@@ -11,6 +11,8 @@ import {
   Stack,
   Typography,
 } from '@mui/material';
+import attaIcon from './assets/atta-flour.svg';
+import sugarIcon from './assets/sugar-cubes.svg';
 
 // Point to production backend by default; override via Vite env (VITE_API_URL) if needed.
 const API_URL = import.meta.env.VITE_API_URL || 'https://ration-stock.vercel.app/count';
@@ -22,13 +24,13 @@ export default function App() {
   const [result, setResult] = useState(null);
 
   const summarySections = [
-    { key: 'RAW_RICE', label: 'RAW RICE', icon: '🍚', color: '#f4753b' },
-    { key: 'BOILED_RICE', label: 'BOILED RICE', icon: '🍛', color: '#d0873a' },
-    { key: 'MATTA_CMR', label: 'MATTA CMR', icon: '🛵', color: '#ef4f91' },
+    { key: 'RAW_RICE', label: 'RAW RICE', icon: '🍚', color: '#e9d7d7ff' },
+    { key: 'BOILED_RICE', label: 'BOILED RICE', icon: '🍚', color: '#d0873a' },
+    { key: 'MATTA_CMR', label: 'MATTA CMR', icon: '🍚', color: '#eeb5b5ff' },
     { key: 'WHEAT', label: 'WHEAT', icon: '🌾', color: '#e8b24c' },
-    { key: 'SUGAR', label: 'SUGAR', icon: '🧊', color: '#70a7ff' },
-    { key: 'ATTA', label: 'ATTA', icon: '🥯', color: '#d7a16c' },
-    { key: 'KOIL', label: 'KOIL', icon: '💧', color: '#8a6bff' },
+    { key: 'SUGAR', label: 'SUGAR', icon: sugarIcon, iconType: 'image', color: '#70a7ff' },
+    { key: 'ATTA', label: 'ATTA', icon: attaIcon, iconType: 'image', color: '#d7a16c' },
+    { key: 'KOIL', label: 'KOIL', icon: '🛢️', color: '#8a6bff' },
   ];
 
   const handleChange = (e) => {
@@ -64,6 +66,32 @@ export default function App() {
     if (!result) return fallback;
     const value = result[`${sectionKey}_${suffix}`];
     return value ?? fallback;
+  };
+
+  const formatStatValue = (value, defaultUnit = '') => {
+    if (value === undefined || value === null) return defaultUnit ? `0 ${defaultUnit}` : '0';
+
+    let unit = defaultUnit;
+    let numeric = value;
+
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      const match = trimmed.match(/^(-?[0-9]+(?:\.[0-9]+)?)/);
+      if (match) {
+        numeric = parseFloat(match[1]);
+        const remainder = trimmed.slice(match[1].length).trim();
+        unit = remainder || unit;
+      } else {
+        return trimmed;
+      }
+    }
+
+    if (typeof numeric === 'number' && Number.isFinite(numeric)) {
+      const formatted = numeric.toFixed(2).replace(/\.?0+$/, '');
+      return unit ? `${formatted} ${unit}` : formatted;
+    }
+
+    return String(value);
   };
 
   const renderStat = (label, value) => (
@@ -305,16 +333,21 @@ export default function App() {
 
             <Stack spacing={2.5}>
               {summarySections.map((section) => {
-                const cbKey = section.key === 'KOIL' ? 'cb_sum' : 'cb_sum';
-                const bagKey = section.key === 'KOIL' ? 'bag_count' : 'bag_count';
+                const cbKey = 'cb_sum';
+                const bagKey = 'bag_count';
                 const remainingKey = section.key === 'KOIL' ? 'remaining_ltr' : 'remaining_kg';
-                const cbValue = getStat(section.key, cbKey, section.key === 'KOIL' ? '0 ltr' : '0 kg');
+
+                const cbValue = formatStatValue(
+                  getStat(section.key, cbKey, section.key === 'KOIL' ? '0 ltr' : '0 kg'),
+                  section.key === 'KOIL' ? 'ltr' : 'kg'
+                );
                 const bagsValue =
-                  section.key === 'KOIL' ? '–' : getStat(section.key, bagKey, '0').toString();
-                const remainingValue = getStat(
-                  section.key,
-                  remainingKey,
-                  section.key === 'KOIL' ? '0 ltr' : '0 kg'
+                  section.key === 'KOIL'
+                    ? '–'
+                    : formatStatValue(getStat(section.key, bagKey, '0'), '');
+                const remainingValue = formatStatValue(
+                  getStat(section.key, remainingKey, section.key === 'KOIL' ? '0 ltr' : '0 kg'),
+                  section.key === 'KOIL' ? 'ltr' : 'kg'
                 );
 
                 return (
@@ -341,7 +374,11 @@ export default function App() {
                           fontSize: 20,
                         }}
                       >
-                        {section.icon}
+                        {section.iconType === 'image' ? (
+                          <img src={section.icon} alt={section.label} style={{ width: 26, height: 26 }} />
+                        ) : (
+                          section.icon
+                        )}
                       </Box>
                       <Typography sx={{ fontWeight: 800, letterSpacing: 0.3 }}>
                         {section.label}
