@@ -12,7 +12,8 @@ import {
   Typography,
 } from '@mui/material';
 
-const API_URL = 'http://localhost:8000/count'; // Change if backend runs elsewhere
+// Point to production backend by default; override via Vite env (VITE_API_URL) if needed.
+const API_URL = import.meta.env.VITE_API_URL || 'https://ration-stock.vercel.app/count';
 
 export default function App() {
   const [form, setForm] = useState({ fps_id: '', month: '', year: '' });
