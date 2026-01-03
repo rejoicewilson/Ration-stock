@@ -400,7 +400,7 @@ export default function App() {
             >
               Data sourced from{' '}
               <a
-                href="https://epos.kerala.gov.in/fps_stock.action"
+                href="https://epos.kerala.gov.in/FPS_Stock.jsp"
                 target="_blank"
                 rel="noreferrer"
                 style={{ color: '#2f64f8', fontWeight: 700 }}
