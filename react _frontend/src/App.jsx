@@ -394,6 +394,20 @@ export default function App() {
                 );
               })}
             </Stack>
+            <Typography
+              variant="caption"
+              sx={{ display: 'block', mt: 2.5, color: '#6d7584', textAlign: 'center' }}
+            >
+              Data sourced from{' '}
+              <a
+                href="https://epos.kerala.gov.in/fps_stock.action"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: '#2f64f8', fontWeight: 700 }}
+              >
+                epos.kerala.gov.in
+              </a>
+            </Typography>
           </Box>
         )}
       </Container>
