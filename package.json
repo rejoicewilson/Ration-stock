@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "npm --prefix \"react _frontend\" ci && npm --prefix \"react _frontend\" run build -- --outDir ../public --emptyOutDir"
+    "build": "cd \"react _frontend\" && npm install && npm run build -- --outDir ../public --emptyOutDir"
   }
 }

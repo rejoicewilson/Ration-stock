@@ -1,0 +1,19 @@
+{
+  "name": "Ration Stock",
+  "short_name": "Ration",
+  "description": "Check FPS ration stock summary.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f6fb",
+  "theme_color": "#2f64f8",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
