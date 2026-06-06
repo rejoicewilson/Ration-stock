@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm --prefix \"react _frontend\" install && npm --prefix \"react _frontend\" run build",
+  "outputDirectory": "react _frontend/dist",
+  "rewrites": [
+    {
+      "source": "/count",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/fps-stock",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/docs",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/openapi.json",
+      "destination": "/api/index"
+    }
+  ]
+}

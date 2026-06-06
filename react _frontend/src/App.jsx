@@ -14,8 +14,8 @@ import {
 import attaIcon from './assets/atta-flour.svg';
 import sugarIcon from './assets/sugar-cubes.svg';
 
-// Point to production backend by default; override via Vite env (VITE_API_URL) if needed.
-const API_URL = import.meta.env.VITE_API_URL || 'https://ration-stock.vercel.app/count';
+// Same-origin by default in production; override locally with VITE_API_URL if needed.
+const API_URL = import.meta.env.VITE_API_URL || '/count';
 
 export default function App() {
   const [form, setForm] = useState({ fps_id: '', month: '', year: '' });
