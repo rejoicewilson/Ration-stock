@@ -31,6 +31,30 @@
       "dest": "api/index.py"
     },
     {
+      "src": "/manifest.webmanifest",
+      "dest": "/manifest.webmanifest"
+    },
+    {
+      "src": "/service-worker.js",
+      "dest": "/service-worker.js"
+    },
+    {
+      "src": "/app-icon.svg",
+      "dest": "/app-icon.svg"
+    },
+    {
+      "src": "/icon-192.png",
+      "dest": "/icon-192.png"
+    },
+    {
+      "src": "/icon-512.png",
+      "dest": "/icon-512.png"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/icon-192.png"
+    },
+    {
       "src": "/assets/(.*)",
       "dest": "/assets/$1"
     },
