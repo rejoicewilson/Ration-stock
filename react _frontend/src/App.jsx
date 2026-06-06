@@ -52,11 +52,23 @@ export default function App() {
           year: Number(form.year),
         }),
       });
-      if (!res.ok) throw new Error('Server error');
-      const data = await res.json();
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { detail: responseText || 'Server returned an empty response' };
+      }
+      if (!res.ok) {
+        const requestId = res.headers.get('X-Request-ID');
+        const detail = data?.detail || data?.message || 'Server error';
+        const suffix = requestId ? ` Request ID: ${requestId}` : '';
+        throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
+      }
       setResult(data);
     } catch (err) {
-      setError('Failed to fetch data. Please check your input and backend.');
+      console.error('Stock fetch failed:', err);
+      setError(err.message || 'Failed to fetch data. Please check your input and backend.');
     } finally {
       setLoading(false);
     }

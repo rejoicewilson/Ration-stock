@@ -1,10 +1,33 @@
-from fastapi import FastAPI, HTTPException
+import logging
+import re
+import time
+from logging.handlers import RotatingFileHandler
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
 from bs4 import BeautifulSoup
 
 app = FastAPI()
+
+logger = logging.getLogger("ration-backend")
+logger.setLevel(logging.INFO)
+
+log_formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+file_handler = RotatingFileHandler(
+    "backend.log",
+    maxBytes=1_000_000,
+    backupCount=3,
+    encoding="utf-8",
+)
+file_handler.setFormatter(log_formatter)
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(log_formatter)
+
+if not logger.handlers:
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
 
 # Allow the Vite dev server (and fallback to any origin during development) to hit the API
 app.add_middleware(
@@ -22,6 +45,40 @@ class StockRequest(BaseModel):
     year: int
 
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    request_id = str(int(time.time() * 1000))
+    start_time = time.perf_counter()
+    logger.info(
+        "request_start request_id=%s method=%s path=%s client=%s",
+        request_id,
+        request.method,
+        request.url.path,
+        request.client.host if request.client else "unknown",
+    )
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception(
+            "request_failed request_id=%s method=%s path=%s",
+            request_id,
+            request.method,
+            request.url.path,
+        )
+        raise
+
+    duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+    logger.info(
+        "request_end request_id=%s status_code=%s duration_ms=%s",
+        request_id,
+        response.status_code,
+        duration_ms,
+    )
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
 @app.post("/fps-stock")
 def get_fps_stock(request: StockRequest):
     url = "https://epos.kerala.gov.in/fps_stock.action"
@@ -32,16 +89,27 @@ def get_fps_stock(request: StockRequest):
     # If the user prompt implied JSON payload for *my* endpoint, I translate it.
     
     payload = request.model_dump()
+    logger.info("fps_stock_start payload=%s", payload)
     
     try:
         # Using data=payload sends application/x-www-form-urlencoded
-        response = requests.post(url, data=payload)
+        response = requests.post(url, data=payload, timeout=30)
+        logger.info(
+            "fps_stock_upstream_response status_code=%s content_length=%s",
+            response.status_code,
+            len(response.text),
+        )
         response.raise_for_status()
         
         # Parse the HTML response
         soup = BeautifulSoup(response.text, 'html.parser')
         table = soup.find('table', id='Report')
         if not table:
+            logger.warning(
+                "fps_stock_table_missing status_code=%s response_preview=%r",
+                response.status_code,
+                response.text[:500],
+            )
             return {"remote_status_code": response.status_code, "content": response.text}
         
         header = table.find('th', colspan='11').text.strip()
@@ -66,11 +134,16 @@ def get_fps_stock(request: StockRequest):
                 }
                 data.append(item)
         
+        logger.info("fps_stock_success row_count=%s", len(data))
         return {"remote_status_code": response.status_code, "header": header, "data": data}
         
 
     except requests.RequestException as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("fps_stock_upstream_error payload=%s", payload)
+        raise HTTPException(status_code=500, detail=f"Upstream ePoS request failed: {e}")
+    except Exception as e:
+        logger.exception("fps_stock_parse_error payload=%s", payload)
+        raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
 
 
 
@@ -79,12 +152,23 @@ def get_fps_stock(request: StockRequest):
 def get_raw_rice_cb_sum(request: StockRequest):
     url = "https://epos.kerala.gov.in/fps_stock.action"
     payload = request.model_dump()
+    logger.info("count_start payload=%s", payload)
     try:
-        response = requests.post(url, data=payload)
+        response = requests.post(url, data=payload, timeout=30)
+        logger.info(
+            "count_upstream_response status_code=%s content_length=%s",
+            response.status_code,
+            len(response.text),
+        )
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         table = soup.find('table', id='Report')
         if not table:
+            logger.warning(
+                "count_table_missing status_code=%s response_preview=%r",
+                response.status_code,
+                response.text[:500],
+            )
             return {"remote_status_code": response.status_code, "RAW_RICE_cb_sum": 0}
         rows = table.find_all('tr')[2:]  # Skip header rows
         raw_cb_sum = 0
@@ -130,7 +214,7 @@ def get_raw_rice_cb_sum(request: StockRequest):
                     except ValueError:
                         pass
                 # Atta group
-                if "atta" in comm_lower:
+                if re.search(r"\batta\b", comm_lower):
                     try:
                         atta_cb_sum += float(cols[10].text.strip())
                     except ValueError:
@@ -159,7 +243,7 @@ def get_raw_rice_cb_sum(request: StockRequest):
         # Atta bags
         atta_bag_count = int(atta_cb_sum // 50)
         atta_remaining_kg = atta_cb_sum % 50
-        return {
+        result = {
             "RAW_RICE_cb_sum": f"{raw_cb_sum} kg",
             "RAW_RICE_bag_count": raw_bag_count,
             "RAW_RICE_remaining_kg": f"{raw_remaining_kg} kg",
@@ -181,5 +265,21 @@ def get_raw_rice_cb_sum(request: StockRequest):
             "KOIL_cb_sum": f"{koil_cb_sum} ltr",
             "KOIL_remaining_ltr": f"{koil_cb_sum} ltr"
         }
+        logger.info(
+            "count_success rows=%s raw=%s boiled=%s matta_cmr=%s wheat=%s sugar=%s atta=%s koil=%s",
+            len(rows),
+            raw_cb_sum,
+            br_cb_sum,
+            matta_cmr_cb_sum,
+            wheat_cb_sum,
+            sugar_cb_sum,
+            atta_cb_sum,
+            koil_cb_sum,
+        )
+        return result
     except requests.RequestException as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("count_upstream_error payload=%s", payload)
+        raise HTTPException(status_code=500, detail=f"Upstream ePoS request failed: {e}")
+    except Exception as e:
+        logger.exception("count_parse_error payload=%s", payload)
+        raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
