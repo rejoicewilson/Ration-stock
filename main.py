@@ -22,14 +22,17 @@ console_handler.setFormatter(log_formatter)
 if not logger.handlers:
     logger.addHandler(console_handler)
     if not os.environ.get("VERCEL"):
-        file_handler = RotatingFileHandler(
-            "backend.log",
-            maxBytes=1_000_000,
-            backupCount=3,
-            encoding="utf-8",
-        )
-        file_handler.setFormatter(log_formatter)
-        logger.addHandler(file_handler)
+        try:
+            file_handler = RotatingFileHandler(
+                "backend.log",
+                maxBytes=1_000_000,
+                backupCount=3,
+                encoding="utf-8",
+            )
+            file_handler.setFormatter(log_formatter)
+            logger.addHandler(file_handler)
+        except OSError as exc:
+            logger.warning("file_logging_disabled reason=%s", exc)
 
 # Allow the Vite dev server (and fallback to any origin during development) to hit the API
 app.add_middleware(
