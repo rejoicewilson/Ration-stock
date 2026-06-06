@@ -1,0 +1,8 @@
+{
+  "name": "ration-stock-deploy",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix \"react _frontend\" ci && npm --prefix \"react _frontend\" run build -- --outDir ../public --emptyOutDir"
+  }
+}
