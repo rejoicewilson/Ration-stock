@@ -1,23 +1,42 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm --prefix \"react _frontend\" install && npm --prefix \"react _frontend\" run build",
-  "outputDirectory": "react _frontend/dist",
-  "rewrites": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/count",
-      "destination": "/api/index"
+      "src": "api/index.py",
+      "use": "@vercel/python"
     },
     {
-      "source": "/fps-stock",
-      "destination": "/api/index"
+      "src": "react _frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/count",
+      "dest": "api/index.py"
     },
     {
-      "source": "/docs",
-      "destination": "/api/index"
+      "src": "/fps-stock",
+      "dest": "api/index.py"
     },
     {
-      "source": "/openapi.json",
-      "destination": "/api/index"
+      "src": "/docs",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/openapi.json",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
