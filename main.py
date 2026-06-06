@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import time
 from logging.handlers import RotatingFileHandler
@@ -15,19 +16,20 @@ logger = logging.getLogger("ration-backend")
 logger.setLevel(logging.INFO)
 
 log_formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
-file_handler = RotatingFileHandler(
-    "backend.log",
-    maxBytes=1_000_000,
-    backupCount=3,
-    encoding="utf-8",
-)
-file_handler.setFormatter(log_formatter)
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(log_formatter)
 
 if not logger.handlers:
-    logger.addHandler(file_handler)
     logger.addHandler(console_handler)
+    if not os.environ.get("VERCEL"):
+        file_handler = RotatingFileHandler(
+            "backend.log",
+            maxBytes=1_000_000,
+            backupCount=3,
+            encoding="utf-8",
+        )
+        file_handler.setFormatter(log_formatter)
+        logger.addHandler(file_handler)
 
 # Allow the Vite dev server (and fallback to any origin during development) to hit the API
 app.add_middleware(
