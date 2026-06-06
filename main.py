@@ -2,15 +2,25 @@ import logging
 import os
 import re
 import time
+from pathlib import Path
 from logging.handlers import RotatingFileHandler
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import requests
 from bs4 import BeautifulSoup
 
 app = FastAPI()
+BASE_DIR = Path(__file__).resolve().parent
+REACT_DIST_DIR = BASE_DIR / "react _frontend" / "dist"
+REACT_INDEX_FILE = REACT_DIST_DIR / "index.html"
+REACT_ASSETS_DIR = REACT_DIST_DIR / "assets"
+
+if REACT_ASSETS_DIR.exists():
+    app.mount("/assets", StaticFiles(directory=REACT_ASSETS_DIR), name="assets")
 
 logger = logging.getLogger("ration-backend")
 logger.setLevel(logging.INFO)
@@ -48,6 +58,18 @@ class StockRequest(BaseModel):
     fps_id: int
     month: int
     year: int
+
+
+@app.get("/")
+def serve_react_app():
+    if REACT_INDEX_FILE.exists():
+        return FileResponse(REACT_INDEX_FILE)
+    raise HTTPException(status_code=404, detail="React build not found")
+
+
+@app.get("/favicon.ico")
+def favicon():
+    return Response(status_code=204)
 
 
 @app.middleware("http")
