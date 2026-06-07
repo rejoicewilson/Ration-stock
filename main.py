@@ -173,6 +173,41 @@ def parse_transaction_report(html: str):
     return {"title": title, "headers": TRANSACTION_HEADERS, "transactions": transactions}
 
 
+def to_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def summarize_transactions(transactions):
+    commodity_keys = [
+        "wheat",
+        "atta",
+        "rr",
+        "br",
+        "cmr",
+        "sugar",
+        "koil",
+        "frr",
+        "fbr",
+        "fkoil",
+        "pl_fbr",
+        "free_kit",
+        "free_kit_spl",
+        "sub_kit",
+    ]
+    commodity_totals = {
+        key: round(sum(to_float(transaction.get(key)) for transaction in transactions), 3)
+        for key in commodity_keys
+    }
+    return {
+        "total_amount": round(sum(to_float(transaction.get("amount")) for transaction in transactions), 2),
+        "transaction_count": len(transactions),
+        "commodity_totals": commodity_totals,
+    }
+
+
 @app.get("/")
 def serve_react_app():
     if REACT_INDEX_FILE.exists():
@@ -335,6 +370,7 @@ def fetch_transactions(request: TransactionsRequest):
                 "parse_duration_ms": parse_duration_ms,
                 "total_duration_ms": total_duration_ms,
                 "title": transaction_report["title"],
+                "summary": summarize_transactions([]),
                 "transactions": [],
                 "content_preview": response.text[:1000],
             }
@@ -358,6 +394,7 @@ def fetch_transactions(request: TransactionsRequest):
             "table_count": 1,
             "row_count": row_count,
             "title": transaction_report["title"],
+            "summary": summarize_transactions(transactions),
             "headers": transaction_report["headers"],
             "transactions": transactions,
         }

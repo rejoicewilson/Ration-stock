@@ -194,85 +194,6 @@ export default function App() {
     </Box>
   );
 
-  const commodityLabels = [
-    ['wheat', 'Wheat'],
-    ['atta', 'Atta'],
-    ['rr', 'RR'],
-    ['br', 'BR'],
-    ['cmr', 'CMR'],
-    ['sugar', 'Sugar'],
-    ['koil', 'Koil'],
-    ['frr', 'FRR'],
-    ['fbr', 'FBR'],
-    ['fkoil', 'FKoil'],
-    ['pl_fbr', 'PL FBR'],
-    ['free_kit', 'Free Kit'],
-    ['free_kit_spl', 'Free Kit SPL'],
-    ['sub_kit', 'Sub Kit'],
-  ];
-
-  const nonZeroCommodities = (transaction) =>
-    commodityLabels
-      .map(([key, label]) => ({ label, value: transaction[key] }))
-      .filter((item) => {
-        const numeric = Number(item.value);
-        return Number.isFinite(numeric) && numeric !== 0;
-      });
-
-  const renderTransaction = (transaction) => {
-    const commodities = nonZeroCommodities(transaction);
-
-    return (
-      <Paper
-        key={`${transaction.receipt_no}-${transaction.sl_no}`}
-        elevation={0}
-        sx={{
-          p: 2,
-          borderRadius: 3,
-          background: '#ffffff',
-          border: '1px solid #e8edf7',
-          boxShadow: '0 10px 24px rgba(26, 58, 109, 0.07)',
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
-          <Box>
-            <Typography sx={{ fontWeight: 800 }}>RC {transaction.rc_no}</Typography>
-            <Typography variant="caption" sx={{ color: '#6d7584', fontWeight: 700 }}>
-              {transaction.scheme} | {transaction.receipt_date} | {transaction.time}
-            </Typography>
-          </Box>
-          <Typography sx={{ color: '#2f64f8', fontWeight: 800 }}>
-            Rs. {formatStatValue(transaction.amount, '')}
-          </Typography>
-        </Box>
-        <Divider sx={{ mb: 1.2 }} />
-        <Grid container spacing={1}>
-          {commodities.length ? (
-            commodities.map((item) => (
-              <Grid item xs={4} key={item.label}>
-                <Box sx={{ bgcolor: '#f7f8fb', borderRadius: 2, px: 1, py: 0.8, textAlign: 'center' }}>
-                  <Typography variant="caption" sx={{ color: '#7b8395', fontWeight: 700 }}>
-                    {item.label}
-                  </Typography>
-                  <Typography sx={{ fontWeight: 800 }}>{formatStatValue(item.value, '')}</Typography>
-                </Box>
-              </Grid>
-            ))
-          ) : (
-            <Grid item xs={12}>
-              <Typography variant="body2" sx={{ color: '#7b8395' }}>
-                No commodity quantity recorded.
-              </Typography>
-            </Grid>
-          )}
-        </Grid>
-        <Typography variant="caption" sx={{ display: 'block', mt: 1.2, color: '#7b8395' }}>
-          Receipt {transaction.receipt_no} | {transaction.trans_type} | Auth {transaction.auth_trans_time}
-        </Typography>
-      </Paper>
-    );
-  };
-
   const monthYearLabel = () => {
     if (!form.month || !form.year) return '';
     const monthNames = [
@@ -702,7 +623,7 @@ export default function App() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                      Transactions
+                      Collection Summary
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#6d7584', fontWeight: 700 }}>
                       {transactionsResult.row_count || 0} records
@@ -720,9 +641,36 @@ export default function App() {
                   </Typography>
                 )}
 
-                <Stack spacing={1.5}>
-                  {(transactionsResult.transactions || []).map(renderTransaction)}
-                </Stack>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    borderRadius: 3,
+                    background: '#ffffff',
+                    border: '1px solid #e8edf7',
+                    boxShadow: '0 12px 28px rgba(26, 58, 109, 0.08)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography variant="caption" sx={{ color: '#7b8395', fontWeight: 800, letterSpacing: 0.4 }}>
+                    TOTAL AMOUNT COLLECTED
+                  </Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 900, color: '#2f64f8', mt: 1 }}>
+                    Rs. {formatStatValue(transactionsResult.summary?.total_amount || 0, '')}
+                  </Typography>
+                  <Divider sx={{ my: 2 }} />
+                  <Grid container spacing={1.5}>
+                    <Grid item xs={12} sm={4}>
+                      {renderStat('TRANSACTIONS', transactionsResult.summary?.transaction_count || 0)}
+                    </Grid>
+                    <Grid item xs={6} sm={4}>
+                      {renderStat('FROM', toEposDate(transactionForm.from_date))}
+                    </Grid>
+                    <Grid item xs={6} sm={4}>
+                      {renderStat('TO', toEposDate(transactionForm.to_date))}
+                    </Grid>
+                  </Grid>
+                </Paper>
               </Box>
             )}
           </>
