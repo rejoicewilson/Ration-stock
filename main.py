@@ -118,6 +118,61 @@ def parse_html_tables(html: str):
     return parsed_tables
 
 
+TRANSACTION_HEADERS = [
+    "sl_no",
+    "rc_no",
+    "scheme",
+    "tagged_depot",
+    "availed_depot",
+    "receipt_no",
+    "receipt_date",
+    "time",
+    "wheat",
+    "atta",
+    "rr",
+    "br",
+    "cmr",
+    "sugar",
+    "koil",
+    "frr",
+    "fbr",
+    "fkoil",
+    "pl_fbr",
+    "free_kit",
+    "free_kit_spl",
+    "sub_kit",
+    "amount",
+    "trans_type",
+    "auth_trans_time",
+]
+
+
+def parse_transaction_report(html: str):
+    soup = BeautifulSoup(html, "html.parser")
+    table = soup.find("table")
+    if not table:
+        return {"title": "", "headers": TRANSACTION_HEADERS, "transactions": []}
+
+    rows = table.find_all("tr")
+    title = rows[0].get_text(" ", strip=True) if rows else ""
+    width = len(TRANSACTION_HEADERS)
+    data_cells = []
+
+    for row in rows[3:]:
+        cells = [cell.get_text(" ", strip=True) for cell in row.find_all("td")]
+        if len(cells) >= width and len(cells) % width == 0:
+            data_cells = cells
+            break
+
+    transactions = []
+    for index in range(0, len(data_cells), width):
+        chunk = data_cells[index:index + width]
+        if len(chunk) == width:
+            transactions.append(dict(zip(TRANSACTION_HEADERS, chunk)))
+
+    return {"title": title, "headers": TRANSACTION_HEADERS, "transactions": transactions}
+
+
 @app.get("/")
 def serve_react_app():
     if REACT_INDEX_FILE.exists():
@@ -263,12 +318,13 @@ def fetch_transactions(request: TransactionsRequest):
         response.raise_for_status()
 
         parse_start_time = time.perf_counter()
-        tables = parse_html_tables(response.text)
+        transaction_report = parse_transaction_report(response.text)
+        transactions = transaction_report["transactions"]
         parse_duration_ms = round((time.perf_counter() - parse_start_time) * 1000, 2)
         total_duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
-        if not tables:
+        if not transactions:
             logger.warning(
-                "transactions_table_missing status_code=%s response_preview=%r",
+                "transactions_missing status_code=%s response_preview=%r",
                 response.status_code,
                 response.text[:500],
             )
@@ -278,16 +334,16 @@ def fetch_transactions(request: TransactionsRequest):
                 "upstream_duration_ms": upstream_duration_ms,
                 "parse_duration_ms": parse_duration_ms,
                 "total_duration_ms": total_duration_ms,
-                "tables": [],
+                "title": transaction_report["title"],
+                "transactions": [],
                 "content_preview": response.text[:1000],
             }
             TRANSACTIONS_CACHE[cache_key] = {"stored_at": time.time(), "data": result}
             return result
 
-        row_count = sum(len(table["rows"]) for table in tables)
+        row_count = len(transactions)
         logger.info(
-            "transactions_success table_count=%s row_count=%s upstream_ms=%s parse_ms=%s total_ms=%s",
-            len(tables),
+            "transactions_success row_count=%s upstream_ms=%s parse_ms=%s total_ms=%s",
             row_count,
             upstream_duration_ms,
             parse_duration_ms,
@@ -299,9 +355,11 @@ def fetch_transactions(request: TransactionsRequest):
             "upstream_duration_ms": upstream_duration_ms,
             "parse_duration_ms": parse_duration_ms,
             "total_duration_ms": total_duration_ms,
-            "table_count": len(tables),
+            "table_count": 1,
             "row_count": row_count,
-            "tables": tables,
+            "title": transaction_report["title"],
+            "headers": transaction_report["headers"],
+            "transactions": transactions,
         }
         TRANSACTIONS_CACHE[cache_key] = {"stored_at": time.time(), "data": result}
         return result

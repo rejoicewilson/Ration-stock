@@ -16,12 +16,34 @@ import sugarIcon from './assets/sugar-cubes.svg';
 
 // Same-origin by default in production; override locally with VITE_API_URL if needed.
 const API_URL = import.meta.env.VITE_API_URL || '/count';
+const TRANSACTIONS_API_URL = import.meta.env.VITE_TRANSACTIONS_API_URL || '/transactions';
+
+const todayForDateInput = () => new Date().toISOString().slice(0, 10);
+
+const toEposDate = (value) => {
+  if (!value) return '';
+  const [year, month, day] = value.split('-');
+  return `${day}-${month}-${year}`;
+};
 
 export default function App() {
+  const [activeView, setActiveView] = useState('stock');
   const [form, setForm] = useState({ fps_id: '', month: '', year: '' });
+  const [transactionForm, setTransactionForm] = useState({
+    from_date: todayForDateInput(),
+    to_date: todayForDateInput(),
+    dist_code: '18',
+    afso: '42',
+    fps_id: '',
+    month: String(new Date().getMonth() + 1).padStart(2, '0'),
+    year: String(new Date().getFullYear()),
+  });
   const [loading, setLoading] = useState(false);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [transactionsError, setTransactionsError] = useState('');
   const [result, setResult] = useState(null);
+  const [transactionsResult, setTransactionsResult] = useState(null);
 
   const summarySections = [
     { key: 'RAW_RICE', label: 'RAW RICE', icon: '🍚', color: '#e9d7d7ff' },
@@ -35,6 +57,10 @@ export default function App() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleTransactionChange = (e) => {
+    setTransactionForm({ ...transactionForm, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
@@ -71,6 +97,47 @@ export default function App() {
       setError(err.message || 'Failed to fetch data. Please check your input and backend.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTransactionsSubmit = async (e) => {
+    e.preventDefault();
+    setTransactionsLoading(true);
+    setTransactionsError('');
+    setTransactionsResult(null);
+    try {
+      const res = await fetch(TRANSACTIONS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from_date: toEposDate(transactionForm.from_date),
+          to_date: toEposDate(transactionForm.to_date),
+          dist_code: Number(transactionForm.dist_code),
+          afso: Number(transactionForm.afso),
+          fps_id: Number(transactionForm.fps_id),
+          month: Number(transactionForm.month),
+          year: Number(transactionForm.year),
+        }),
+      });
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { detail: responseText || 'Server returned an empty response' };
+      }
+      if (!res.ok) {
+        const requestId = res.headers.get('X-Request-ID');
+        const detail = data?.detail || data?.message || 'Server error';
+        const suffix = requestId ? ` Request ID: ${requestId}` : '';
+        throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
+      }
+      setTransactionsResult(data);
+    } catch (err) {
+      console.error('Transactions fetch failed:', err);
+      setTransactionsError(err.message || 'Failed to fetch transactions.');
+    } finally {
+      setTransactionsLoading(false);
     }
   };
 
@@ -126,6 +193,85 @@ export default function App() {
       </Typography>
     </Box>
   );
+
+  const commodityLabels = [
+    ['wheat', 'Wheat'],
+    ['atta', 'Atta'],
+    ['rr', 'RR'],
+    ['br', 'BR'],
+    ['cmr', 'CMR'],
+    ['sugar', 'Sugar'],
+    ['koil', 'Koil'],
+    ['frr', 'FRR'],
+    ['fbr', 'FBR'],
+    ['fkoil', 'FKoil'],
+    ['pl_fbr', 'PL FBR'],
+    ['free_kit', 'Free Kit'],
+    ['free_kit_spl', 'Free Kit SPL'],
+    ['sub_kit', 'Sub Kit'],
+  ];
+
+  const nonZeroCommodities = (transaction) =>
+    commodityLabels
+      .map(([key, label]) => ({ label, value: transaction[key] }))
+      .filter((item) => {
+        const numeric = Number(item.value);
+        return Number.isFinite(numeric) && numeric !== 0;
+      });
+
+  const renderTransaction = (transaction) => {
+    const commodities = nonZeroCommodities(transaction);
+
+    return (
+      <Paper
+        key={`${transaction.receipt_no}-${transaction.sl_no}`}
+        elevation={0}
+        sx={{
+          p: 2,
+          borderRadius: 3,
+          background: '#ffffff',
+          border: '1px solid #e8edf7',
+          boxShadow: '0 10px 24px rgba(26, 58, 109, 0.07)',
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+          <Box>
+            <Typography sx={{ fontWeight: 800 }}>RC {transaction.rc_no}</Typography>
+            <Typography variant="caption" sx={{ color: '#6d7584', fontWeight: 700 }}>
+              {transaction.scheme} | {transaction.receipt_date} | {transaction.time}
+            </Typography>
+          </Box>
+          <Typography sx={{ color: '#2f64f8', fontWeight: 800 }}>
+            Rs. {formatStatValue(transaction.amount, '')}
+          </Typography>
+        </Box>
+        <Divider sx={{ mb: 1.2 }} />
+        <Grid container spacing={1}>
+          {commodities.length ? (
+            commodities.map((item) => (
+              <Grid item xs={4} key={item.label}>
+                <Box sx={{ bgcolor: '#f7f8fb', borderRadius: 2, px: 1, py: 0.8, textAlign: 'center' }}>
+                  <Typography variant="caption" sx={{ color: '#7b8395', fontWeight: 700 }}>
+                    {item.label}
+                  </Typography>
+                  <Typography sx={{ fontWeight: 800 }}>{formatStatValue(item.value, '')}</Typography>
+                </Box>
+              </Grid>
+            ))
+          ) : (
+            <Grid item xs={12}>
+              <Typography variant="body2" sx={{ color: '#7b8395' }}>
+                No commodity quantity recorded.
+              </Typography>
+            </Grid>
+          )}
+        </Grid>
+        <Typography variant="caption" sx={{ display: 'block', mt: 1.2, color: '#7b8395' }}>
+          Receipt {transaction.receipt_no} | {transaction.trans_type} | Auth {transaction.auth_trans_time}
+        </Typography>
+      </Paper>
+    );
+  };
 
   const monthYearLabel = () => {
     if (!form.month || !form.year) return '';
@@ -184,6 +330,8 @@ export default function App() {
           </Paper>
         </Box>
 
+        {activeView === 'stock' ? (
+          <>
         <Paper
           elevation={0}
           sx={{
@@ -422,6 +570,163 @@ export default function App() {
             </Typography>
           </Box>
         )}
+          </>
+        ) : (
+          <>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                background: '#ffffff',
+                boxShadow: '0 20px 40px rgba(104, 141, 255, 0.12)',
+                border: '1px solid #e8edf7',
+                mb: 3,
+              }}
+            >
+              <Stack spacing={2} component="form" onSubmit={handleTransactionsSubmit}>
+                <Grid container spacing={1.5}>
+                  <Grid item xs={6}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      FROM DATE *
+                    </Typography>
+                    <Box
+                      component="input"
+                      name="from_date"
+                      value={transactionForm.from_date}
+                      onChange={handleTransactionChange}
+                      required
+                      type="date"
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        borderRadius: 12,
+                        border: '1px solid #dfe5f0',
+                        background: '#fbfcff',
+                        outline: 'none',
+                        fontSize: 15,
+                        fontWeight: 600,
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      TO DATE *
+                    </Typography>
+                    <Box
+                      component="input"
+                      name="to_date"
+                      value={transactionForm.to_date}
+                      onChange={handleTransactionChange}
+                      required
+                      type="date"
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        borderRadius: 12,
+                        border: '1px solid #dfe5f0',
+                        background: '#fbfcff',
+                        outline: 'none',
+                        fontSize: 15,
+                        fontWeight: 600,
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+
+                <Grid container spacing={1.5}>
+                  {[
+                    ['dist_code', 'DIST CODE'],
+                    ['afso', 'AFSO'],
+                    ['fps_id', 'FPS ID'],
+                    ['month', 'MONTH'],
+                    ['year', 'YEAR'],
+                  ].map(([name, label]) => (
+                    <Grid item xs={name === 'fps_id' ? 12 : 6} key={name}>
+                      <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                        {label} *
+                      </Typography>
+                      <Box
+                        component="input"
+                        name={name}
+                        value={transactionForm[name]}
+                        onChange={handleTransactionChange}
+                        required
+                        type="number"
+                        placeholder={label}
+                        min={name === 'month' ? 1 : undefined}
+                        max={name === 'month' ? 12 : undefined}
+                        style={{
+                          width: '100%',
+                          padding: '14px',
+                          borderRadius: 12,
+                          border: '1px solid #dfe5f0',
+                          background: '#fbfcff',
+                          outline: 'none',
+                          fontSize: 16,
+                          fontWeight: 600,
+                        }}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={transactionsLoading}
+                  startIcon={!transactionsLoading ? '🕑' : null}
+                  sx={{
+                    py: 1.4,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #2767f7 0%, #2255e6 100%)',
+                    boxShadow: '0 12px 24px rgba(36, 94, 255, 0.35)',
+                  }}
+                >
+                  {transactionsLoading ? <CircularProgress size={22} color="inherit" /> : 'Get Transactions'}
+                </Button>
+              </Stack>
+            </Paper>
+
+            {transactionsError && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {transactionsError}
+              </Alert>
+            )}
+
+            {transactionsResult && (
+              <Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                      Transactions
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#6d7584', fontWeight: 700 }}>
+                      {transactionsResult.row_count || 0} records
+                      {transactionsResult.cache_hit ? ' | cached' : ''}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" sx={{ color: '#3b63f4', fontWeight: 700 }}>
+                    {Math.round(transactionsResult.total_duration_ms || 0)} ms
+                  </Typography>
+                </Box>
+
+                {transactionsResult.title && (
+                  <Typography variant="body2" sx={{ color: '#6d7584', mb: 1.5, fontWeight: 700 }}>
+                    {transactionsResult.title}
+                  </Typography>
+                )}
+
+                <Stack spacing={1.5}>
+                  {(transactionsResult.transactions || []).map(renderTransaction)}
+                </Stack>
+              </Box>
+            )}
+          </>
+        )}
       </Container>
 
       {/* Bottom nav */}
@@ -443,11 +748,19 @@ export default function App() {
         }}
       >
         {[
-          { label: 'Stock', icon: '🏠', active: true },
-          { label: 'Transactions', icon: '🕑' },
-          { label: 'Settings', icon: '⚙️' },
+          { label: 'Stock', icon: '🏠', view: 'stock' },
+          { label: 'Transactions', icon: '🕑', view: 'transactions' },
+          { label: 'Settings', icon: '⚙️', view: 'settings' },
         ].map((item) => (
-          <Box key={item.label} sx={{ textAlign: 'center', color: item.active ? '#2f64f8' : '#7b8395' }}>
+          <Box
+            key={item.label}
+            onClick={() => item.view !== 'settings' && setActiveView(item.view)}
+            sx={{
+              textAlign: 'center',
+              color: activeView === item.view ? '#2f64f8' : '#7b8395',
+              cursor: item.view === 'settings' ? 'default' : 'pointer',
+            }}
+          >
             <div style={{ fontSize: 20 }}>{item.icon}</div>
             <Typography variant="caption" sx={{ fontWeight: 700 }}>
               {item.label}
