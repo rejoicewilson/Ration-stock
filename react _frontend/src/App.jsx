@@ -670,6 +670,19 @@ export default function App() {
                       {renderStat('TO', toEposDate(transactionForm.to_date))}
                     </Grid>
                   </Grid>
+                  <Divider sx={{ my: 2 }} />
+                  <Grid container spacing={1.5}>
+                    {[
+                      ['ATTA', 'atta'],
+                      ['RR', 'rr'],
+                      ['BR', 'br'],
+                      ['CMR', 'cmr'],
+                    ].map(([label, key]) => (
+                      <Grid item xs={6} sm={3} key={key}>
+                        {renderStat(label, formatStatValue(transactionsResult.summary?.commodity_totals?.[key] || 0, 'kg'))}
+                      </Grid>
+                    ))}
+                  </Grid>
                 </Paper>
               </Box>
             )}
