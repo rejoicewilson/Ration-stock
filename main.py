@@ -23,6 +23,10 @@ EPOS_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 EPOS_TIMEOUT = (5, 15)
+TRANSACTIONS_CACHE_TTL_SECONDS = 300
+TRANSACTIONS_CACHE = {}
+EPOS_SESSION = requests.Session()
+EPOS_SESSION.headers.update(EPOS_HEADERS)
 
 if REACT_ASSETS_DIR.exists():
     app.mount("/assets", StaticFiles(directory=REACT_ASSETS_DIR), name="assets")
@@ -230,11 +234,25 @@ def get_fps_stock(request: StockRequest):
 def fetch_transactions(request: TransactionsRequest):
     url = "https://epos.kerala.gov.in/day_wise_trans.action"
     payload = request.model_dump()
+    cache_key = tuple(sorted(payload.items()))
+    cached = TRANSACTIONS_CACHE.get(cache_key)
+    if cached:
+        age_seconds = time.time() - cached["stored_at"]
+        if age_seconds <= TRANSACTIONS_CACHE_TTL_SECONDS:
+            logger.info("transactions_cache_hit payload=%s age_seconds=%.2f", payload, age_seconds)
+            return {
+                **cached["data"],
+                "cache_hit": True,
+                "cache_age_seconds": round(age_seconds, 2),
+            }
+
+        TRANSACTIONS_CACHE.pop(cache_key, None)
+
     logger.info("transactions_start payload=%s", payload)
 
     try:
         start_time = time.perf_counter()
-        response = requests.post(url, data=payload, headers=EPOS_HEADERS, timeout=EPOS_TIMEOUT)
+        response = EPOS_SESSION.post(url, data=payload, timeout=EPOS_TIMEOUT)
         upstream_duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
         logger.info(
             "transactions_upstream_response status_code=%s content_length=%s duration_ms=%s",
@@ -254,14 +272,17 @@ def fetch_transactions(request: TransactionsRequest):
                 response.status_code,
                 response.text[:500],
             )
-            return {
+            result = {
                 "remote_status_code": response.status_code,
+                "cache_hit": False,
                 "upstream_duration_ms": upstream_duration_ms,
                 "parse_duration_ms": parse_duration_ms,
                 "total_duration_ms": total_duration_ms,
                 "tables": [],
                 "content_preview": response.text[:1000],
             }
+            TRANSACTIONS_CACHE[cache_key] = {"stored_at": time.time(), "data": result}
+            return result
 
         row_count = sum(len(table["rows"]) for table in tables)
         logger.info(
@@ -272,8 +293,9 @@ def fetch_transactions(request: TransactionsRequest):
             parse_duration_ms,
             total_duration_ms,
         )
-        return {
+        result = {
             "remote_status_code": response.status_code,
+            "cache_hit": False,
             "upstream_duration_ms": upstream_duration_ms,
             "parse_duration_ms": parse_duration_ms,
             "total_duration_ms": total_duration_ms,
@@ -281,6 +303,8 @@ def fetch_transactions(request: TransactionsRequest):
             "row_count": row_count,
             "tables": tables,
         }
+        TRANSACTIONS_CACHE[cache_key] = {"stored_at": time.time(), "data": result}
+        return result
     except requests.RequestException as e:
         logger.exception("transactions_upstream_error payload=%s", payload)
         raise HTTPException(status_code=500, detail=f"Upstream ePoS transaction request failed: {e}")
