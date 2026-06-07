@@ -443,8 +443,8 @@ export default function App() {
         }}
       >
         {[
-          { label: 'Home', icon: '🏠', active: true },
-          { label: 'History', icon: '🕑' },
+          { label: 'Stock', icon: '🏠', active: true },
+          { label: 'Transactions', icon: '🕑' },
           { label: 'Settings', icon: '⚙️' },
         ].map((item) => (
           <Box key={item.label} sx={{ textAlign: 'center', color: item.active ? '#2f64f8' : '#7b8395' }}>
