@@ -270,11 +270,6 @@ def get_transactions(request: TransactionsRequest):
     return fetch_transactions(request)
 
 
-@app.post("/day-wise-trans")
-def get_day_wise_transactions(request: TransactionsRequest):
-    return fetch_transactions(request)
-
-
 
 # Updated /count endpoint to sum CB Qty for RAW RICE group
 @app.post("/count")
