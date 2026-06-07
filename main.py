@@ -18,6 +18,11 @@ BASE_DIR = Path(__file__).resolve().parent
 REACT_DIST_DIR = BASE_DIR / "react _frontend" / "dist"
 REACT_INDEX_FILE = REACT_DIST_DIR / "index.html"
 REACT_ASSETS_DIR = REACT_DIST_DIR / "assets"
+EPOS_HEADERS = {
+    "User-Agent": "Mozilla/5.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
+EPOS_TIMEOUT = (5, 15)
 
 if REACT_ASSETS_DIR.exists():
     app.mount("/assets", StaticFiles(directory=REACT_ASSETS_DIR), name="assets")
@@ -228,15 +233,21 @@ def fetch_transactions(request: TransactionsRequest):
     logger.info("transactions_start payload=%s", payload)
 
     try:
-        response = requests.post(url, data=payload, timeout=30)
+        start_time = time.perf_counter()
+        response = requests.post(url, data=payload, headers=EPOS_HEADERS, timeout=EPOS_TIMEOUT)
+        upstream_duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
         logger.info(
-            "transactions_upstream_response status_code=%s content_length=%s",
+            "transactions_upstream_response status_code=%s content_length=%s duration_ms=%s",
             response.status_code,
             len(response.text),
+            upstream_duration_ms,
         )
         response.raise_for_status()
 
+        parse_start_time = time.perf_counter()
         tables = parse_html_tables(response.text)
+        parse_duration_ms = round((time.perf_counter() - parse_start_time) * 1000, 2)
+        total_duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
         if not tables:
             logger.warning(
                 "transactions_table_missing status_code=%s response_preview=%r",
@@ -245,14 +256,27 @@ def fetch_transactions(request: TransactionsRequest):
             )
             return {
                 "remote_status_code": response.status_code,
+                "upstream_duration_ms": upstream_duration_ms,
+                "parse_duration_ms": parse_duration_ms,
+                "total_duration_ms": total_duration_ms,
                 "tables": [],
                 "content_preview": response.text[:1000],
             }
 
         row_count = sum(len(table["rows"]) for table in tables)
-        logger.info("transactions_success table_count=%s row_count=%s", len(tables), row_count)
+        logger.info(
+            "transactions_success table_count=%s row_count=%s upstream_ms=%s parse_ms=%s total_ms=%s",
+            len(tables),
+            row_count,
+            upstream_duration_ms,
+            parse_duration_ms,
+            total_duration_ms,
+        )
         return {
             "remote_status_code": response.status_code,
+            "upstream_duration_ms": upstream_duration_ms,
+            "parse_duration_ms": parse_duration_ms,
+            "total_duration_ms": total_duration_ms,
             "table_count": len(tables),
             "row_count": row_count,
             "tables": tables,
