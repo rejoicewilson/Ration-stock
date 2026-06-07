@@ -673,13 +673,22 @@ export default function App() {
                   <Divider sx={{ my: 2 }} />
                   <Grid container spacing={1.5}>
                     {[
+                      ['WHEAT', 'wheat'],
                       ['ATTA', 'atta'],
                       ['RR', 'rr'],
                       ['BR', 'br'],
                       ['CMR', 'cmr'],
+                      ['SUGAR', 'sugar'],
+                      ['KOIL', 'koil'],
                     ].map(([label, key]) => (
                       <Grid item xs={6} sm={3} key={key}>
-                        {renderStat(label, formatStatValue(transactionsResult.summary?.commodity_totals?.[key] || 0, 'kg'))}
+                        {renderStat(
+                          label,
+                          formatStatValue(
+                            transactionsResult.summary?.commodity_totals?.[key] || 0,
+                            key === 'koil' ? 'ltr' : 'kg'
+                          )
+                        )}
                       </Grid>
                     ))}
                   </Grid>
