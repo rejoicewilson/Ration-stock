@@ -23,6 +23,14 @@
       "dest": "api/index.py"
     },
     {
+      "src": "/transactions",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/day-wise-trans",
+      "dest": "api/index.py"
+    },
+    {
       "src": "/docs",
       "dest": "api/index.py"
     },

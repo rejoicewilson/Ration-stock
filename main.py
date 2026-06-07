@@ -60,6 +60,55 @@ class StockRequest(BaseModel):
     year: int
 
 
+class TransactionsRequest(BaseModel):
+    from_date: str
+    to_date: str
+    dist_code: int
+    afso: int
+    fps_id: int
+    month: int
+    year: int
+
+
+def parse_html_tables(html: str):
+    soup = BeautifulSoup(html, "html.parser")
+    parsed_tables = []
+
+    for table in soup.find_all("table"):
+        rows = []
+        for tr in table.find_all("tr"):
+            cells = [cell.get_text(" ", strip=True) for cell in tr.find_all(["th", "td"])]
+            if cells:
+                rows.append(cells)
+
+        if not rows:
+            continue
+
+        max_cols = max(len(row) for row in rows)
+        header_index = next((index for index, row in enumerate(rows) if len(row) == max_cols), 0)
+        title_rows = rows[:header_index]
+        headers = rows[header_index]
+        data_rows = [row for row in rows[header_index + 1:] if len(row) > 1]
+        records = []
+        if headers and data_rows:
+            for row in data_rows:
+                if len(row) == len(headers):
+                    records.append(dict(zip(headers, row)))
+                else:
+                    records.append({"cells": row})
+
+        parsed_tables.append(
+            {
+                "title_rows": title_rows,
+                "headers": headers,
+                "rows": data_rows,
+                "records": records,
+            }
+        )
+
+    return parsed_tables
+
+
 @app.get("/")
 def serve_react_app():
     if REACT_INDEX_FILE.exists():
@@ -171,6 +220,59 @@ def get_fps_stock(request: StockRequest):
     except Exception as e:
         logger.exception("fps_stock_parse_error payload=%s", payload)
         raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
+
+
+def fetch_transactions(request: TransactionsRequest):
+    url = "https://epos.kerala.gov.in/day_wise_trans.action"
+    payload = request.model_dump()
+    logger.info("transactions_start payload=%s", payload)
+
+    try:
+        response = requests.post(url, data=payload, timeout=30)
+        logger.info(
+            "transactions_upstream_response status_code=%s content_length=%s",
+            response.status_code,
+            len(response.text),
+        )
+        response.raise_for_status()
+
+        tables = parse_html_tables(response.text)
+        if not tables:
+            logger.warning(
+                "transactions_table_missing status_code=%s response_preview=%r",
+                response.status_code,
+                response.text[:500],
+            )
+            return {
+                "remote_status_code": response.status_code,
+                "tables": [],
+                "content_preview": response.text[:1000],
+            }
+
+        row_count = sum(len(table["rows"]) for table in tables)
+        logger.info("transactions_success table_count=%s row_count=%s", len(tables), row_count)
+        return {
+            "remote_status_code": response.status_code,
+            "table_count": len(tables),
+            "row_count": row_count,
+            "tables": tables,
+        }
+    except requests.RequestException as e:
+        logger.exception("transactions_upstream_error payload=%s", payload)
+        raise HTTPException(status_code=500, detail=f"Upstream ePoS transaction request failed: {e}")
+    except Exception as e:
+        logger.exception("transactions_parse_error payload=%s", payload)
+        raise HTTPException(status_code=500, detail=f"Backend transaction parse error: {e}")
+
+
+@app.post("/transactions")
+def get_transactions(request: TransactionsRequest):
+    return fetch_transactions(request)
+
+
+@app.post("/day-wise-trans")
+def get_day_wise_transactions(request: TransactionsRequest):
+    return fetch_transactions(request)
 
 
 
