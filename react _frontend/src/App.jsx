@@ -44,7 +44,8 @@ export default function App() {
   ];
   const yearOptions = Array.from({ length: 8 }, (_, index) => String(currentYear - 5 + index));
   const [activeView, setActiveView] = useState('stock');
-  const [openSelect, setOpenSelect] = useState(null);
+  const [picker, setPicker] = useState(null);
+  const [pendingPickerValue, setPendingPickerValue] = useState('');
   const [form, setForm] = useState({
     fps_id: '',
     month: '',
@@ -247,8 +248,7 @@ export default function App() {
     return `${monthNames[idx]} ${form.year}`;
   };
 
-  const renderSelectControl = ({ selectKey, name, value, onChange, placeholder, options, badge }) => {
-    const isOpen = openSelect === selectKey;
+  const renderSelectControl = ({ selectKey, name, value, onChange, placeholder, options, badge, pickerType }) => {
     const selectedOption = options.find((option) => {
       const optionValue = Array.isArray(option) ? option[0] : option;
       return optionValue === value;
@@ -264,15 +264,18 @@ export default function App() {
         <Box
           component="button"
           type="button"
-          onClick={() => setOpenSelect(isOpen ? null : selectKey)}
+          onClick={() => {
+            setPendingPickerValue(value || '');
+            setPicker({ selectKey, name, value, onChange, placeholder, options, badge, pickerType });
+          }}
           sx={{
             width: '100%',
             height: 52,
             px: 1,
             borderRadius: 3,
-            border: isOpen ? '1px solid #2f64f8' : '1px solid #dfe5f0',
+            border: picker?.selectKey === selectKey ? '1px solid #2f64f8' : '1px solid #dfe5f0',
             background: '#ffffff',
-            boxShadow: isOpen
+            boxShadow: picker?.selectKey === selectKey
               ? '0 0 0 4px rgba(47, 100, 248, 0.12), 0 12px 24px rgba(31, 63, 130, 0.10)'
               : '0 8px 18px rgba(31, 63, 130, 0.06)',
             display: 'flex',
@@ -321,89 +324,117 @@ export default function App() {
               mr: 0.5,
               borderRight: '2px solid #7b8395',
               borderBottom: '2px solid #7b8395',
-              transform: isOpen ? 'rotate(225deg)' : 'translateY(-25%) rotate(45deg)',
+              transform: 'translateY(-25%) rotate(45deg)',
               transition: 'transform 0.16s ease',
               flex: '0 0 auto',
             }}
           />
         </Box>
-        {isOpen && (
-          <Paper
-            elevation={0}
-            sx={{
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: 'calc(100% + 8px)',
-              zIndex: 20,
-              maxHeight: 286,
-              overflowY: 'auto',
-              borderRadius: 3,
-              background: '#ffffff',
-              border: '1px solid #e2e7f0',
-              boxShadow: '0 18px 38px rgba(24, 40, 72, 0.18)',
-            }}
-          >
+      </Box>
+    );
+  };
+
+  const renderPickerModal = () => {
+    if (!picker) return null;
+
+    const columnCount = picker.pickerType === 'month' ? 4 : 3;
+
+    return (
+      <Box
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          px: 2,
+          background: 'rgba(14, 23, 41, 0.34)',
+        }}
+      >
+        <Paper
+          elevation={0}
+          sx={{
+            width: 'min(100%, 420px)',
+            borderRadius: 3,
+            overflow: 'hidden',
+            background: '#ffffff',
+            boxShadow: '0 24px 60px rgba(19, 34, 65, 0.28)',
+          }}
+        >
+          <Box sx={{ height: 8, background: '#2798e8' }} />
+          <Box sx={{ px: 2.5, pt: 2.2, pb: 1 }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 800, color: '#9aa2b1', mb: 1.5 }}>
+              {picker.placeholder}
+            </Typography>
             <Box
               sx={{
-                px: 1.2,
+                display: 'grid',
+                gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
+                rowGap: picker.pickerType === 'month' ? 1.8 : 1,
+                columnGap: 0.8,
                 py: 1,
-                fontSize: 12,
-                fontWeight: 800,
-                color: '#98a0ae',
-                borderBottom: '1px solid #edf1f7',
               }}
             >
-              {placeholder}
-            </Box>
-            {options.map((option) => {
-              const optionValue = Array.isArray(option) ? option[0] : option;
-              const optionLabel = Array.isArray(option) ? option[1] : option;
-              const selected = optionValue === value;
+              {picker.options.map((option) => {
+                const optionValue = Array.isArray(option) ? option[0] : option;
+                const optionLabel = Array.isArray(option) ? option[1] : option;
+                const displayLabel = picker.pickerType === 'month' ? optionLabel.slice(0, 3) : optionLabel;
+                const selected = optionValue === pendingPickerValue;
 
-              return (
-                <Box
-                  component="button"
-                  type="button"
-                  key={optionValue}
-                  onClick={() => {
-                    onChange({ target: { name, value: optionValue } });
-                    setOpenSelect(null);
-                  }}
-                  sx={{
-                    width: '100%',
-                    minHeight: 46,
-                    px: 1.2,
-                    border: 0,
-                    borderBottom: '1px solid #edf1f7',
-                    background: selected ? '#f4f7ff' : '#ffffff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    color: '#34405a',
-                    fontSize: 14,
-                    fontWeight: selected ? 900 : 700,
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    '&:last-of-type': { borderBottom: 0 },
-                  }}
-                >
-                  <span>{optionLabel}</span>
+                return (
                   <Box
+                    component="button"
+                    type="button"
+                    key={optionValue}
+                    onClick={() => setPendingPickerValue(optionValue)}
                     sx={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      border: selected ? '5px solid #2f64f8' : '2px solid #a7adba',
-                      background: '#ffffff',
-                      flex: '0 0 auto',
+                      width: '100%',
+                      minHeight: picker.pickerType === 'month' ? 72 : 54,
+                      border: 0,
+                      borderRadius: '999px',
+                      background: selected ? '#2d9cef' : 'transparent',
+                      color: selected ? '#ffffff' : '#20242c',
+                      fontSize: picker.pickerType === 'month' ? 23 : 18,
+                      fontWeight: selected ? 800 : 700,
+                      cursor: 'pointer',
                     }}
-                  />
-                </Box>
-              );
-            })}
-          </Paper>
-        )}
+                  >
+                    {displayLabel}
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: 2,
+              px: 2.5,
+              py: 1.8,
+            }}
+          >
+            <Button
+              type="button"
+              onClick={() => setPicker(null)}
+              sx={{ color: '#2798e8', fontWeight: 800, fontSize: 16, textTransform: 'none' }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!pendingPickerValue) return;
+                picker.onChange({ target: { name: picker.name, value: pendingPickerValue } });
+                setPicker(null);
+              }}
+              sx={{ color: '#2798e8', fontWeight: 800, fontSize: 16, textTransform: 'none' }}
+            >
+              OK
+            </Button>
+          </Box>
+        </Paper>
       </Box>
     );
   };
@@ -417,6 +448,7 @@ export default function App() {
         pb: 12,
       }}
     >
+      {renderPickerModal()}
       <Container maxWidth="sm" sx={{ pt: 3, pb: 10 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
           <Box>
@@ -512,6 +544,7 @@ export default function App() {
                   placeholder: 'Select month',
                   options: monthOptions,
                   badge: 'MM',
+                  pickerType: 'month',
                 })}
               </Grid>
               <Grid item xs={6}>
@@ -526,6 +559,7 @@ export default function App() {
                   placeholder: 'Select year',
                   options: yearOptions,
                   badge: 'YR',
+                  pickerType: 'year',
                 })}
                 <Box
                   sx={{
@@ -785,6 +819,7 @@ export default function App() {
                           onChange: handleTransactionChange,
                           options: name === 'month' ? monthOptions : yearOptions,
                           badge: name === 'month' ? 'MM' : 'YR',
+                          pickerType: name === 'month' ? 'month' : 'year',
                         })
                       ) : (
                         <Box
