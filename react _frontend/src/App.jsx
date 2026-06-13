@@ -335,31 +335,34 @@ export default function App() {
           alignItems: 'center',
           justifyContent: 'center',
           px: 2,
-          background: 'rgba(14, 23, 41, 0.34)',
+          background: 'rgba(15, 23, 42, 0.42)',
+          backdropFilter: 'blur(4px)',
         }}
       >
         <Paper
           elevation={0}
           sx={{
-            width: 'min(100%, 420px)',
-            borderRadius: 3,
+            width: 'min(100%, 390px)',
+            borderRadius: 5,
             overflow: 'hidden',
-            background: '#ffffff',
-            boxShadow: '0 24px 60px rgba(19, 34, 65, 0.28)',
+            background: 'linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)',
+            border: '1px solid rgba(226, 232, 240, 0.95)',
+            boxShadow: '0 26px 70px rgba(15, 23, 42, 0.28)',
           }}
         >
-          <Box sx={{ height: 8, background: '#2798e8' }} />
-          <Box sx={{ px: 2.5, pt: 2.2, pb: 1 }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 800, color: '#9aa2b1', mb: 1.5 }}>
+          <Box sx={{ px: 2.4, pt: 2.4, pb: 1.2 }}>
+            <Typography sx={{ fontSize: 18, fontWeight: 900, color: '#17233c', mb: 0.4 }}>
               {picker.placeholder}
+            </Typography>
+            <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#8a94a7', mb: 2 }}>
+              Tap one option, then confirm
             </Typography>
             <Box
               sx={{
                 display: 'grid',
                 gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
-                rowGap: picker.pickerType === 'month' ? 1.8 : 1,
-                columnGap: 0.8,
-                py: 1,
+                gap: 1.1,
+                py: 0.5,
               }}
             >
               {picker.options.map((option) => {
@@ -376,14 +379,21 @@ export default function App() {
                     onClick={() => setPendingPickerValue(optionValue)}
                     sx={{
                       width: '100%',
-                      minHeight: picker.pickerType === 'month' ? 72 : 54,
+                      minHeight: picker.pickerType === 'month' ? 58 : 52,
                       border: 0,
-                      borderRadius: '999px',
-                      background: selected ? '#2d9cef' : 'transparent',
+                      borderRadius: 4,
+                      background: selected ? '#2563eb' : '#ffffff',
                       color: selected ? '#ffffff' : '#20242c',
-                      fontSize: picker.pickerType === 'month' ? 23 : 18,
-                      fontWeight: selected ? 800 : 700,
+                      boxShadow: selected
+                        ? '0 12px 24px rgba(37, 99, 235, 0.28)'
+                        : 'inset 0 0 0 1px #edf1f7',
+                      fontSize: picker.pickerType === 'month' ? 18 : 16,
+                      fontWeight: selected ? 900 : 800,
                       cursor: 'pointer',
+                      transition: 'background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease',
+                      '&:active': {
+                        transform: 'scale(0.97)',
+                      },
                     }}
                   >
                     {displayLabel}
@@ -396,15 +406,23 @@ export default function App() {
             sx={{
               display: 'flex',
               justifyContent: 'flex-end',
-              gap: 2,
-              px: 2.5,
-              py: 1.8,
+              gap: 1,
+              px: 2.4,
+              pt: 1,
+              pb: 2.2,
             }}
           >
             <Button
               type="button"
               onClick={() => setPicker(null)}
-              sx={{ color: '#2798e8', fontWeight: 800, fontSize: 16, textTransform: 'none' }}
+              sx={{
+                color: '#64748b',
+                fontWeight: 900,
+                fontSize: 14,
+                textTransform: 'none',
+                borderRadius: 3,
+                px: 2,
+              }}
             >
               Cancel
             </Button>
@@ -415,7 +433,17 @@ export default function App() {
                 picker.onChange({ target: { name: picker.name, value: pendingPickerValue } });
                 setPicker(null);
               }}
-              sx={{ color: '#2798e8', fontWeight: 800, fontSize: 16, textTransform: 'none' }}
+              sx={{
+                color: '#ffffff',
+                bgcolor: '#2563eb',
+                fontWeight: 900,
+                fontSize: 14,
+                textTransform: 'none',
+                borderRadius: 3,
+                px: 2.4,
+                boxShadow: '0 10px 22px rgba(37, 99, 235, 0.26)',
+                '&:hover': { bgcolor: '#1d4ed8' },
+              }}
             >
               OK
             </Button>
