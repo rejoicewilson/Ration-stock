@@ -242,6 +242,92 @@ export default function App() {
     return `${monthNames[idx]} ${form.year}`;
   };
 
+  const renderSelectControl = ({ name, value, onChange, placeholder, options, badge }) => (
+    <Box sx={{ position: 'relative', mt: 0.5 }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          left: 9,
+          top: 9,
+          zIndex: 1,
+          width: 34,
+          height: 34,
+          borderRadius: 2,
+          display: 'grid',
+          placeItems: 'center',
+          background: value ? '#eaf0ff' : '#f0f3f8',
+          color: value ? '#245df2' : '#7b8395',
+          fontSize: 11,
+          fontWeight: 900,
+          letterSpacing: 0.2,
+          pointerEvents: 'none',
+        }}
+      >
+        {badge}
+      </Box>
+      <Box
+        component="select"
+        name={name}
+        value={value}
+        onChange={onChange}
+        required
+        sx={{
+          width: '100%',
+          height: 52,
+          pl: '54px',
+          pr: '42px',
+          borderRadius: 3,
+          border: '1px solid #dfe5f0',
+          background: 'linear-gradient(180deg, #ffffff 0%, #f8faff 100%)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.85), 0 8px 18px rgba(31, 63, 130, 0.05)',
+          outline: 'none',
+          color: value ? '#17233c' : '#7b8395',
+          fontSize: 15,
+          fontWeight: 800,
+          cursor: 'pointer',
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          MozAppearance: 'none',
+          transition: 'border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease',
+          '&:focus': {
+            borderColor: '#2f64f8',
+            background: '#ffffff',
+            boxShadow: '0 0 0 4px rgba(47, 100, 248, 0.12)',
+          },
+        }}
+      >
+        {placeholder && (
+          <option value="" disabled>
+            {placeholder}
+          </option>
+        )}
+        {options.map((option) => {
+          const optionValue = Array.isArray(option) ? option[0] : option;
+          const optionLabel = Array.isArray(option) ? option[1] : option;
+
+          return (
+            <option key={optionValue} value={optionValue}>
+              {optionLabel}
+            </option>
+          );
+        })}
+      </Box>
+      <Box
+        sx={{
+          position: 'absolute',
+          right: 15,
+          top: '50%',
+          width: 9,
+          height: 9,
+          borderRight: '2px solid #7b8395',
+          borderBottom: '2px solid #7b8395',
+          transform: 'translateY(-65%) rotate(45deg)',
+          pointerEvents: 'none',
+        }}
+      />
+    </Box>
+  );
+
   return (
     <Box
       sx={{
@@ -338,63 +424,27 @@ export default function App() {
                 <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
                   MONTH *
                 </Typography>
-                <Box
-                  component="select"
-                  name="month"
-                  value={form.month}
-                  onChange={handleChange}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    borderRadius: 12,
-                    border: '1px solid #dfe5f0',
-                    background: '#fbfcff',
-                    outline: 'none',
-                    fontSize: 16,
-                    fontWeight: 600,
-                  }}
-                >
-                  <option value="" disabled>
-                    Select month
-                  </option>
-                  {monthOptions.map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </Box>
+                {renderSelectControl({
+                  name: 'month',
+                  value: form.month,
+                  onChange: handleChange,
+                  placeholder: 'Select month',
+                  options: monthOptions,
+                  badge: 'MM',
+                })}
               </Grid>
               <Grid item xs={6}>
                 <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
                   YEAR *
                 </Typography>
-                <Box
-                  component="select"
-                  name="year"
-                  value={form.year}
-                  onChange={handleChange}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '14px 14px 14px 44px',
-                    borderRadius: 12,
-                    border: '1px solid #dfe5f0',
-                    background: '#fbfcff',
-                    outline: 'none',
-                    fontSize: 16,
-                    fontWeight: 600,
-                  }}
-                >
-                  <option value="" disabled>
-                    Select year
-                  </option>
-                  {yearOptions.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </Box>
+                {renderSelectControl({
+                  name: 'year',
+                  value: form.year,
+                  onChange: handleChange,
+                  placeholder: 'Select year',
+                  options: yearOptions,
+                  badge: 'YR',
+                })}
                 <Box
                   sx={{
                     position: 'relative',
@@ -402,7 +452,7 @@ export default function App() {
                     left: '12px',
                     width: 24,
                     height: 24,
-                    display: 'grid',
+                    display: 'none',
                     placeItems: 'center',
                     color: '#6d7584',
                     pointerEvents: 'none',
@@ -646,34 +696,13 @@ export default function App() {
                         {label} *
                       </Typography>
                       {name === 'month' || name === 'year' ? (
-                        <Box
-                          component="select"
-                          name={name}
-                          value={transactionForm[name]}
-                          onChange={handleTransactionChange}
-                          required
-                          style={{
-                            width: '100%',
-                            padding: '14px',
-                            borderRadius: 12,
-                            border: '1px solid #dfe5f0',
-                            background: '#fbfcff',
-                            outline: 'none',
-                            fontSize: 16,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {(name === 'month' ? monthOptions : yearOptions).map((option) => {
-                            const value = Array.isArray(option) ? option[0] : option;
-                            const optionLabel = Array.isArray(option) ? option[1] : option;
-
-                            return (
-                              <option key={value} value={value}>
-                                {optionLabel}
-                              </option>
-                            );
-                          })}
-                        </Box>
+                        renderSelectControl({
+                          name,
+                          value: transactionForm[name],
+                          onChange: handleTransactionChange,
+                          options: name === 'month' ? monthOptions : yearOptions,
+                          badge: name === 'month' ? 'MM' : 'YR',
+                        })
                       ) : (
                         <Box
                           component="input"
