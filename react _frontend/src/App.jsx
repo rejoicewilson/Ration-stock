@@ -44,6 +44,7 @@ export default function App() {
   ];
   const yearOptions = Array.from({ length: 8 }, (_, index) => String(currentYear - 5 + index));
   const [activeView, setActiveView] = useState('stock');
+  const [openSelect, setOpenSelect] = useState(null);
   const [form, setForm] = useState({
     fps_id: '',
     month: '',
@@ -89,6 +90,10 @@ export default function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.month || !form.year) {
+      setError('Please select month and year.');
+      return;
+    }
     setLoading(true);
     setError('');
     setResult(null);
@@ -242,91 +247,166 @@ export default function App() {
     return `${monthNames[idx]} ${form.year}`;
   };
 
-  const renderSelectControl = ({ name, value, onChange, placeholder, options, badge }) => (
-    <Box sx={{ position: 'relative', mt: 0.5 }}>
-      <Box
-        sx={{
-          position: 'absolute',
-          left: 9,
-          top: 9,
-          zIndex: 1,
-          width: 34,
-          height: 34,
-          borderRadius: 2,
-          display: 'grid',
-          placeItems: 'center',
-          background: value ? '#eaf0ff' : '#f0f3f8',
-          color: value ? '#245df2' : '#7b8395',
-          fontSize: 11,
-          fontWeight: 900,
-          letterSpacing: 0.2,
-          pointerEvents: 'none',
-        }}
-      >
-        {badge}
-      </Box>
-      <Box
-        component="select"
-        name={name}
-        value={value}
-        onChange={onChange}
-        required
-        sx={{
-          width: '100%',
-          height: 52,
-          pl: '54px',
-          pr: '42px',
-          borderRadius: 3,
-          border: '1px solid #dfe5f0',
-          background: 'linear-gradient(180deg, #ffffff 0%, #f8faff 100%)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.85), 0 8px 18px rgba(31, 63, 130, 0.05)',
-          outline: 'none',
-          color: value ? '#17233c' : '#7b8395',
-          fontSize: 15,
-          fontWeight: 800,
-          cursor: 'pointer',
-          appearance: 'none',
-          WebkitAppearance: 'none',
-          MozAppearance: 'none',
-          transition: 'border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease',
-          '&:focus': {
-            borderColor: '#2f64f8',
-            background: '#ffffff',
-            boxShadow: '0 0 0 4px rgba(47, 100, 248, 0.12)',
-          },
-        }}
-      >
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
-        {options.map((option) => {
-          const optionValue = Array.isArray(option) ? option[0] : option;
-          const optionLabel = Array.isArray(option) ? option[1] : option;
+  const renderSelectControl = ({ selectKey, name, value, onChange, placeholder, options, badge }) => {
+    const isOpen = openSelect === selectKey;
+    const selectedOption = options.find((option) => {
+      const optionValue = Array.isArray(option) ? option[0] : option;
+      return optionValue === value;
+    });
+    const selectedLabel = selectedOption
+      ? Array.isArray(selectedOption)
+        ? selectedOption[1]
+        : selectedOption
+      : placeholder;
 
-          return (
-            <option key={optionValue} value={optionValue}>
-              {optionLabel}
-            </option>
-          );
-        })}
+    return (
+      <Box sx={{ position: 'relative', mt: 0.5 }}>
+        <Box
+          component="button"
+          type="button"
+          onClick={() => setOpenSelect(isOpen ? null : selectKey)}
+          sx={{
+            width: '100%',
+            height: 52,
+            px: 1,
+            borderRadius: 3,
+            border: isOpen ? '1px solid #2f64f8' : '1px solid #dfe5f0',
+            background: '#ffffff',
+            boxShadow: isOpen
+              ? '0 0 0 4px rgba(47, 100, 248, 0.12), 0 12px 24px rgba(31, 63, 130, 0.10)'
+              : '0 8px 18px rgba(31, 63, 130, 0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            color: value ? '#17233c' : '#8b93a4',
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <Box
+            sx={{
+              width: 34,
+              height: 34,
+              borderRadius: 2,
+              display: 'grid',
+              placeItems: 'center',
+              background: value ? '#eaf0ff' : '#f2f5fa',
+              color: value ? '#245df2' : '#8b93a4',
+              fontSize: 10,
+              fontWeight: 900,
+              letterSpacing: 0.2,
+              flex: '0 0 auto',
+            }}
+          >
+            {badge}
+          </Box>
+          <Typography
+            component="span"
+            sx={{
+              minWidth: 0,
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              fontSize: 14,
+              fontWeight: 800,
+            }}
+          >
+            {selectedLabel}
+          </Typography>
+          <Box
+            sx={{
+              width: 9,
+              height: 9,
+              mr: 0.5,
+              borderRight: '2px solid #7b8395',
+              borderBottom: '2px solid #7b8395',
+              transform: isOpen ? 'rotate(225deg)' : 'translateY(-25%) rotate(45deg)',
+              transition: 'transform 0.16s ease',
+              flex: '0 0 auto',
+            }}
+          />
+        </Box>
+        {isOpen && (
+          <Paper
+            elevation={0}
+            sx={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: 'calc(100% + 8px)',
+              zIndex: 20,
+              maxHeight: 286,
+              overflowY: 'auto',
+              borderRadius: 3,
+              background: '#ffffff',
+              border: '1px solid #e2e7f0',
+              boxShadow: '0 18px 38px rgba(24, 40, 72, 0.18)',
+            }}
+          >
+            <Box
+              sx={{
+                px: 1.2,
+                py: 1,
+                fontSize: 12,
+                fontWeight: 800,
+                color: '#98a0ae',
+                borderBottom: '1px solid #edf1f7',
+              }}
+            >
+              {placeholder}
+            </Box>
+            {options.map((option) => {
+              const optionValue = Array.isArray(option) ? option[0] : option;
+              const optionLabel = Array.isArray(option) ? option[1] : option;
+              const selected = optionValue === value;
+
+              return (
+                <Box
+                  component="button"
+                  type="button"
+                  key={optionValue}
+                  onClick={() => {
+                    onChange({ target: { name, value: optionValue } });
+                    setOpenSelect(null);
+                  }}
+                  sx={{
+                    width: '100%',
+                    minHeight: 46,
+                    px: 1.2,
+                    border: 0,
+                    borderBottom: '1px solid #edf1f7',
+                    background: selected ? '#f4f7ff' : '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    color: '#34405a',
+                    fontSize: 14,
+                    fontWeight: selected ? 900 : 700,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    '&:last-of-type': { borderBottom: 0 },
+                  }}
+                >
+                  <span>{optionLabel}</span>
+                  <Box
+                    sx={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      border: selected ? '5px solid #2f64f8' : '2px solid #a7adba',
+                      background: '#ffffff',
+                      flex: '0 0 auto',
+                    }}
+                  />
+                </Box>
+              );
+            })}
+          </Paper>
+        )}
       </Box>
-      <Box
-        sx={{
-          position: 'absolute',
-          right: 15,
-          top: '50%',
-          width: 9,
-          height: 9,
-          borderRight: '2px solid #7b8395',
-          borderBottom: '2px solid #7b8395',
-          transform: 'translateY(-65%) rotate(45deg)',
-          pointerEvents: 'none',
-        }}
-      />
-    </Box>
-  );
+    );
+  };
 
   return (
     <Box
@@ -425,6 +505,7 @@ export default function App() {
                   MONTH *
                 </Typography>
                 {renderSelectControl({
+                  selectKey: 'stock-month',
                   name: 'month',
                   value: form.month,
                   onChange: handleChange,
@@ -438,6 +519,7 @@ export default function App() {
                   YEAR *
                 </Typography>
                 {renderSelectControl({
+                  selectKey: 'stock-year',
                   name: 'year',
                   value: form.year,
                   onChange: handleChange,
@@ -697,6 +779,7 @@ export default function App() {
                       </Typography>
                       {name === 'month' || name === 'year' ? (
                         renderSelectControl({
+                          selectKey: `transactions-${name}`,
                           name,
                           value: transactionForm[name],
                           onChange: handleTransactionChange,
