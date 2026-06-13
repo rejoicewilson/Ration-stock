@@ -248,14 +248,16 @@ export default function App() {
     return `${monthNames[idx]} ${form.year}`;
   };
 
-  const renderSelectControl = ({ selectKey, name, value, onChange, placeholder, options, badge, pickerType }) => {
+  const renderSelectControl = ({ selectKey, name, value, onChange, placeholder, options, pickerType }) => {
     const selectedOption = options.find((option) => {
       const optionValue = Array.isArray(option) ? option[0] : option;
       return optionValue === value;
     });
     const selectedLabel = selectedOption
       ? Array.isArray(selectedOption)
-        ? selectedOption[1]
+        ? pickerType === 'month'
+          ? selectedOption[1].slice(0, 3)
+          : selectedOption[1]
         : selectedOption
       : placeholder;
 
@@ -266,12 +268,12 @@ export default function App() {
           type="button"
           onClick={() => {
             setPendingPickerValue(value || '');
-            setPicker({ selectKey, name, value, onChange, placeholder, options, badge, pickerType });
+            setPicker({ selectKey, name, value, onChange, placeholder, options, pickerType });
           }}
           sx={{
             width: '100%',
             height: 52,
-            px: 1,
+            px: 1.4,
             borderRadius: 3,
             border: picker?.selectKey === selectKey ? '1px solid #2f64f8' : '1px solid #dfe5f0',
             background: '#ffffff',
@@ -280,29 +282,12 @@ export default function App() {
               : '0 8px 18px rgba(31, 63, 130, 0.06)',
             display: 'flex',
             alignItems: 'center',
-            gap: 1,
+            gap: 0.8,
             color: value ? '#17233c' : '#8b93a4',
             cursor: 'pointer',
             textAlign: 'left',
           }}
         >
-          <Box
-            sx={{
-              width: 34,
-              height: 34,
-              borderRadius: 2,
-              display: 'grid',
-              placeItems: 'center',
-              background: value ? '#eaf0ff' : '#f2f5fa',
-              color: value ? '#245df2' : '#8b93a4',
-              fontSize: 10,
-              fontWeight: 900,
-              letterSpacing: 0.2,
-              flex: '0 0 auto',
-            }}
-          >
-            {badge}
-          </Box>
           <Typography
             component="span"
             sx={{
@@ -311,8 +296,9 @@ export default function App() {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              fontSize: 14,
+              fontSize: { xs: 13, sm: 14 },
               fontWeight: 800,
+              lineHeight: 1.2,
             }}
           >
             {selectedLabel}
@@ -543,7 +529,6 @@ export default function App() {
                   onChange: handleChange,
                   placeholder: 'Select month',
                   options: monthOptions,
-                  badge: 'MM',
                   pickerType: 'month',
                 })}
               </Grid>
@@ -558,7 +543,6 @@ export default function App() {
                   onChange: handleChange,
                   placeholder: 'Select year',
                   options: yearOptions,
-                  badge: 'YR',
                   pickerType: 'year',
                 })}
                 <Box
@@ -818,7 +802,6 @@ export default function App() {
                           value: transactionForm[name],
                           onChange: handleTransactionChange,
                           options: name === 'month' ? monthOptions : yearOptions,
-                          badge: name === 'month' ? 'MM' : 'YR',
                           pickerType: name === 'month' ? 'month' : 'year',
                         })
                       ) : (
