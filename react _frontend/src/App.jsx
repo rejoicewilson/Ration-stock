@@ -393,22 +393,6 @@ export default function App() {
               </Typography>
               <Box
                 sx={{
-                  '@keyframes balanceBeam': {
-                    '0%, 100%': { transform: 'rotate(-2.5deg)' },
-                    '50%': { transform: 'rotate(2.5deg)' },
-                  },
-                  '@keyframes leftPan': {
-                    '0%, 100%': { transform: 'translateY(2px)' },
-                    '50%': { transform: 'translateY(-3px)' },
-                  },
-                  '@keyframes rightPan': {
-                    '0%, 100%': { transform: 'translateY(-3px)' },
-                    '50%': { transform: 'translateY(2px)' },
-                  },
-                  '@keyframes balanceShadow': {
-                    '0%, 100%': { transform: 'scaleX(0.9)', opacity: 0.16 },
-                    '50%': { transform: 'scaleX(1.08)', opacity: 0.24 },
-                  },
                   display: 'flex',
                   alignItems: 'center',
                   gap: 1.5,
@@ -430,7 +414,6 @@ export default function App() {
                       borderRadius: '50%',
                       background: '#303536',
                       opacity: 0.18,
-                      animation: 'balanceShadow 2.4s ease-in-out infinite',
                     }}
                   />
                   <Box
@@ -511,7 +494,6 @@ export default function App() {
                       borderTop: '7px solid #303536',
                       borderRadius: '50% 50% 0 0',
                       transformOrigin: '50% 50%',
-                      animation: 'balanceBeam 2.4s ease-in-out infinite',
                       zIndex: 2,
                     }}
                   >
@@ -525,7 +507,6 @@ export default function App() {
                       top: 27,
                       width: 34,
                       height: 36,
-                      animation: 'leftPan 2.4s ease-in-out infinite',
                       transformOrigin: '50% 0',
                     }}
                   >
@@ -574,7 +555,6 @@ export default function App() {
                       top: 27,
                       width: 34,
                       height: 36,
-                      animation: 'rightPan 2.4s ease-in-out infinite',
                       transformOrigin: '50% 0',
                     }}
                   >
