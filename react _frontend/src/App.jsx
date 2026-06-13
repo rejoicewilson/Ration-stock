@@ -391,6 +391,92 @@ export default function App() {
               <Typography sx={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.4, color: '#6d7584', mb: 1 }}>
                 BAG WEIGHT (KG)
               </Typography>
+              <Box
+                sx={{
+                  '@keyframes scaleNeedle': {
+                    '0%, 100%': { transform: 'rotate(-10deg)' },
+                    '50%': { transform: 'rotate(14deg)' },
+                  },
+                  '@keyframes bagBounce': {
+                    '0%, 100%': { transform: 'translateY(0)' },
+                    '50%': { transform: 'translateY(-5px)' },
+                  },
+                  '@keyframes dialPulse': {
+                    '0%, 100%': { boxShadow: '0 0 0 rgba(47, 100, 248, 0)' },
+                    '50%': { boxShadow: '0 0 0 5px rgba(47, 100, 248, 0.10)' },
+                  },
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  mb: 1.5,
+                  p: 1.3,
+                  borderRadius: 2,
+                  background: '#f7f9ff',
+                  border: '1px solid #e5ebf8',
+                }}
+              >
+                <Box sx={{ position: 'relative', width: 58, height: 48, flex: '0 0 auto' }}>
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: 13,
+                      top: 2,
+                      width: 32,
+                      height: 22,
+                      borderRadius: '12px 12px 6px 6px',
+                      background: '#f2b84b',
+                      border: '2px solid #d99a28',
+                      animation: 'bagBounce 1.8s ease-in-out infinite',
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: 6,
+                      bottom: 3,
+                      width: 46,
+                      height: 30,
+                      borderRadius: '8px 8px 10px 10px',
+                      background: '#ffffff',
+                      border: '2px solid #dbe4f4',
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: 18,
+                      bottom: 12,
+                      width: 22,
+                      height: 22,
+                      borderRadius: '50%',
+                      background: '#eef4ff',
+                      border: '2px solid #2f64f8',
+                      animation: 'dialPulse 1.8s ease-in-out infinite',
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: 28,
+                      bottom: 23,
+                      width: 2,
+                      height: 10,
+                      borderRadius: 1,
+                      background: '#2f64f8',
+                      transformOrigin: '50% 100%',
+                      animation: 'scaleNeedle 1.8s ease-in-out infinite',
+                    }}
+                  />
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: 13, fontWeight: 800, color: '#31415f' }}>
+                    Set bag size for accurate counts
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: '#7b8395', fontWeight: 700 }}>
+                    Rice applies to raw, boiled, and matta CMR
+                  </Typography>
+                </Box>
+              </Box>
               <Grid container spacing={1.5}>
                 {[
                   ['rice_bag_weight', 'RICE'],
