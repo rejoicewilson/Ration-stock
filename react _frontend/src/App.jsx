@@ -394,12 +394,12 @@ export default function App() {
               <Box
                 sx={{
                   '@keyframes scaleNeedle': {
-                    '0%, 100%': { transform: 'rotate(-10deg)' },
-                    '50%': { transform: 'rotate(14deg)' },
+                    '0%, 100%': { transform: 'rotate(-14deg)' },
+                    '50%': { transform: 'rotate(16deg)' },
                   },
                   '@keyframes bagBounce': {
                     '0%, 100%': { transform: 'translateY(0)' },
-                    '50%': { transform: 'translateY(-5px)' },
+                    '50%': { transform: 'translateY(-4px)' },
                   },
                   '@keyframes dialPulse': {
                     '0%, 100%': { boxShadow: '0 0 0 rgba(47, 100, 248, 0)' },
@@ -411,60 +411,101 @@ export default function App() {
                   mb: 1.5,
                   p: 1.3,
                   borderRadius: 2,
-                  background: '#f7f9ff',
-                  border: '1px solid #e5ebf8',
+                  background: '#fff7ec',
+                  border: '1px solid #f2d3ad',
                 }}
               >
-                <Box sx={{ position: 'relative', width: 58, height: 48, flex: '0 0 auto' }}>
+                <Box sx={{ position: 'relative', width: 76, height: 76, flex: '0 0 auto' }}>
                   <Box
                     sx={{
                       position: 'absolute',
-                      left: 13,
-                      top: 2,
-                      width: 32,
-                      height: 22,
-                      borderRadius: '12px 12px 6px 6px',
-                      background: '#f2b84b',
-                      border: '2px solid #d99a28',
+                      left: 5,
+                      top: 1,
+                      width: 66,
+                      height: 26,
+                      borderRadius: '0 0 34px 34px',
+                      background: '#f6c866',
+                      border: '3px solid #2b1938',
+                      borderTop: '3px solid #2b1938',
                       animation: 'bagBounce 1.8s ease-in-out infinite',
                     }}
                   />
                   <Box
                     sx={{
                       position: 'absolute',
-                      left: 6,
-                      bottom: 3,
-                      width: 46,
-                      height: 30,
-                      borderRadius: '8px 8px 10px 10px',
-                      background: '#ffffff',
-                      border: '2px solid #dbe4f4',
+                      left: 31,
+                      top: 26,
+                      width: 14,
+                      height: 13,
+                      background: '#f28a48',
+                      borderLeft: '3px solid #2b1938',
+                      borderRight: '3px solid #2b1938',
                     }}
                   />
                   <Box
                     sx={{
                       position: 'absolute',
-                      left: 18,
-                      bottom: 12,
-                      width: 22,
-                      height: 22,
+                      left: 8,
+                      bottom: 2,
+                      width: 60,
+                      height: 42,
+                      borderRadius: '8px 8px 6px 6px',
+                      background: '#ef5353',
+                      border: '3px solid #2b1938',
+                      clipPath: 'polygon(16% 0, 84% 0, 100% 100%, 0 100%)',
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: 22,
+                      bottom: 10,
+                      width: 32,
+                      height: 32,
                       borderRadius: '50%',
-                      background: '#eef4ff',
-                      border: '2px solid #2f64f8',
+                      background: '#ffe1b8',
+                      border: '3px solid #2b1938',
                       animation: 'dialPulse 1.8s ease-in-out infinite',
                     }}
                   />
+                  {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+                    <Box
+                      key={angle}
+                      sx={{
+                        position: 'absolute',
+                        left: 37,
+                        bottom: 26,
+                        width: 2,
+                        height: 7,
+                        background: '#2b1938',
+                        transformOrigin: '50% 16px',
+                        transform: `rotate(${angle}deg) translateY(-13px)`,
+                      }}
+                    />
+                  ))}
                   <Box
                     sx={{
                       position: 'absolute',
-                      left: 28,
-                      bottom: 23,
-                      width: 2,
-                      height: 10,
+                      left: 36,
+                      bottom: 27,
+                      width: 3,
+                      height: 15,
                       borderRadius: 1,
-                      background: '#2f64f8',
+                      background: '#2b1938',
                       transformOrigin: '50% 100%',
                       animation: 'scaleNeedle 1.8s ease-in-out infinite',
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: 32,
+                      bottom: 23,
+                      width: 11,
+                      height: 11,
+                      borderRadius: '50%',
+                      background: '#ffe1b8',
+                      border: '3px solid #2b1938',
                     }}
                   />
                 </Box>
