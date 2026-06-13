@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import requests
 from bs4 import BeautifulSoup
 
@@ -67,6 +67,10 @@ class StockRequest(BaseModel):
     fps_id: int
     month: int
     year: int
+    rice_bag_weight: float = Field(default=50, gt=0)
+    wheat_bag_weight: float = Field(default=50, gt=0)
+    sugar_bag_weight: float = Field(default=50, gt=0)
+    atta_bag_weight: float = Field(default=50, gt=0)
 
 
 class TransactionsRequest(BaseModel):
@@ -263,7 +267,11 @@ def get_fps_stock(request: StockRequest):
     # However, I'll try sending it as data (form-urlencoded) first as it is safer for older frameworks.
     # If the user prompt implied JSON payload for *my* endpoint, I translate it.
     
-    payload = request.model_dump()
+    payload = {
+        "fps_id": request.fps_id,
+        "month": request.month,
+        "year": request.year,
+    }
     logger.info("fps_stock_start payload=%s", payload)
     
     try:
@@ -418,7 +426,11 @@ def get_transactions(request: TransactionsRequest):
 @app.post("/count")
 def get_raw_rice_cb_sum(request: StockRequest):
     url = "https://epos.kerala.gov.in/fps_stock.action"
-    payload = request.model_dump()
+    payload = {
+        "fps_id": request.fps_id,
+        "month": request.month,
+        "year": request.year,
+    }
     logger.info("count_start payload=%s", payload)
     try:
         response = requests.post(url, data=payload, timeout=30)
@@ -492,25 +504,35 @@ def get_raw_rice_cb_sum(request: StockRequest):
                         koil_cb_sum += float(cols[10].text.strip())
                     except ValueError:
                         pass
+        rice_bag_weight = request.rice_bag_weight
+        wheat_bag_weight = request.wheat_bag_weight
+        sugar_bag_weight = request.sugar_bag_weight
+        atta_bag_weight = request.atta_bag_weight
         # RAW RICE bags
-        raw_bag_count = int(raw_cb_sum // 50)
-        raw_remaining_kg = raw_cb_sum % 50
+        raw_bag_count = int(raw_cb_sum // rice_bag_weight)
+        raw_remaining_kg = raw_cb_sum % rice_bag_weight
         # BOILED RICE bags
-        br_bag_count = int(br_cb_sum // 50)
-        br_remaining_kg = br_cb_sum % 50
+        br_bag_count = int(br_cb_sum // rice_bag_weight)
+        br_remaining_kg = br_cb_sum % rice_bag_weight
         # Matta/CMR bags (combined)
-        matta_cmr_bag_count = int(matta_cmr_cb_sum // 50)
-        matta_cmr_remaining_kg = matta_cmr_cb_sum % 50
+        matta_cmr_bag_count = int(matta_cmr_cb_sum // rice_bag_weight)
+        matta_cmr_remaining_kg = matta_cmr_cb_sum % rice_bag_weight
         # Wheat bags
-        wheat_bag_count = int(wheat_cb_sum // 50)
-        wheat_remaining_kg = wheat_cb_sum % 50
+        wheat_bag_count = int(wheat_cb_sum // wheat_bag_weight)
+        wheat_remaining_kg = wheat_cb_sum % wheat_bag_weight
         # Sugar bags
-        sugar_bag_count = int(sugar_cb_sum // 50)
-        sugar_remaining_kg = sugar_cb_sum % 50
+        sugar_bag_count = int(sugar_cb_sum // sugar_bag_weight)
+        sugar_remaining_kg = sugar_cb_sum % sugar_bag_weight
         # Atta bags
-        atta_bag_count = int(atta_cb_sum // 50)
-        atta_remaining_kg = atta_cb_sum % 50
+        atta_bag_count = int(atta_cb_sum // atta_bag_weight)
+        atta_remaining_kg = atta_cb_sum % atta_bag_weight
         result = {
+            "bag_weights": {
+                "rice": f"{rice_bag_weight} kg",
+                "wheat": f"{wheat_bag_weight} kg",
+                "sugar": f"{sugar_bag_weight} kg",
+                "atta": f"{atta_bag_weight} kg",
+            },
             "RAW_RICE_cb_sum": f"{raw_cb_sum} kg",
             "RAW_RICE_bag_count": raw_bag_count,
             "RAW_RICE_remaining_kg": f"{raw_remaining_kg} kg",

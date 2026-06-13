@@ -28,7 +28,15 @@ const toEposDate = (value) => {
 
 export default function App() {
   const [activeView, setActiveView] = useState('stock');
-  const [form, setForm] = useState({ fps_id: '', month: '', year: '' });
+  const [form, setForm] = useState({
+    fps_id: '',
+    month: '',
+    year: '',
+    rice_bag_weight: '50',
+    wheat_bag_weight: '50',
+    sugar_bag_weight: '50',
+    atta_bag_weight: '50',
+  });
   const [transactionForm, setTransactionForm] = useState({
     from_date: todayForDateInput(),
     to_date: todayForDateInput(),
@@ -76,6 +84,10 @@ export default function App() {
           fps_id: Number(form.fps_id),
           month: Number(form.month),
           year: Number(form.year),
+          rice_bag_weight: Number(form.rice_bag_weight),
+          wheat_bag_weight: Number(form.wheat_bag_weight),
+          sugar_bag_weight: Number(form.sugar_bag_weight),
+          atta_bag_weight: Number(form.atta_bag_weight),
         }),
       });
       const responseText = await res.text();
@@ -374,6 +386,46 @@ export default function App() {
                 </Box>
               </Grid>
             </Grid>
+
+            <Box>
+              <Typography sx={{ fontSize: 12, fontWeight: 800, letterSpacing: 0.4, color: '#6d7584', mb: 1 }}>
+                BAG WEIGHT (KG)
+              </Typography>
+              <Grid container spacing={1.5}>
+                {[
+                  ['rice_bag_weight', 'RICE'],
+                  ['wheat_bag_weight', 'WHEAT'],
+                  ['sugar_bag_weight', 'SUGAR'],
+                  ['atta_bag_weight', 'ATTA'],
+                ].map(([name, label]) => (
+                  <Grid item xs={6} key={name}>
+                    <Typography sx={{ fontSize: 11, fontWeight: 700, color: '#7b8395', mb: 0.5 }}>
+                      {label}
+                    </Typography>
+                    <Box
+                      component="input"
+                      name={name}
+                      value={form[name]}
+                      onChange={handleChange}
+                      required
+                      type="number"
+                      min={1}
+                      step="0.1"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: 12,
+                        border: '1px solid #dfe5f0',
+                        background: '#fbfcff',
+                        outline: 'none',
+                        fontSize: 15,
+                        fontWeight: 700,
+                      }}
+                    />
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
 
             <Button
               type="submit"
