@@ -27,6 +27,22 @@ const toEposDate = (value) => {
 };
 
 export default function App() {
+  const currentYear = new Date().getFullYear();
+  const monthOptions = [
+    ['01', 'January'],
+    ['02', 'February'],
+    ['03', 'March'],
+    ['04', 'April'],
+    ['05', 'May'],
+    ['06', 'June'],
+    ['07', 'July'],
+    ['08', 'August'],
+    ['09', 'September'],
+    ['10', 'October'],
+    ['11', 'November'],
+    ['12', 'December'],
+  ];
+  const yearOptions = Array.from({ length: 8 }, (_, index) => String(currentYear - 5 + index));
   const [activeView, setActiveView] = useState('stock');
   const [form, setForm] = useState({
     fps_id: '',
@@ -323,15 +339,11 @@ export default function App() {
                   MONTH *
                 </Typography>
                 <Box
-                  component="input"
+                  component="select"
                   name="month"
                   value={form.month}
                   onChange={handleChange}
                   required
-                  type="number"
-                  placeholder="MM"
-                  min={1}
-                  max={12}
                   style={{
                     width: '100%',
                     padding: '14px',
@@ -342,22 +354,27 @@ export default function App() {
                     fontSize: 16,
                     fontWeight: 600,
                   }}
-                />
+                >
+                  <option value="" disabled>
+                    Select month
+                  </option>
+                  {monthOptions.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </Box>
               </Grid>
               <Grid item xs={6}>
                 <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
                   YEAR *
                 </Typography>
                 <Box
-                  component="input"
+                  component="select"
                   name="year"
                   value={form.year}
                   onChange={handleChange}
                   required
-                  type="number"
-                  placeholder="YYYY"
-                  min={2000}
-                  max={2100}
                   style={{
                     width: '100%',
                     padding: '14px 14px 14px 44px',
@@ -368,7 +385,16 @@ export default function App() {
                     fontSize: 16,
                     fontWeight: 600,
                   }}
-                />
+                >
+                  <option value="" disabled>
+                    Select year
+                  </option>
+                  {yearOptions.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </Box>
                 <Box
                   sx={{
                     position: 'relative',
@@ -619,27 +645,56 @@ export default function App() {
                       <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
                         {label} *
                       </Typography>
-                      <Box
-                        component="input"
-                        name={name}
-                        value={transactionForm[name]}
-                        onChange={handleTransactionChange}
-                        required
-                        type="number"
-                        placeholder={label}
-                        min={name === 'month' ? 1 : undefined}
-                        max={name === 'month' ? 12 : undefined}
-                        style={{
-                          width: '100%',
-                          padding: '14px',
-                          borderRadius: 12,
-                          border: '1px solid #dfe5f0',
-                          background: '#fbfcff',
-                          outline: 'none',
-                          fontSize: 16,
-                          fontWeight: 600,
-                        }}
-                      />
+                      {name === 'month' || name === 'year' ? (
+                        <Box
+                          component="select"
+                          name={name}
+                          value={transactionForm[name]}
+                          onChange={handleTransactionChange}
+                          required
+                          style={{
+                            width: '100%',
+                            padding: '14px',
+                            borderRadius: 12,
+                            border: '1px solid #dfe5f0',
+                            background: '#fbfcff',
+                            outline: 'none',
+                            fontSize: 16,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {(name === 'month' ? monthOptions : yearOptions).map((option) => {
+                            const value = Array.isArray(option) ? option[0] : option;
+                            const optionLabel = Array.isArray(option) ? option[1] : option;
+
+                            return (
+                              <option key={value} value={value}>
+                                {optionLabel}
+                              </option>
+                            );
+                          })}
+                        </Box>
+                      ) : (
+                        <Box
+                          component="input"
+                          name={name}
+                          value={transactionForm[name]}
+                          onChange={handleTransactionChange}
+                          required
+                          type="number"
+                          placeholder={label}
+                          style={{
+                            width: '100%',
+                            padding: '14px',
+                            borderRadius: 12,
+                            border: '1px solid #dfe5f0',
+                            background: '#fbfcff',
+                            outline: 'none',
+                            fontSize: 16,
+                            fontWeight: 600,
+                          }}
+                        />
+                      )}
                     </Grid>
                   ))}
                 </Grid>
