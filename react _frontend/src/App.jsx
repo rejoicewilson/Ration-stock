@@ -110,6 +110,15 @@ export default function App() {
       ['75', 'Chalakkudy'],
       ['82', 'Kunnamkulam'],
     ],
+    '19': [
+      ['46', 'Palakkad'],
+      ['47', 'Chittur'],
+      ['48', 'Ottappalam'],
+      ['49', 'Mannarkad'],
+      ['50', 'Alathur'],
+      ['76', 'Pattambi'],
+      ['84', 'Attappadi'],
+    ],
     '20': [
       ['51', 'Ernad'],
       ['52', 'Nilambur'],
