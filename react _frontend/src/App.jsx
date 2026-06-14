@@ -60,6 +60,16 @@ export default function App() {
     ['22', 'Wayanad'],
   ];
   const afsoOptionsByDistrict = {
+    '11': [
+      ['01', 'CRO South Thiruvananthapuram'],
+      ['02', 'CRO North Thiruvananthapuram'],
+      ['03', 'TSO Thiruvananthapuram'],
+      ['04', 'Chirayinkeezhu'],
+      ['05', 'Nedumangad'],
+      ['06', 'Neyyattinkara'],
+      ['70', 'Kattakada'],
+      ['71', 'Varkala'],
+    ],
     '12': [
       ['07', 'Kollam'],
       ['08', 'Kottarakkara'],
