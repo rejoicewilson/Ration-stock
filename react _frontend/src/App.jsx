@@ -60,7 +60,6 @@ export default function App() {
     ['22', 'Wayanad'],
   ];
   const afsoOptions = [
-    ['0', 'ALL'],
     ['41', 'Thrissur'],
     ['42', 'Thalappilly'],
     ['43', 'Mukundapuram'],
