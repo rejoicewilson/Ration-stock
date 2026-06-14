@@ -43,6 +43,22 @@ export default function App() {
     ['12', 'December'],
   ];
   const yearOptions = Array.from({ length: 8 }, (_, index) => String(currentYear - 5 + index));
+  const districtOptions = [
+    ['14', 'Alappuzha'],
+    ['17', 'Ernakulam'],
+    ['16', 'Idukki'],
+    ['23', 'Kannur'],
+    ['24', 'Kasaragod'],
+    ['12', 'Kollam'],
+    ['15', 'Kottayam'],
+    ['21', 'Kozhikode'],
+    ['20', 'Malappuram'],
+    ['19', 'Palakkad'],
+    ['13', 'Pathanamthitta'],
+    ['11', 'Thiruvananthapuram'],
+    ['18', 'Thrissur'],
+    ['22', 'Wayanad'],
+  ];
   const [activeView, setActiveView] = useState('stock');
   const [picker, setPicker] = useState(null);
   const [pendingPickerValue, setPendingPickerValue] = useState('');
@@ -323,7 +339,7 @@ export default function App() {
   const renderPickerModal = () => {
     if (!picker) return null;
 
-    const columnCount = picker.pickerType === 'month' ? 4 : 3;
+    const columnCount = picker.pickerType === 'month' ? 4 : picker.pickerType === 'district' ? 1 : 3;
 
     return (
       <Box
@@ -363,6 +379,8 @@ export default function App() {
                 gridTemplateColumns: `repeat(${columnCount}, 1fr)`,
                 gap: 1.1,
                 py: 0.5,
+                maxHeight: picker.pickerType === 'district' ? 330 : 'none',
+                overflowY: picker.pickerType === 'district' ? 'auto' : 'visible',
               }}
             >
               {picker.options.map((option) => {
@@ -379,7 +397,7 @@ export default function App() {
                     onClick={() => setPendingPickerValue(optionValue)}
                     sx={{
                       width: '100%',
-                      minHeight: picker.pickerType === 'month' ? 58 : 52,
+                      minHeight: picker.pickerType === 'month' ? 58 : picker.pickerType === 'district' ? 46 : 52,
                       border: 0,
                       borderRadius: 4,
                       background: selected ? '#2563eb' : '#ffffff',
@@ -387,7 +405,7 @@ export default function App() {
                       boxShadow: selected
                         ? '0 12px 24px rgba(37, 99, 235, 0.28)'
                         : 'inset 0 0 0 1px #edf1f7',
-                      fontSize: picker.pickerType === 'month' ? 18 : 16,
+                      fontSize: picker.pickerType === 'month' ? 18 : picker.pickerType === 'district' ? 14 : 16,
                       fontWeight: selected ? 900 : 800,
                       cursor: 'pointer',
                       transition: 'background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease',
@@ -813,7 +831,7 @@ export default function App() {
 
                 <Grid container spacing={1.5}>
                   {[
-                    ['dist_code', 'DIST CODE'],
+                    ['dist_code', 'DISTRICT'],
                     ['afso', 'AFSO'],
                     ['fps_id', 'FPS ID'],
                     ['month', 'MONTH'],
@@ -823,12 +841,23 @@ export default function App() {
                       <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
                         {label} *
                       </Typography>
-                      {name === 'month' || name === 'year' ? (
+                      {name === 'dist_code' ? (
+                        renderSelectControl({
+                          selectKey: 'transactions-district',
+                          name,
+                          value: transactionForm[name],
+                          onChange: handleTransactionChange,
+                          placeholder: 'Select district',
+                          options: districtOptions,
+                          pickerType: 'district',
+                        })
+                      ) : name === 'month' || name === 'year' ? (
                         renderSelectControl({
                           selectKey: `transactions-${name}`,
                           name,
                           value: transactionForm[name],
                           onChange: handleTransactionChange,
+                          placeholder: name === 'month' ? 'Select month' : 'Select year',
                           options: name === 'month' ? monthOptions : yearOptions,
                           pickerType: name === 'month' ? 'month' : 'year',
                         })
