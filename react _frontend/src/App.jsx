@@ -95,6 +95,13 @@ export default function App() {
       ['75', 'Chalakkudy'],
       ['82', 'Kunnamkulam'],
     ],
+    '23': [
+      ['65', 'Thaliparambu'],
+      ['66', 'Kannur'],
+      ['67', 'Thalassery'],
+      ['79', 'Iritty'],
+      ['83', 'Payyannur'],
+    ],
   };
   const [activeView, setActiveView] = useState('stock');
   const [picker, setPicker] = useState(null);
