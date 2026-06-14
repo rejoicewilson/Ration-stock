@@ -59,6 +59,16 @@ export default function App() {
     ['18', 'Thrissur'],
     ['22', 'Wayanad'],
   ];
+  const afsoOptions = [
+    ['0', 'ALL'],
+    ['41', 'Thrissur'],
+    ['42', 'Mhalappilly'],
+    ['43', 'Mukundapuram'],
+    ['44', 'Chavakkad'],
+    ['45', 'Kodungalloor'],
+    ['75', 'Chalakkudy'],
+    ['82', 'Kunnamkulam'],
+  ];
   const [activeView, setActiveView] = useState('stock');
   const [picker, setPicker] = useState(null);
   const [pendingPickerValue, setPendingPickerValue] = useState('');
@@ -849,6 +859,16 @@ export default function App() {
                           onChange: handleTransactionChange,
                           placeholder: 'Select district',
                           options: districtOptions,
+                          pickerType: 'district',
+                        })
+                      ) : name === 'afso' ? (
+                        renderSelectControl({
+                          selectKey: 'transactions-afso',
+                          name,
+                          value: transactionForm[name],
+                          onChange: handleTransactionChange,
+                          placeholder: 'Select AFSO',
+                          options: afsoOptions,
                           pickerType: 'district',
                         })
                       ) : name === 'month' || name === 'year' ? (
