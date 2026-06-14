@@ -154,6 +154,11 @@ export default function App() {
       ['61', 'Vadakara'],
       ['78', 'Thamarassery'],
     ],
+    '22': [
+      ['62', 'Vythiri'],
+      ['63', 'Sulthan Bathery'],
+      ['64', 'Mananthavady'],
+    ],
     '23': [
       ['65', 'Thaliparambu'],
       ['66', 'Kannur'],
