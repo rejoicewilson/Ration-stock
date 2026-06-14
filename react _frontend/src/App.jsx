@@ -68,6 +68,13 @@ export default function App() {
       ['21', 'Mavelikkara'],
       ['22', 'Chengannur'],
     ],
+    '16': [
+      ['28', 'Thodupuzha'],
+      ['29', 'Devikulam'],
+      ['30', 'Udumbanchola'],
+      ['31', 'Peerumedu'],
+      ['74', 'Idukki'],
+    ],
     '17': [
       ['32', 'CRO Ernakulam'],
       ['33', 'CRO Kochi'],
