@@ -519,7 +519,7 @@ export default function App() {
                 placeholder="Enter FPS ID"
                 style={{
                   width: '100%',
-                  padding: '14px 14px 14px 44px',
+                  padding: '14px',
                   borderRadius: 12,
                   border: '1px solid #dfe5f0',
                   background: '#fbfcff',
@@ -535,7 +535,7 @@ export default function App() {
                   left: '12px',
                   width: 24,
                   height: 24,
-                  display: 'grid',
+                  display: 'none',
                   placeItems: 'center',
                   color: '#6d7584',
                   pointerEvents: 'none',
