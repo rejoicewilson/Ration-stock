@@ -60,6 +60,14 @@ export default function App() {
     ['22', 'Wayanad'],
   ];
   const afsoOptionsByDistrict = {
+    '14': [
+      ['17', 'Cherthala'],
+      ['18', 'Ambalapuzha'],
+      ['19', 'Kuttanad'],
+      ['20', 'Karthikappally'],
+      ['21', 'Mavelikkara'],
+      ['22', 'Chengannur'],
+    ],
     '18': [
     ['41', 'Thrissur'],
     ['42', 'Thalappilly'],
@@ -173,7 +181,7 @@ export default function App() {
   const handleTransactionsSubmit = async (e) => {
     e.preventDefault();
     if (!transactionForm.afso) {
-      setTransactionsError('AFSO list is available only for Thrissur now. Please select Thrissur or share this district AFSO list.');
+      setTransactionsError('AFSO list is not added for the selected district yet. Please share this district AFSO list.');
       return;
     }
     setTransactionsLoading(true);
