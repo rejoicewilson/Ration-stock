@@ -59,7 +59,8 @@ export default function App() {
     ['18', 'Thrissur'],
     ['22', 'Wayanad'],
   ];
-  const afsoOptions = [
+  const afsoOptionsByDistrict = {
+    '18': [
     ['41', 'Thrissur'],
     ['42', 'Thalappilly'],
     ['43', 'Mukundapuram'],
@@ -67,7 +68,8 @@ export default function App() {
     ['45', 'Kodungalloor'],
     ['75', 'Chalakkudy'],
     ['82', 'Kunnamkulam'],
-  ];
+    ],
+  };
   const [activeView, setActiveView] = useState('stock');
   const [picker, setPicker] = useState(null);
   const [pendingPickerValue, setPendingPickerValue] = useState('');
@@ -111,6 +113,15 @@ export default function App() {
   };
 
   const handleTransactionChange = (e) => {
+    if (e.target.name === 'dist_code') {
+      const nextAfsoOptions = afsoOptionsByDistrict[e.target.value] || [];
+      setTransactionForm({
+        ...transactionForm,
+        dist_code: e.target.value,
+        afso: nextAfsoOptions[0]?.[0] || '',
+      });
+      return;
+    }
     setTransactionForm({ ...transactionForm, [e.target.name]: e.target.value });
   };
 
@@ -161,6 +172,10 @@ export default function App() {
 
   const handleTransactionsSubmit = async (e) => {
     e.preventDefault();
+    if (!transactionForm.afso) {
+      setTransactionsError('AFSO list is available only for Thrissur now. Please select Thrissur or share this district AFSO list.');
+      return;
+    }
     setTransactionsLoading(true);
     setTransactionsError('');
     setTransactionsResult(null);
@@ -273,7 +288,7 @@ export default function App() {
     return `${monthNames[idx]} ${form.year}`;
   };
 
-  const renderSelectControl = ({ selectKey, name, value, onChange, placeholder, options, pickerType }) => {
+  const renderSelectControl = ({ selectKey, name, value, onChange, placeholder, options, pickerType, disabled = false }) => {
     const selectedOption = options.find((option) => {
       const optionValue = Array.isArray(option) ? option[0] : option;
       return optionValue === value;
@@ -291,7 +306,9 @@ export default function App() {
         <Box
           component="button"
           type="button"
+          disabled={disabled}
           onClick={() => {
+            if (disabled) return;
             setPendingPickerValue(value || '');
             setPicker({ selectKey, name, value, onChange, placeholder, options, pickerType });
           }}
@@ -309,7 +326,8 @@ export default function App() {
             alignItems: 'center',
             gap: 0.8,
             color: value ? '#17233c' : '#8b93a4',
-            cursor: 'pointer',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.68 : 1,
             textAlign: 'left',
           }}
         >
@@ -866,9 +884,12 @@ export default function App() {
                           name,
                           value: transactionForm[name],
                           onChange: handleTransactionChange,
-                          placeholder: 'Select AFSO',
-                          options: afsoOptions,
+                          placeholder: afsoOptionsByDistrict[transactionForm.dist_code]?.length
+                            ? 'Select AFSO'
+                            : 'AFSO list pending',
+                          options: afsoOptionsByDistrict[transactionForm.dist_code] || [],
                           pickerType: 'district',
+                          disabled: !(afsoOptionsByDistrict[transactionForm.dist_code]?.length),
                         })
                       ) : name === 'month' || name === 'year' ? (
                         renderSelectControl({
