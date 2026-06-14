@@ -102,6 +102,12 @@ export default function App() {
       ['79', 'Iritty'],
       ['83', 'Payyannur'],
     ],
+    '24': [
+      ['68', 'Kasaragod'],
+      ['69', 'Hosdurg'],
+      ['80', 'Vellarikundu'],
+      ['81', 'Manjeswaram'],
+    ],
   };
   const [activeView, setActiveView] = useState('stock');
   const [picker, setPicker] = useState(null);
