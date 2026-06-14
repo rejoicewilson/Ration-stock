@@ -110,6 +110,14 @@ export default function App() {
       ['75', 'Chalakkudy'],
       ['82', 'Kunnamkulam'],
     ],
+    '21': [
+      ['57', 'CRO North Kozhikode'],
+      ['58', 'CRO South Kozhikode'],
+      ['59', 'TSO Kozhikode'],
+      ['60', 'Koyilandi'],
+      ['61', 'Vadakara'],
+      ['78', 'Thamarassery'],
+    ],
     '23': [
       ['65', 'Thaliparambu'],
       ['66', 'Kannur'],
