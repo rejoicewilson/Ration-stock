@@ -76,6 +76,13 @@ export default function App() {
       ['21', 'Mavelikkara'],
       ['22', 'Chengannur'],
     ],
+    '15': [
+      ['23', 'Kottayam'],
+      ['24', 'Changanachery'],
+      ['25', 'Vaikom'],
+      ['26', 'Kanjirappally'],
+      ['27', 'Meenachil'],
+    ],
     '16': [
       ['28', 'Thodupuzha'],
       ['29', 'Devikulam'],
