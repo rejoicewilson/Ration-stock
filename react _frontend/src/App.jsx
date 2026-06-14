@@ -68,6 +68,14 @@ export default function App() {
       ['11', 'Kunnathoor'],
       ['72', 'Punalur'],
     ],
+    '13': [
+      ['12', 'Kozhenchery'],
+      ['13', 'Thiruvalla'],
+      ['14', 'Adoor'],
+      ['15', 'Ranni'],
+      ['16', 'Mallappally'],
+      ['73', 'Konni'],
+    ],
     '14': [
       ['17', 'Cherthala'],
       ['18', 'Ambalapuzha'],
