@@ -60,6 +60,14 @@ export default function App() {
     ['22', 'Wayanad'],
   ];
   const afsoOptionsByDistrict = {
+    '12': [
+      ['07', 'Kollam'],
+      ['08', 'Kottarakkara'],
+      ['09', 'Pathanapuram'],
+      ['10', 'Karunagappally'],
+      ['11', 'Kunnathoor'],
+      ['72', 'Punalur'],
+    ],
     '14': [
       ['17', 'Cherthala'],
       ['18', 'Ambalapuzha'],
