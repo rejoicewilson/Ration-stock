@@ -62,7 +62,7 @@ export default function App() {
   const afsoOptions = [
     ['0', 'ALL'],
     ['41', 'Thrissur'],
-    ['42', 'Mhalappilly'],
+    ['42', 'Thalappilly'],
     ['43', 'Mukundapuram'],
     ['44', 'Chavakkad'],
     ['45', 'Kodungalloor'],
