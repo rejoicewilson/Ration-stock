@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import {
   Alert,
   Box,
@@ -610,6 +611,7 @@ export default function App() {
         pb: 12,
       }}
     >
+      <Analytics />
       {renderPickerModal()}
       <Container maxWidth="sm" sx={{ pt: 3, pb: 10 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
