@@ -1533,7 +1533,15 @@ export default function App() {
                             {table.title_rows.flat().join(' ')}
                           </Typography>
                         )}
-                        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
+                        <Box
+                          component="table"
+                          sx={{
+                            width: 'max-content',
+                            minWidth: 920,
+                            borderCollapse: 'collapse',
+                            tableLayout: 'auto',
+                          }}
+                        >
                           <Box component="thead">
                             <Box component="tr">
                               {(table.headers || []).map((header, index) => (
@@ -1542,10 +1550,12 @@ export default function App() {
                                   key={`${header}-${index}`}
                                   sx={{
                                     textAlign: 'left',
-                                    p: 1,
+                                    p: 1.2,
                                     fontSize: 12,
                                     color: '#6d7584',
                                     borderBottom: '1px solid #e8edf7',
+                                    whiteSpace: 'nowrap',
+                                    verticalAlign: 'top',
                                   }}
                                 >
                                   {header}
@@ -1561,11 +1571,13 @@ export default function App() {
                                     component="td"
                                     key={cellIndex}
                                     sx={{
-                                      p: 1,
+                                      p: 1.2,
                                       fontSize: 13,
                                       fontWeight: 600,
                                       color: '#17233c',
                                       borderBottom: '1px solid #f0f3f8',
+                                      whiteSpace: 'nowrap',
+                                      verticalAlign: 'top',
                                     }}
                                   >
                                     {cell}
