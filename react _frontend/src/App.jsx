@@ -513,123 +513,234 @@ export default function App() {
     );
   };
 
+  const getRoFieldValue = (table, label) => {
+    const headerIndex = (table?.headers || []).findIndex((header) => header === label);
+    return headerIndex >= 0 ? table?.rows?.[0]?.[headerIndex] || '' : '';
+  };
+
+  const renderRoSectionTitle = (label) => (
+    <Typography
+      sx={{
+        mb: 0.8,
+        color: '#17233c',
+        fontSize: 12,
+        fontWeight: 900,
+        letterSpacing: 0.4,
+        textTransform: 'uppercase',
+      }}
+    >
+      {label}
+    </Typography>
+  );
+
+  const renderCommodityCards = (table) => {
+    const headers = table?.headers || [];
+    const headerIndex = (label) => headers.findIndex((header) => header === label);
+    const value = (row, label) => {
+      const index = headerIndex(label);
+      return index >= 0 ? row[index] || '-' : '-';
+    };
+
+    return (
+      <Stack spacing={1.2} sx={{ display: { xs: 'flex', sm: 'none' } }}>
+        {(table?.rows || []).map((row, index) => (
+          <Box
+            key={index}
+            sx={{
+              p: 1.4,
+              borderRadius: 3,
+              background: '#ffffff',
+              border: '1px solid #e2e9f4',
+              boxShadow: '0 10px 24px rgba(26, 58, 109, 0.08)',
+            }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.2, mb: 1.1 }}>
+              <Box>
+                <Typography sx={{ color: '#17233c', fontSize: 15, fontWeight: 900 }}>
+                  {value(row, 'Commodity')}
+                </Typography>
+                <Typography sx={{ color: '#748094', fontSize: 11, fontWeight: 800 }}>
+                  {value(row, 'Scheme')} | {value(row, 'Unit')}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  px: 1.1,
+                  py: 0.45,
+                  borderRadius: 999,
+                  background: '#eef5ff',
+                  color: '#245ef5',
+                  fontSize: 11,
+                  fontWeight: 900,
+                  height: 'fit-content',
+                }}
+              >
+                Cost {value(row, 'Cost')}
+              </Box>
+            </Box>
+            <Grid container spacing={1}>
+              {[
+                ['Dispatched', 'Dispatched Qty', '#e8fff3', '#0f7a45'],
+                ['Balance', 'Balance Qty', '#fff4e5', '#9a5a00'],
+                ['Allotment', 'Allotment Qty', '#f4f7fb', '#31415f'],
+                ['Earlier', 'Earlier Dispatched Qty', '#f4f7fb', '#31415f'],
+              ].map(([label, key, bg, color]) => (
+                <Grid item xs={6} key={key}>
+                  <Box sx={{ p: 1, borderRadius: 2, background: bg }}>
+                    <Typography sx={{ fontSize: 10, color: '#748094', fontWeight: 900, textTransform: 'uppercase' }}>
+                      {label}
+                    </Typography>
+                    <Typography sx={{ mt: 0.25, color, fontSize: 14, fontWeight: 900 }}>
+                      {value(row, key)}
+                    </Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        ))}
+      </Stack>
+    );
+  };
+
   const renderRoQuantityReport = () => {
     const tables = roQuantityResult?.tables || [];
     const dispatchTable = tables[0];
     const shopTable = tables[1];
     const commodityTable = tables[2];
     const title = dispatchTable?.title_rows?.flat()?.join(' ') || roQuantityResult.request?.ro_no || '';
+    const truckNo = getRoFieldValue(dispatchTable, 'Truck NO');
+    const dispatchedDate = getRoFieldValue(dispatchTable, 'Dispatched Date');
+    const dispatchTime = getRoFieldValue(dispatchTable, 'Dispatch Time');
+    const bags = getRoFieldValue(shopTable, 'No Of Bags');
+    const amountPaid = getRoFieldValue(shopTable, 'Amount Paid');
 
     return (
       <Paper
         elevation={0}
         sx={{
-          p: 2,
+          p: 0,
           borderRadius: 3,
-          background: '#ffffff',
+          background: '#f6f8fc',
           border: '1px solid #e8edf7',
           boxShadow: '0 14px 34px rgba(26, 58, 109, 0.12)',
           overflow: 'hidden',
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, mb: 1.5 }}>
+        <Box
+          sx={{
+            p: 2,
+            background: 'linear-gradient(135deg, #173b7a 0%, #2563eb 100%)',
+            color: '#ffffff',
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, mb: 1.2 }}>
           <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 900, color: '#17233c', fontSize: 16 }}>
+            <Typography sx={{ fontWeight: 900, color: '#ffffff', fontSize: 16 }}>
               Order Quantity Details
             </Typography>
-            <Typography sx={{ color: '#6d7584', fontWeight: 800, fontSize: 12, mt: 0.25 }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.78)', fontWeight: 800, fontSize: 12, mt: 0.25 }}>
               {roQuantityResult.request?.ro_no || ''}
             </Typography>
           </Box>
-          <Typography sx={{ color: '#3b63f4', fontWeight: 900, fontSize: 13, flex: '0 0 auto' }}>
+          <Typography sx={{ color: '#ffffff', fontWeight: 900, fontSize: 13, flex: '0 0 auto' }}>
             {Math.round(roQuantityResult.duration_ms || 0)} ms
           </Typography>
         </Box>
 
         {title && (
-          <Box
-            sx={{
-              px: 1.4,
-              py: 1,
-              mb: 1.5,
-              borderRadius: 2,
-              background: '#1f83bd',
-              color: '#ffffff',
-              fontWeight: 900,
-              fontSize: 13,
-              lineHeight: 1.35,
-            }}
-          >
+          <Typography sx={{ color: '#ffffff', fontWeight: 900, fontSize: 13, lineHeight: 1.35 }}>
             {title}
-          </Box>
+          </Typography>
         )}
+        </Box>
 
-        <Stack spacing={1.5}>
+        <Stack spacing={1.7} sx={{ p: 2 }}>
+          <Grid container spacing={1}>
+            {[
+              ['Truck', truckNo],
+              ['Dispatch', `${dispatchedDate || '-'} ${dispatchTime || ''}`.trim()],
+              ['Bags', bags],
+              ['Amount', amountPaid],
+            ].map(([label, value]) => (
+              <Grid item xs={6} sm={3} key={label}>
+                <Box sx={{ p: 1.2, borderRadius: 2.5, background: '#ffffff', border: '1px solid #e4ebf5' }}>
+                  <Typography sx={{ color: '#748094', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
+                    {label}
+                  </Typography>
+                  <Typography sx={{ mt: 0.35, color: '#17233c', fontSize: 14, fontWeight: 900, lineHeight: 1.25 }}>
+                    {value || '-'}
+                  </Typography>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+
           {dispatchTable?.rows?.length > 0 && (
             <Box>
-              <Typography sx={{ mb: 0.75, color: '#31415f', fontSize: 12, fontWeight: 900 }}>
-                Dispatch
-              </Typography>
+              {renderRoSectionTitle('Dispatch Details')}
               {renderRoDetailFields(dispatchTable)}
             </Box>
           )}
 
           {shopTable?.rows?.length > 0 && (
             <Box>
-              <Typography sx={{ mb: 0.75, color: '#31415f', fontSize: 12, fontWeight: 900 }}>
-                Shop
-              </Typography>
+              {renderRoSectionTitle('Shop Details')}
               {renderRoDetailFields(shopTable)}
             </Box>
           )}
 
           {commodityTable?.rows?.length > 0 && (
-            <Box sx={{ overflowX: 'auto', border: '1px solid #dfe6f1', borderRadius: 2 }}>
-              <Box component="table" sx={{ width: '100%', minWidth: 760, borderCollapse: 'collapse' }}>
-                <Box component="thead">
-                  <Box component="tr">
-                    {(commodityTable.headers || []).map((header, index) => (
-                      <Box
-                        component="th"
-                        key={`${header}-${index}`}
-                        sx={{
-                          p: 1,
-                          textAlign: index >= 3 ? 'right' : 'left',
-                          fontSize: 11,
-                          fontWeight: 900,
-                          color: '#31415f',
-                          background: '#edf7fb',
-                          borderBottom: '1px solid #d7e2ef',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {header}
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-                <Box component="tbody">
-                  {commodityTable.rows.map((row, rowIndex) => (
-                    <Box component="tr" key={rowIndex} sx={{ background: rowIndex % 2 ? '#fbfdff' : '#ffffff' }}>
-                      {row.map((cell, cellIndex) => (
+            <Box>
+              {renderRoSectionTitle('Commodity Quantities')}
+              {renderCommodityCards(commodityTable)}
+              <Box sx={{ display: { xs: 'none', sm: 'block' }, overflowX: 'auto', border: '1px solid #dfe6f1', borderRadius: 2 }}>
+                <Box component="table" sx={{ width: '100%', minWidth: 760, borderCollapse: 'collapse' }}>
+                  <Box component="thead">
+                    <Box component="tr">
+                      {(commodityTable.headers || []).map((header, index) => (
                         <Box
-                          component="td"
-                          key={cellIndex}
+                          component="th"
+                          key={`${header}-${index}`}
                           sx={{
                             p: 1,
-                            textAlign: cellIndex >= 3 ? 'right' : 'left',
-                            fontSize: 12,
-                            fontWeight: cellIndex <= 1 ? 900 : 800,
-                            color: '#17233c',
-                            borderBottom: '1px solid #eef2f7',
+                            textAlign: index >= 3 ? 'right' : 'left',
+                            fontSize: 11,
+                            fontWeight: 900,
+                            color: '#31415f',
+                            background: '#edf7fb',
+                            borderBottom: '1px solid #d7e2ef',
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {cell}
+                          {header}
                         </Box>
                       ))}
                     </Box>
-                  ))}
+                  </Box>
+                  <Box component="tbody">
+                    {commodityTable.rows.map((row, rowIndex) => (
+                      <Box component="tr" key={rowIndex} sx={{ background: rowIndex % 2 ? '#fbfdff' : '#ffffff' }}>
+                        {row.map((cell, cellIndex) => (
+                          <Box
+                            component="td"
+                            key={cellIndex}
+                            sx={{
+                              p: 1,
+                              textAlign: cellIndex >= 3 ? 'right' : 'left',
+                              fontSize: 12,
+                              fontWeight: cellIndex <= 1 ? 900 : 800,
+                              color: '#17233c',
+                              borderBottom: '1px solid #eef2f7',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {cell}
+                          </Box>
+                        ))}
+                      </Box>
+                    ))}
+                  </Box>
                 </Box>
               </Box>
             </Box>
