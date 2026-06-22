@@ -484,6 +484,167 @@ export default function App() {
     </Box>
   );
 
+  const renderRoDetailFields = (table) => {
+    const row = table?.rows?.[0] || [];
+    return (
+      <Grid container spacing={1}>
+        {(table?.headers || []).map((header, index) => (
+          <Grid item xs={6} sm={4} key={`${header}-${index}`}>
+            <Box
+              sx={{
+                py: 1,
+                px: 1.2,
+                borderRadius: 2,
+                background: '#f8fafc',
+                border: '1px solid #e6ebf3',
+                minHeight: 64,
+              }}
+            >
+              <Typography sx={{ fontSize: 10, color: '#748094', fontWeight: 800, textTransform: 'uppercase' }}>
+                {header}
+              </Typography>
+              <Typography sx={{ mt: 0.5, fontSize: 13, color: '#17233c', fontWeight: 900, lineHeight: 1.25 }}>
+                {row[index] || '-'}
+              </Typography>
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
+    );
+  };
+
+  const renderRoQuantityReport = () => {
+    const tables = roQuantityResult?.tables || [];
+    const dispatchTable = tables[0];
+    const shopTable = tables[1];
+    const commodityTable = tables[2];
+    const title = dispatchTable?.title_rows?.flat()?.join(' ') || roQuantityResult.request?.ro_no || '';
+
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          borderRadius: 3,
+          background: '#ffffff',
+          border: '1px solid #e8edf7',
+          boxShadow: '0 14px 34px rgba(26, 58, 109, 0.12)',
+          overflow: 'hidden',
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, mb: 1.5 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 900, color: '#17233c', fontSize: 16 }}>
+              Order Quantity Details
+            </Typography>
+            <Typography sx={{ color: '#6d7584', fontWeight: 800, fontSize: 12, mt: 0.25 }}>
+              {roQuantityResult.request?.ro_no || ''}
+            </Typography>
+          </Box>
+          <Typography sx={{ color: '#3b63f4', fontWeight: 900, fontSize: 13, flex: '0 0 auto' }}>
+            {Math.round(roQuantityResult.duration_ms || 0)} ms
+          </Typography>
+        </Box>
+
+        {title && (
+          <Box
+            sx={{
+              px: 1.4,
+              py: 1,
+              mb: 1.5,
+              borderRadius: 2,
+              background: '#1f83bd',
+              color: '#ffffff',
+              fontWeight: 900,
+              fontSize: 13,
+              lineHeight: 1.35,
+            }}
+          >
+            {title}
+          </Box>
+        )}
+
+        <Stack spacing={1.5}>
+          {dispatchTable?.rows?.length > 0 && (
+            <Box>
+              <Typography sx={{ mb: 0.75, color: '#31415f', fontSize: 12, fontWeight: 900 }}>
+                Dispatch
+              </Typography>
+              {renderRoDetailFields(dispatchTable)}
+            </Box>
+          )}
+
+          {shopTable?.rows?.length > 0 && (
+            <Box>
+              <Typography sx={{ mb: 0.75, color: '#31415f', fontSize: 12, fontWeight: 900 }}>
+                Shop
+              </Typography>
+              {renderRoDetailFields(shopTable)}
+            </Box>
+          )}
+
+          {commodityTable?.rows?.length > 0 && (
+            <Box sx={{ overflowX: 'auto', border: '1px solid #dfe6f1', borderRadius: 2 }}>
+              <Box component="table" sx={{ width: '100%', minWidth: 760, borderCollapse: 'collapse' }}>
+                <Box component="thead">
+                  <Box component="tr">
+                    {(commodityTable.headers || []).map((header, index) => (
+                      <Box
+                        component="th"
+                        key={`${header}-${index}`}
+                        sx={{
+                          p: 1,
+                          textAlign: index >= 3 ? 'right' : 'left',
+                          fontSize: 11,
+                          fontWeight: 900,
+                          color: '#31415f',
+                          background: '#edf7fb',
+                          borderBottom: '1px solid #d7e2ef',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {header}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {commodityTable.rows.map((row, rowIndex) => (
+                    <Box component="tr" key={rowIndex} sx={{ background: rowIndex % 2 ? '#fbfdff' : '#ffffff' }}>
+                      {row.map((cell, cellIndex) => (
+                        <Box
+                          component="td"
+                          key={cellIndex}
+                          sx={{
+                            p: 1,
+                            textAlign: cellIndex >= 3 ? 'right' : 'left',
+                            fontSize: 12,
+                            fontWeight: cellIndex <= 1 ? 900 : 800,
+                            color: '#17233c',
+                            borderBottom: '1px solid #eef2f7',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {cell}
+                        </Box>
+                      ))}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </Stack>
+
+        {roQuantityResult.table_count === 0 && (
+          <Alert severity="warning" sx={{ mt: 1.5 }}>
+            No quantity table found. {roQuantityResult.response_preview || ''}
+          </Alert>
+        )}
+      </Paper>
+    );
+  };
+
   const monthYearLabel = () => {
     if (!form.month || !form.year) return '';
     const monthNames = [
@@ -1500,129 +1661,7 @@ export default function App() {
                   </Alert>
                 )}
 
-                {roQuantityResult && (
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2,
-                      borderRadius: 3,
-                      background: '#fff8d9',
-                      border: '1px solid #eadf9f',
-                      boxShadow: '0 14px 30px rgba(77, 67, 24, 0.16)',
-                      overflowX: 'auto',
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, mb: 1.5 }}>
-                      <Box>
-                        <Typography sx={{ fontWeight: 900, color: '#17233c' }}>
-                          Order Quantity Details
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#6d7584', fontWeight: 700 }}>
-                          {roQuantityResult.request?.ro_no || ''}
-                        </Typography>
-                      </Box>
-                      <Typography variant="body2" sx={{ color: '#3b63f4', fontWeight: 800 }}>
-                        {Math.round(roQuantityResult.duration_ms || 0)} ms
-                      </Typography>
-                    </Box>
-
-                    {(roQuantityResult.tables || []).map((table, tableIndex) => (
-                      <Box
-                        key={tableIndex}
-                        sx={{
-                          mb: tableIndex === roQuantityResult.tables.length - 1 ? 0 : 0.2,
-                          minWidth: 760,
-                        }}
-                      >
-                        {table.title_rows?.flat()?.length > 0 && (
-                          <Typography
-                            sx={{
-                              px: 1,
-                              py: 0.6,
-                              background: '#1f83bd',
-                              color: '#ffffff',
-                              fontSize: 12,
-                              fontWeight: 900,
-                              textAlign: 'center',
-                              border: '1px solid #1b5f8e',
-                              borderBottom: 0,
-                            }}
-                          >
-                            {table.title_rows.flat().join(' ')}
-                          </Typography>
-                        )}
-                        <Box
-                          component="table"
-                          sx={{
-                            width: '100%',
-                            minWidth: 760,
-                            borderCollapse: 'collapse',
-                            tableLayout: 'auto',
-                            background: '#f7f7f7',
-                            color: '#000000',
-                            boxShadow: tableIndex === roQuantityResult.tables.length - 1
-                              ? '0 10px 24px rgba(0, 0, 0, 0.20)'
-                              : 'none',
-                          }}
-                        >
-                          <Box component="thead">
-                            <Box component="tr">
-                              {(table.headers || []).map((header, index) => (
-                                <Box
-                                  component="th"
-                                  key={`${header}-${index}`}
-                                  sx={{
-                                    textAlign: 'left',
-                                    p: 0.55,
-                                    fontSize: 11,
-                                    fontWeight: 900,
-                                    color: '#000000',
-                                    background: '#b9e5ef',
-                                    border: '1px solid #525252',
-                                    whiteSpace: 'nowrap',
-                                    verticalAlign: 'top',
-                                  }}
-                                >
-                                  {header}
-                                </Box>
-                              ))}
-                            </Box>
-                          </Box>
-                          <Box component="tbody">
-                            {(table.rows || []).map((row, rowIndex) => (
-                              <Box component="tr" key={rowIndex}>
-                                {row.map((cell, cellIndex) => (
-                                  <Box
-                                    component="td"
-                                    key={cellIndex}
-                                    sx={{
-                                      p: 0.55,
-                                      fontSize: 11,
-                                      fontWeight: 800,
-                                      color: '#000000',
-                                      background: '#f7f7f7',
-                                      border: '1px solid #6f6f6f',
-                                      whiteSpace: 'nowrap',
-                                      verticalAlign: 'top',
-                                    }}
-                                  >
-                                    {cell}
-                                  </Box>
-                                ))}
-                              </Box>
-                            ))}
-                          </Box>
-                        </Box>
-                      </Box>
-                    ))}
-
-                    {roQuantityResult.table_count === 0 && (
-                      <Alert severity="warning">
-                        No quantity table found. {roQuantityResult.response_preview || ''}
-                      </Alert>
-                    )}
-                  </Paper>
-                )}
+                {roQuantityResult && renderRoQuantityReport()}
               </Stack>
             )}
           </>
