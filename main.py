@@ -119,6 +119,23 @@ SCM_RO_DETAIL_KEYS = {
 RO_NO_PATTERN = re.compile(r"RO/[A-Z]+/\d+/\d+/\d+/\d+/\d+", re.IGNORECASE)
 
 
+def is_javascript_placeholder(value: str):
+    lowered = (value or "").strip().lower()
+    return (
+        not lowered
+        or "(" in lowered
+        or ")" in lowered
+        or lowered in {"ro_no", "month", "year", "shop_no", "dist_code"}
+        or lowered.startswith("escape")
+    )
+
+
+def clean_scm_param_value(value: str):
+    cleaned = unescape(str(value or ""))
+    cleaned = cleaned.split("<", 1)[0].strip().strip("'\"")
+    return cleaned.rstrip(";").strip()
+
+
 def extract_scm_detail_params(raw_value: str):
     if not raw_value:
         return {}
@@ -127,7 +144,7 @@ def extract_scm_detail_params(raw_value: str):
     query = parsed.query or raw_value
     parsed_params = parse_qs(query, keep_blank_values=True)
     params = {
-        key: values[0]
+        key: clean_scm_param_value(values[0])
         for key, values in parsed_params.items()
         if key in SCM_RO_DETAIL_KEYS and values
     }
@@ -139,7 +156,7 @@ def extract_scm_detail_params(raw_value: str):
     for key in SCM_RO_DETAIL_KEYS:
         match = re.search(rf"{re.escape(key)}\s*=\s*([^&'\"\s)]+)", raw_value)
         if match:
-            params[key] = match.group(1)
+            params[key] = clean_scm_param_value(match.group(1))
     if params:
         return params
 
@@ -156,7 +173,10 @@ def extract_scm_detail_params(raw_value: str):
             "district_code",
             "truckchit_number",
         ]
-        return dict(zip(ordered_keys, positional_values[:8]))
+        return {
+            key: clean_scm_param_value(value)
+            for key, value in zip(ordered_keys, positional_values[:8])
+        }
 
     return {}
 
@@ -171,9 +191,12 @@ def extract_scm_actions_by_ro_no(html: str):
         end = min(match.end() + 2500, len(decoded))
         context = decoded[start:end]
         params = extract_scm_detail_params(context) or {}
-
-        if not params.get("ro_no"):
-            params["ro_no"] = ro_no
+        params = {
+            key: value
+            for key, value in params.items()
+            if not is_javascript_placeholder(str(value))
+        }
+        params["ro_no"] = ro_no
 
         if not params.get("release_order_id_aso"):
             id_match = re.search(
@@ -288,7 +311,7 @@ def truckchit_from_ro_no(ro_no: str):
     if not ro_no:
         return ""
     parts = [part for part in ro_no.strip().split("/") if part]
-    if len(parts) >= 8 and parts[0].upper() == "RO":
+    if len(parts) >= 7 and parts[0].upper() == "RO":
         return "TC-" + "-".join(parts[1:])
     return ""
 
@@ -319,6 +342,7 @@ def add_fallback_ro_actions(tables, request: RoDetailsRequest, html: str = ""):
             }
             action.update(existing or {})
             action.update(actions_by_ro_no.get(ro_no, {}))
+            action["ro_no"] = ro_no
 
             if not action.get("release_order_id_aso"):
                 logger.warning("ro_details_action_missing_release_id ro_no=%s", ro_no)
