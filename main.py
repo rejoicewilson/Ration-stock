@@ -231,10 +231,13 @@ def parse_html_tables(html: str):
     parsed_tables = []
 
     for table in soup.find_all("table"):
+        if table.find("table"):
+            continue
+
         rows = []
         row_actions = []
         for tr in table.find_all("tr"):
-            cells = [cell.get_text(" ", strip=True) for cell in tr.find_all(["th", "td"])]
+            cells = [cell.get_text(" ", strip=True) for cell in tr.find_all(["th", "td"], recursive=False)]
             if cells:
                 rows.append(cells)
                 action_params = {}

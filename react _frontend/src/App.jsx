@@ -1506,9 +1506,9 @@ export default function App() {
                     sx={{
                       p: 2,
                       borderRadius: 3,
-                      background: '#ffffff',
-                      border: '1px solid #e8edf7',
-                      boxShadow: '0 12px 28px rgba(26, 58, 109, 0.08)',
+                      background: '#fff8d9',
+                      border: '1px solid #eadf9f',
+                      boxShadow: '0 14px 30px rgba(77, 67, 24, 0.16)',
                       overflowX: 'auto',
                     }}
                   >
@@ -1527,19 +1527,42 @@ export default function App() {
                     </Box>
 
                     {(roQuantityResult.tables || []).map((table, tableIndex) => (
-                      <Box key={tableIndex} sx={{ mb: tableIndex === roQuantityResult.tables.length - 1 ? 0 : 2 }}>
+                      <Box
+                        key={tableIndex}
+                        sx={{
+                          mb: tableIndex === roQuantityResult.tables.length - 1 ? 0 : 0.2,
+                          minWidth: 760,
+                        }}
+                      >
                         {table.title_rows?.flat()?.length > 0 && (
-                          <Typography sx={{ fontWeight: 800, mb: 1, color: '#31415f' }}>
+                          <Typography
+                            sx={{
+                              px: 1,
+                              py: 0.6,
+                              background: '#1f83bd',
+                              color: '#ffffff',
+                              fontSize: 12,
+                              fontWeight: 900,
+                              textAlign: 'center',
+                              border: '1px solid #1b5f8e',
+                              borderBottom: 0,
+                            }}
+                          >
                             {table.title_rows.flat().join(' ')}
                           </Typography>
                         )}
                         <Box
                           component="table"
                           sx={{
-                            width: 'max-content',
-                            minWidth: 920,
+                            width: '100%',
+                            minWidth: 760,
                             borderCollapse: 'collapse',
                             tableLayout: 'auto',
+                            background: '#f7f7f7',
+                            color: '#000000',
+                            boxShadow: tableIndex === roQuantityResult.tables.length - 1
+                              ? '0 10px 24px rgba(0, 0, 0, 0.20)'
+                              : 'none',
                           }}
                         >
                           <Box component="thead">
@@ -1550,10 +1573,12 @@ export default function App() {
                                   key={`${header}-${index}`}
                                   sx={{
                                     textAlign: 'left',
-                                    p: 1.2,
-                                    fontSize: 12,
-                                    color: '#6d7584',
-                                    borderBottom: '1px solid #e8edf7',
+                                    p: 0.55,
+                                    fontSize: 11,
+                                    fontWeight: 900,
+                                    color: '#000000',
+                                    background: '#b9e5ef',
+                                    border: '1px solid #525252',
                                     whiteSpace: 'nowrap',
                                     verticalAlign: 'top',
                                   }}
@@ -1571,11 +1596,12 @@ export default function App() {
                                     component="td"
                                     key={cellIndex}
                                     sx={{
-                                      p: 1.2,
-                                      fontSize: 13,
-                                      fontWeight: 600,
-                                      color: '#17233c',
-                                      borderBottom: '1px solid #f0f3f8',
+                                      p: 0.55,
+                                      fontSize: 11,
+                                      fontWeight: 800,
+                                      color: '#000000',
+                                      background: '#f7f7f7',
+                                      border: '1px solid #6f6f6f',
                                       whiteSpace: 'nowrap',
                                       verticalAlign: 'top',
                                     }}
