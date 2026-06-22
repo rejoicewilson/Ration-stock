@@ -83,6 +83,14 @@ class TransactionsRequest(BaseModel):
     year: int
 
 
+class RoDetailsRequest(BaseModel):
+    month: int
+    year: int
+    shop_no: int
+    dist_code: int
+    depot_id: str
+
+
 def parse_html_tables(html: str):
     soup = BeautifulSoup(html, "html.parser")
     parsed_tables = []
@@ -419,6 +427,44 @@ def fetch_transactions(request: TransactionsRequest):
 @app.post("/transactions")
 def get_transactions(request: TransactionsRequest):
     return fetch_transactions(request)
+
+
+@app.post("/ro-details")
+def get_ro_details(request: RoDetailsRequest):
+    url = "https://scm.kerala.gov.in/List_of_ro_details.jsp"
+    params = {
+        "month": request.month,
+        "year": request.year,
+        "shop_no": request.shop_no,
+        "dist_code": request.dist_code,
+        "depot_id": request.depot_id,
+    }
+    start_time = time.perf_counter()
+    logger.info("ro_details_start payload=%s", params)
+    try:
+        response = EPOS_SESSION.get(url, params=params, timeout=EPOS_TIMEOUT)
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        logger.info(
+            "ro_details_upstream_response status_code=%s content_length=%s duration_ms=%s",
+            response.status_code,
+            len(response.text),
+            duration_ms,
+        )
+        response.raise_for_status()
+        tables = parse_html_tables(response.text)
+        return {
+            "remote_status_code": response.status_code,
+            "duration_ms": duration_ms,
+            "table_count": len(tables),
+            "tables": tables,
+            "response_preview": response.text[:500] if not tables else "",
+        }
+    except requests.RequestException as e:
+        logger.exception("ro_details_upstream_error payload=%s", params)
+        raise HTTPException(status_code=500, detail=f"Upstream SCM request failed: {e}")
+    except Exception as e:
+        logger.exception("ro_details_parse_error payload=%s", params)
+        raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
 
 
 

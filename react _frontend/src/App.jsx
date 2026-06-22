@@ -18,6 +18,7 @@ import sugarIcon from './assets/sugar-cubes.svg';
 // Same-origin by default in production; override locally with VITE_API_URL if needed.
 const API_URL = import.meta.env.VITE_API_URL || '/count';
 const TRANSACTIONS_API_URL = import.meta.env.VITE_TRANSACTIONS_API_URL || '/transactions';
+const RO_DETAILS_API_URL = import.meta.env.VITE_RO_DETAILS_API_URL || '/ro-details';
 
 const todayForDateInput = () => new Date().toISOString().slice(0, 10);
 
@@ -195,12 +196,22 @@ export default function App() {
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
   });
+  const [settingsForm, setSettingsForm] = useState({
+    month: String(new Date().getMonth() + 1).padStart(2, '0'),
+    year: String(new Date().getFullYear()),
+    shop_no: '',
+    dist_code: '18',
+    depot_id: '0802801',
+  });
   const [loading, setLoading] = useState(false);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(false);
   const [error, setError] = useState('');
   const [transactionsError, setTransactionsError] = useState('');
+  const [settingsError, setSettingsError] = useState('');
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
+  const [settingsResult, setSettingsResult] = useState(null);
 
   const summarySections = [
     { key: 'RAW_RICE', label: 'RAW RICE', icon: '🍚', color: '#e9d7d7ff' },
@@ -227,6 +238,10 @@ export default function App() {
       return;
     }
     setTransactionForm({ ...transactionForm, [e.target.name]: e.target.value });
+  };
+
+  const handleSettingsChange = (e) => {
+    setSettingsForm({ ...settingsForm, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
@@ -316,6 +331,45 @@ export default function App() {
       setTransactionsError(err.message || 'Failed to fetch transactions.');
     } finally {
       setTransactionsLoading(false);
+    }
+  };
+
+  const handleSettingsSubmit = async (e) => {
+    e.preventDefault();
+    setSettingsLoading(true);
+    setSettingsError('');
+    setSettingsResult(null);
+    try {
+      const res = await fetch(RO_DETAILS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          month: Number(settingsForm.month),
+          year: Number(settingsForm.year),
+          shop_no: Number(settingsForm.shop_no),
+          dist_code: Number(settingsForm.dist_code),
+          depot_id: settingsForm.depot_id.trim(),
+        }),
+      });
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { detail: responseText || 'Server returned an empty response' };
+      }
+      if (!res.ok) {
+        const requestId = res.headers.get('X-Request-ID');
+        const detail = data?.detail || data?.message || 'Server error';
+        const suffix = requestId ? ` Request ID: ${requestId}` : '';
+        throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
+      }
+      setSettingsResult(data);
+    } catch (err) {
+      console.error('RO details fetch failed:', err);
+      setSettingsError(err.message || 'Failed to fetch RO details.');
+    } finally {
+      setSettingsLoading(false);
     }
   };
 
@@ -898,7 +952,7 @@ export default function App() {
           </Box>
         )}
           </>
-        ) : (
+        ) : activeView === 'transactions' ? (
           <>
             <Paper
               elevation={0}
@@ -1135,6 +1189,222 @@ export default function App() {
               </Box>
             )}
           </>
+        ) : (
+          <>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                background: '#ffffff',
+                boxShadow: '0 20px 40px rgba(104, 141, 255, 0.12)',
+                border: '1px solid #e8edf7',
+                mb: 3,
+              }}
+            >
+              <Stack spacing={2} component="form" onSubmit={handleSettingsSubmit}>
+                <Grid container spacing={1.5}>
+                  <Grid item xs={6}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      MONTH *
+                    </Typography>
+                    {renderSelectControl({
+                      selectKey: 'settings-month',
+                      name: 'month',
+                      value: settingsForm.month,
+                      onChange: handleSettingsChange,
+                      placeholder: 'Select month',
+                      options: monthOptions,
+                      pickerType: 'month',
+                    })}
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      YEAR *
+                    </Typography>
+                    {renderSelectControl({
+                      selectKey: 'settings-year',
+                      name: 'year',
+                      value: settingsForm.year,
+                      onChange: handleSettingsChange,
+                      placeholder: 'Select year',
+                      options: yearOptions,
+                      pickerType: 'year',
+                    })}
+                  </Grid>
+                </Grid>
+
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      SHOP NO *
+                    </Typography>
+                    <Box
+                      component="input"
+                      name="shop_no"
+                      value={settingsForm.shop_no}
+                      onChange={handleSettingsChange}
+                      required
+                      type="number"
+                      placeholder="Enter shop number"
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        borderRadius: 12,
+                        border: '1px solid #dfe5f0',
+                        background: '#fbfcff',
+                        outline: 'none',
+                        fontSize: 16,
+                        fontWeight: 600,
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      DISTRICT *
+                    </Typography>
+                    {renderSelectControl({
+                      selectKey: 'settings-district',
+                      name: 'dist_code',
+                      value: settingsForm.dist_code,
+                      onChange: handleSettingsChange,
+                      placeholder: 'Select district',
+                      options: districtOptions,
+                      pickerType: 'district',
+                    })}
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      DEPOT ID *
+                    </Typography>
+                    <Box
+                      component="input"
+                      name="depot_id"
+                      value={settingsForm.depot_id}
+                      onChange={handleSettingsChange}
+                      required
+                      placeholder="0802801"
+                      style={{
+                        width: '100%',
+                        padding: '14px',
+                        borderRadius: 12,
+                        border: '1px solid #dfe5f0',
+                        background: '#fbfcff',
+                        outline: 'none',
+                        fontSize: 16,
+                        fontWeight: 600,
+                      }}
+                    />
+                  </Grid>
+                </Grid>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={settingsLoading}
+                  sx={{
+                    py: 1.4,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #2767f7 0%, #2255e6 100%)',
+                    boxShadow: '0 12px 24px rgba(36, 94, 255, 0.35)',
+                  }}
+                >
+                  {settingsLoading ? <CircularProgress size={22} color="inherit" /> : 'Get RO Details'}
+                </Button>
+              </Stack>
+            </Paper>
+
+            {settingsError && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {settingsError}
+              </Alert>
+            )}
+
+            {settingsResult && (
+              <Stack spacing={2}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                    RO Details
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#3b63f4', fontWeight: 700 }}>
+                    {Math.round(settingsResult.duration_ms || 0)} ms
+                  </Typography>
+                </Box>
+
+                {(settingsResult.tables || []).map((table, tableIndex) => (
+                  <Paper
+                    key={tableIndex}
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      background: '#ffffff',
+                      border: '1px solid #e8edf7',
+                      boxShadow: '0 12px 28px rgba(26, 58, 109, 0.08)',
+                      overflowX: 'auto',
+                    }}
+                  >
+                    {table.title_rows?.flat()?.length > 0 && (
+                      <Typography sx={{ fontWeight: 800, mb: 1.5, color: '#31415f' }}>
+                        {table.title_rows.flat().join(' ')}
+                      </Typography>
+                    )}
+                    <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
+                      <Box component="thead">
+                        <Box component="tr">
+                          {(table.headers || []).map((header, index) => (
+                            <Box
+                              component="th"
+                              key={`${header}-${index}`}
+                              sx={{
+                                textAlign: 'left',
+                                p: 1,
+                                fontSize: 12,
+                                color: '#6d7584',
+                                borderBottom: '1px solid #e8edf7',
+                              }}
+                            >
+                              {header}
+                            </Box>
+                          ))}
+                        </Box>
+                      </Box>
+                      <Box component="tbody">
+                        {(table.rows || []).slice(0, 30).map((row, rowIndex) => (
+                          <Box component="tr" key={rowIndex}>
+                            {row.map((cell, cellIndex) => (
+                              <Box
+                                component="td"
+                                key={cellIndex}
+                                sx={{
+                                  p: 1,
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  color: '#17233c',
+                                  borderBottom: '1px solid #f0f3f8',
+                                }}
+                              >
+                                {cell}
+                              </Box>
+                            ))}
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+                  </Paper>
+                ))}
+
+                {settingsResult.table_count === 0 && (
+                  <Alert severity="warning">
+                    No table found in SCM response. {settingsResult.response_preview || ''}
+                  </Alert>
+                )}
+              </Stack>
+            )}
+          </>
         )}
       </Container>
 
@@ -1163,11 +1433,11 @@ export default function App() {
         ].map((item) => (
           <Box
             key={item.label}
-            onClick={() => item.view !== 'settings' && setActiveView(item.view)}
+            onClick={() => setActiveView(item.view)}
             sx={{
               textAlign: 'center',
               color: activeView === item.view ? '#2f64f8' : '#7b8395',
-              cursor: item.view === 'settings' ? 'default' : 'pointer',
+              cursor: 'pointer',
             }}
           >
             <div style={{ fontSize: 20 }}>{item.icon}</div>
