@@ -518,19 +518,85 @@ export default function App() {
     return headerIndex >= 0 ? table?.rows?.[0]?.[headerIndex] || '' : '';
   };
 
-  const renderRoSectionTitle = (label) => (
-    <Typography
+  const parseQuantity = (value) => {
+    const parsed = Number(String(value || '').replace(/,/g, ''));
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const formatQty = (value) => parseQuantity(value).toFixed(3);
+
+  const formatCurrency = (value) => {
+    const amount = parseQuantity(value);
+    return `Rs. ${amount.toFixed(2)}`;
+  };
+
+  const renderIconBadge = (icon, bg = '#eef5ff', color = '#245ef5') => (
+    <Box
       sx={{
-        mb: 0.8,
-        color: '#17233c',
-        fontSize: 12,
+        width: 38,
+        height: 38,
+        borderRadius: '50%',
+        background: bg,
+        color,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 18,
         fontWeight: 900,
-        letterSpacing: 0.4,
-        textTransform: 'uppercase',
+        flex: '0 0 auto',
       }}
     >
-      {label}
-    </Typography>
+      {icon}
+    </Box>
+  );
+
+  const renderInfoCard = ({ title, icon, iconBg, iconColor, children }) => (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 2,
+        borderRadius: 3,
+        background: '#ffffff',
+        border: '1px solid #e6edf7',
+        boxShadow: '0 12px 28px rgba(26, 58, 109, 0.08)',
+      }}
+    >
+      <Stack direction="row" spacing={1.2} alignItems="center" sx={{ mb: 1.5 }}>
+        {renderIconBadge(icon, iconBg, iconColor)}
+        <Typography sx={{ color: '#17233c', fontSize: 16, fontWeight: 900 }}>
+          {title}
+        </Typography>
+      </Stack>
+      {children}
+    </Paper>
+  );
+
+  const renderInfoValue = (label, value, options = {}) => (
+    <Box
+      sx={{
+        p: 1.15,
+        borderRadius: 2,
+        background: options.bg || '#f8fafc',
+        border: '1px solid #e6ebf3',
+        minHeight: 64,
+      }}
+    >
+      <Typography sx={{ color: '#748094', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
+        {label}
+      </Typography>
+      <Typography
+        sx={{
+          mt: 0.4,
+          color: options.color || '#17233c',
+          fontSize: options.large ? 16 : 13,
+          fontWeight: 900,
+          lineHeight: 1.25,
+          wordBreak: 'break-word',
+        }}
+      >
+        {value || '-'}
+      </Typography>
+    </Box>
   );
 
   const renderCommodityCards = (table) => {
@@ -542,62 +608,111 @@ export default function App() {
     };
 
     return (
-      <Stack spacing={1.2} sx={{ display: { xs: 'flex', sm: 'none' } }}>
+      <Stack spacing={1.5}>
         {(table?.rows || []).map((row, index) => (
-          <Box
+          <Paper
+            elevation={0}
             key={index}
             sx={{
-              p: 1.4,
+              p: 1.5,
               borderRadius: 3,
               background: '#ffffff',
               border: '1px solid #e2e9f4',
               boxShadow: '0 10px 24px rgba(26, 58, 109, 0.08)',
             }}
           >
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.2, mb: 1.1 }}>
-              <Box>
-                <Typography sx={{ color: '#17233c', fontSize: 15, fontWeight: 900 }}>
-                  {value(row, 'Commodity')}
-                </Typography>
-                <Typography sx={{ color: '#748094', fontSize: 11, fontWeight: 800 }}>
-                  {value(row, 'Scheme')} | {value(row, 'Unit')}
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  px: 1.1,
-                  py: 0.45,
-                  borderRadius: 999,
-                  background: '#eef5ff',
-                  color: '#245ef5',
-                  fontSize: 11,
-                  fontWeight: 900,
-                  height: 'fit-content',
-                }}
-              >
-                Cost {value(row, 'Cost')}
-              </Box>
-            </Box>
-            <Grid container spacing={1}>
-              {[
-                ['Dispatched', 'Dispatched Qty', '#e8fff3', '#0f7a45'],
-                ['Balance', 'Balance Qty', '#fff4e5', '#9a5a00'],
-                ['Allotment', 'Allotment Qty', '#f4f7fb', '#31415f'],
-                ['Earlier', 'Earlier Dispatched Qty', '#f4f7fb', '#31415f'],
-              ].map(([label, key, bg, color]) => (
-                <Grid item xs={6} key={key}>
-                  <Box sx={{ p: 1, borderRadius: 2, background: bg }}>
-                    <Typography sx={{ fontSize: 10, color: '#748094', fontWeight: 900, textTransform: 'uppercase' }}>
-                      {label}
-                    </Typography>
-                    <Typography sx={{ mt: 0.25, color, fontSize: 14, fontWeight: 900 }}>
-                      {value(row, key)}
-                    </Typography>
+            {(() => {
+              const allotment = parseQuantity(value(row, 'Allotment Qty'));
+              const earlier = parseQuantity(value(row, 'Earlier Dispatched Qty'));
+              const current = parseQuantity(value(row, 'Dispatched Qty'));
+              const totalDispatched = earlier + current;
+              const balance = parseQuantity(value(row, 'Balance Qty'));
+              const progress = allotment > 0 ? Math.min((totalDispatched / allotment) * 100, 100) : 0;
+
+              return (
+                <>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.2, mb: 1.3 }}>
+                    <Stack direction="row" spacing={1.1} alignItems="center" sx={{ minWidth: 0 }}>
+                      {renderIconBadge('🌾', '#eefbf3', '#15803d')}
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography sx={{ color: '#17233c', fontSize: 18, fontWeight: 900 }}>
+                          {value(row, 'Commodity')}
+                        </Typography>
+                        <Typography sx={{ color: '#748094', fontSize: 12, fontWeight: 800 }}>
+                          Scheme {value(row, 'Scheme')} | Unit {value(row, 'Unit')}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Box
+                      sx={{
+                        px: 1.1,
+                        py: 0.55,
+                        borderRadius: 999,
+                        background: '#f2f6ff',
+                        color: '#245ef5',
+                        fontSize: 11,
+                        fontWeight: 900,
+                        height: 'fit-content',
+                      }}
+                    >
+                      {formatCurrency(value(row, 'Cost'))}
+                    </Box>
                   </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
+
+                  <Grid container spacing={1}>
+                    <Grid item xs={6}>
+                      {renderInfoValue('Current Dispatched', formatQty(current), {
+                        bg: '#eafff2',
+                        color: '#0f7a45',
+                        large: true,
+                      })}
+                    </Grid>
+                    <Grid item xs={6}>
+                      {renderInfoValue('Balance Qty', formatQty(balance), {
+                        bg: '#fff4e5',
+                        color: '#b45309',
+                        large: true,
+                      })}
+                    </Grid>
+                    <Grid item xs={6}>
+                      {renderInfoValue('Allotment Qty', formatQty(allotment))}
+                    </Grid>
+                    <Grid item xs={6}>
+                      {renderInfoValue('Earlier Dispatched', formatQty(earlier))}
+                    </Grid>
+                    <Grid item xs={12}>
+                      {renderInfoValue('Total Dispatched Qty', formatQty(totalDispatched), {
+                        bg: '#eef5ff',
+                        color: '#245ef5',
+                        large: true,
+                      })}
+                    </Grid>
+                  </Grid>
+
+                  <Box sx={{ mt: 1.5 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.7 }}>
+                      <Typography sx={{ color: '#748094', fontSize: 11, fontWeight: 900 }}>
+                        Dispatch Progress
+                      </Typography>
+                      <Typography sx={{ color: '#17233c', fontSize: 12, fontWeight: 900 }}>
+                        {progress.toFixed(1)}%
+                      </Typography>
+                    </Box>
+                    <Box sx={{ height: 10, borderRadius: 999, background: '#edf2f7', overflow: 'hidden' }}>
+                      <Box
+                        sx={{
+                          width: `${progress}%`,
+                          height: '100%',
+                          borderRadius: 999,
+                          background: 'linear-gradient(90deg, #16a34a 0%, #22c55e 100%)',
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                </>
+              );
+            })()}
+          </Paper>
         ))}
       </Stack>
     );
@@ -614,6 +729,15 @@ export default function App() {
     const dispatchTime = getRoFieldValue(dispatchTable, 'Dispatch Time');
     const bags = getRoFieldValue(shopTable, 'No Of Bags');
     const amountPaid = getRoFieldValue(shopTable, 'Amount Paid');
+    const district = getRoFieldValue(dispatchTable, 'District');
+    const taluk = getRoFieldValue(dispatchTable, 'Taluk Name');
+    const truckChitNo = getRoFieldValue(dispatchTable, 'TruckChit NO');
+    const shopNo = getRoFieldValue(shopTable, 'FP Shop Number');
+    const shopName = getRoFieldValue(shopTable, 'Shop Name');
+    const shopOwner = getRoFieldValue(shopTable, 'Shop Owner Name');
+    const shopAddress = getRoFieldValue(shopTable, 'Shop Address');
+    const monthMatch = title.match(/Month of\s+(.+)$/i);
+    const orderMonth = monthMatch ? monthMatch[1].replace(',', '').trim() : '';
 
     return (
       <Paper
@@ -629,121 +753,116 @@ export default function App() {
       >
         <Box
           sx={{
-            p: 2,
-            background: 'linear-gradient(135deg, #173b7a 0%, #2563eb 100%)',
+            p: 2.2,
+            background: 'linear-gradient(135deg, #173b7a 0%, #2563eb 68%, #0891b2 100%)',
             color: '#ffffff',
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, mb: 1.2 }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 900, color: '#ffffff', fontSize: 16 }}>
-              Order Quantity Details
-            </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.78)', fontWeight: 800, fontSize: 12, mt: 0.25 }}>
-              {roQuantityResult.request?.ro_no || ''}
-            </Typography>
-          </Box>
-          <Typography sx={{ color: '#ffffff', fontWeight: 900, fontSize: 13, flex: '0 0 auto' }}>
-            {Math.round(roQuantityResult.duration_ms || 0)} ms
-          </Typography>
-        </Box>
-
-        {title && (
-          <Typography sx={{ color: '#ffffff', fontWeight: 900, fontSize: 13, lineHeight: 1.35 }}>
-            {title}
-          </Typography>
-        )}
-        </Box>
-
-        <Stack spacing={1.7} sx={{ p: 2 }}>
-          <Grid container spacing={1}>
-            {[
-              ['Truck', truckNo],
-              ['Dispatch', `${dispatchedDate || '-'} ${dispatchTime || ''}`.trim()],
-              ['Bags', bags],
-              ['Amount', amountPaid],
-            ].map(([label, value]) => (
-              <Grid item xs={6} sm={3} key={label}>
-                <Box sx={{ p: 1.2, borderRadius: 2.5, background: '#ffffff', border: '1px solid #e4ebf5' }}>
-                  <Typography sx={{ color: '#748094', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
-                    {label}
-                  </Typography>
-                  <Typography sx={{ mt: 0.35, color: '#17233c', fontSize: 14, fontWeight: 900, lineHeight: 1.25 }}>
-                    {value || '-'}
-                  </Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-
-          {dispatchTable?.rows?.length > 0 && (
-            <Box>
-              {renderRoSectionTitle('Dispatch Details')}
-              {renderRoDetailFields(dispatchTable)}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, mb: 1.6 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontWeight: 900, color: '#ffffff', fontSize: 20, lineHeight: 1.15 }}>
+                Order Quantity Details
+              </Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.82)', fontWeight: 800, fontSize: 12, mt: 0.65 }}>
+                {roQuantityResult.request?.ro_no || ''}
+              </Typography>
             </Box>
+            <Box sx={{ textAlign: 'right', flex: '0 0 auto' }}>
+              <Box
+                sx={{
+                  px: 1.15,
+                  py: 0.55,
+                  borderRadius: 999,
+                  background: '#dcfce7',
+                  color: '#166534',
+                  fontSize: 12,
+                  fontWeight: 900,
+                  mb: 0.6,
+                }}
+              >
+                Dispatched
+              </Box>
+              <Typography sx={{ color: 'rgba(255,255,255,0.84)', fontWeight: 800, fontSize: 11 }}>
+                {Math.round(roQuantityResult.duration_ms || 0)} ms
+              </Typography>
+            </Box>
+          </Box>
+
+          <Grid container spacing={1}>
+            <Grid item xs={12} sm={8}>
+              <Box sx={{ p: 1.2, borderRadius: 2.5, background: 'rgba(255,255,255,0.12)' }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
+                  RO Number
+                </Typography>
+                <Typography sx={{ color: '#ffffff', fontSize: 13, fontWeight: 900, mt: 0.35, wordBreak: 'break-word' }}>
+                  {roQuantityResult.request?.ro_no || '-'}
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={12} sm={4}>
+              <Box sx={{ p: 1.2, borderRadius: 2.5, background: 'rgba(255,255,255,0.12)' }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
+                  Month
+                </Typography>
+                <Typography sx={{ color: '#ffffff', fontSize: 13, fontWeight: 900, mt: 0.35 }}>
+                  {orderMonth || '-'}
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </Box>
+
+        <Stack spacing={1.7} sx={{ p: 2, background: '#f6f8fc' }}>
+          {dispatchTable?.rows?.length > 0 && (
+            renderInfoCard({
+              title: 'Dispatch Details',
+              icon: '🚚',
+              iconBg: '#e0f2fe',
+              iconColor: '#0369a1',
+              children: (
+                <Grid container spacing={1}>
+                  <Grid item xs={6}>{renderInfoValue('District', district)}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('Taluk', taluk)}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('Dispatch Date', dispatchedDate)}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('Dispatch Time', dispatchTime)}</Grid>
+                  <Grid item xs={12}>{renderInfoValue('Truck No', truckNo, { bg: '#eef5ff', color: '#245ef5', large: true })}</Grid>
+                  <Grid item xs={12}>{renderInfoValue('Truck Chit No', truckChitNo)}</Grid>
+                </Grid>
+              ),
+            })
           )}
 
           {shopTable?.rows?.length > 0 && (
-            <Box>
-              {renderRoSectionTitle('Shop Details')}
-              {renderRoDetailFields(shopTable)}
-            </Box>
+            renderInfoCard({
+              title: 'Shop Details',
+              icon: '🏪',
+              iconBg: '#fef3c7',
+              iconColor: '#92400e',
+              children: (
+                <Grid container spacing={1}>
+                  <Grid item xs={6}>{renderInfoValue('FPS Shop Number', shopNo)}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('Shop Name', shopName)}</Grid>
+                  <Grid item xs={12}>{renderInfoValue('Shop Owner Name', shopOwner, { large: true })}</Grid>
+                  <Grid item xs={12}>{renderInfoValue('Shop Address', shopAddress)}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('No. of Bags', bags, { bg: '#fff7ed', color: '#c2410c', large: true })}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('Amount Paid', formatCurrency(amountPaid), { bg: '#f0fdf4', color: '#15803d', large: true })}</Grid>
+                </Grid>
+              ),
+            })
           )}
 
           {commodityTable?.rows?.length > 0 && (
-            <Box>
-              {renderRoSectionTitle('Commodity Quantities')}
+            renderInfoCard({
+              title: 'Commodity Details',
+              icon: '📦',
+              iconBg: '#eefbf3',
+              iconColor: '#15803d',
+              children: (
+                <>
               {renderCommodityCards(commodityTable)}
-              <Box sx={{ display: { xs: 'none', sm: 'block' }, overflowX: 'auto', border: '1px solid #dfe6f1', borderRadius: 2 }}>
-                <Box component="table" sx={{ width: '100%', minWidth: 760, borderCollapse: 'collapse' }}>
-                  <Box component="thead">
-                    <Box component="tr">
-                      {(commodityTable.headers || []).map((header, index) => (
-                        <Box
-                          component="th"
-                          key={`${header}-${index}`}
-                          sx={{
-                            p: 1,
-                            textAlign: index >= 3 ? 'right' : 'left',
-                            fontSize: 11,
-                            fontWeight: 900,
-                            color: '#31415f',
-                            background: '#edf7fb',
-                            borderBottom: '1px solid #d7e2ef',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {header}
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-                  <Box component="tbody">
-                    {commodityTable.rows.map((row, rowIndex) => (
-                      <Box component="tr" key={rowIndex} sx={{ background: rowIndex % 2 ? '#fbfdff' : '#ffffff' }}>
-                        {row.map((cell, cellIndex) => (
-                          <Box
-                            component="td"
-                            key={cellIndex}
-                            sx={{
-                              p: 1,
-                              textAlign: cellIndex >= 3 ? 'right' : 'left',
-                              fontSize: 12,
-                              fontWeight: cellIndex <= 1 ? 900 : 800,
-                              color: '#17233c',
-                              borderBottom: '1px solid #eef2f7',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {cell}
-                          </Box>
-                        ))}
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
+                </>
+              ),
+            })
           )}
         </Stack>
 
