@@ -616,7 +616,7 @@ export default function App() {
                         <Typography sx={{ color: '#17233c', fontSize: 18, fontWeight: 900 }}>
                           {value(row, 'Commodity')}
                         </Typography>
-                        <Typography sx={{ color: '#748094', fontSize: 12, fontWeight: 800 }}>
+                        <Typography sx={{ color: '#17233c', fontSize: 12, fontWeight: 900 }}>
                           Scheme {value(row, 'Scheme')} | Unit {value(row, 'Unit')}
                         </Typography>
                       </Box>
@@ -711,9 +711,7 @@ export default function App() {
     const taluk = getRoFieldValue(dispatchTable, 'Taluk Name');
     const truckChitNo = getRoFieldValue(dispatchTable, 'TruckChit NO');
     const shopNo = getRoFieldValue(shopTable, 'FP Shop Number');
-    const shopName = getRoFieldValue(shopTable, 'Shop Name');
     const shopOwner = getRoFieldValue(shopTable, 'Shop Owner Name');
-    const shopAddress = getRoFieldValue(shopTable, 'Shop Address');
     const monthMatch = title.match(/Month of\s+(.+)$/i);
     const orderMonth = monthMatch ? monthMatch[1].replace(',', '').trim() : '';
 
@@ -832,10 +830,8 @@ export default function App() {
               iconColor: '#92400e',
               children: (
                 <Grid container spacing={1}>
-                  <Grid item xs={6}>{renderInfoValue('FPS Shop Number', shopNo, { icon: '🏪', compact: true })}</Grid>
-                  <Grid item xs={6}>{renderInfoValue('Shop Name', shopName, { icon: '🏷️', compact: true })}</Grid>
+                  <Grid item xs={12}>{renderInfoValue('FPS Shop Number', shopNo, { icon: '🏪', compact: true })}</Grid>
                   <Grid item xs={12}>{renderInfoValue('Shop Owner Name', shopOwner, { icon: '👤', large: true })}</Grid>
-                  <Grid item xs={12}>{renderInfoValue('Shop Address', shopAddress, { icon: '📌' })}</Grid>
                   <Grid item xs={6}>
                     {renderInfoValue('No. of Bags', bags, {
                       icon: '🛍️',
