@@ -6,6 +6,7 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from urllib.parse import parse_qs, urlparse
 from typing import Optional
+from html import unescape
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -115,6 +116,8 @@ SCM_RO_DETAIL_KEYS = {
     "truckchit_number",
 }
 
+RO_NO_PATTERN = re.compile(r"RO/[A-Z]+/\d+/\d+/\d+/\d+/\d+", re.IGNORECASE)
+
 
 def extract_scm_detail_params(raw_value: str):
     if not raw_value:
@@ -156,6 +159,48 @@ def extract_scm_detail_params(raw_value: str):
         return dict(zip(ordered_keys, positional_values[:8]))
 
     return {}
+
+
+def extract_scm_actions_by_ro_no(html: str):
+    decoded = unescape(html or "")
+    actions = {}
+
+    for match in RO_NO_PATTERN.finditer(decoded):
+        ro_no = match.group(0)
+        start = max(match.start() - 2500, 0)
+        end = min(match.end() + 2500, len(decoded))
+        context = decoded[start:end]
+        params = extract_scm_detail_params(context) or {}
+
+        if not params.get("ro_no"):
+            params["ro_no"] = ro_no
+
+        if not params.get("release_order_id_aso"):
+            id_match = re.search(
+                r"release_order_id_aso\s*[:=]\s*['\"]?(\d+)",
+                context,
+                re.IGNORECASE,
+            )
+            if id_match:
+                params["release_order_id_aso"] = id_match.group(1)
+
+        if not params.get("release_order_id_aso") and (
+            "ro_quantity_details_load" in context
+            or "release_order_id" in context.lower()
+        ):
+            ro_numbers = set(re.findall(r"\d+", ro_no))
+            for candidate in re.findall(r"\b\d{6,}\b", context):
+                if candidate not in ro_numbers:
+                    params["release_order_id_aso"] = candidate
+                    break
+
+        if not params.get("truckchit_number"):
+            params["truckchit_number"] = truckchit_from_ro_no(ro_no)
+
+        if params.get("release_order_id_aso"):
+            actions[ro_no] = params
+
+    return actions
 
 
 def parse_html_tables(html: str):
@@ -248,14 +293,14 @@ def truckchit_from_ro_no(ro_no: str):
     return ""
 
 
-def add_fallback_ro_actions(tables, request: RoDetailsRequest):
+def add_fallback_ro_actions(tables, request: RoDetailsRequest, html: str = ""):
+    actions_by_ro_no = extract_scm_actions_by_ro_no(html)
+
     for table in tables:
         headers = table.get("headers") or []
         row_actions = table.get("row_actions") or []
         for index, row in enumerate(table.get("rows") or []):
             existing = row_actions[index] if index < len(row_actions) else {}
-            if existing:
-                continue
 
             ro_no = get_row_value_by_header(headers, row, ["RELEASE ORDER NO", "RO NO"])
             ro_date = get_row_value_by_header(headers, row, ["RO DATE", "DATE"])
@@ -264,7 +309,6 @@ def add_fallback_ro_actions(tables, request: RoDetailsRequest):
                 continue
 
             action = {
-                "release_order_id_aso": "",
                 "ro_no": ro_no,
                 "month_int": str(request.month),
                 "year_int": str(request.year),
@@ -273,6 +317,13 @@ def add_fallback_ro_actions(tables, request: RoDetailsRequest):
                 "district_code": str(request.dist_code),
                 "truckchit_number": truckchit_from_ro_no(ro_no),
             }
+            action.update(existing or {})
+            action.update(actions_by_ro_no.get(ro_no, {}))
+
+            if not action.get("release_order_id_aso"):
+                logger.warning("ro_details_action_missing_release_id ro_no=%s", ro_no)
+                continue
+
             if index < len(row_actions):
                 row_actions[index] = action
             else:
@@ -607,7 +658,7 @@ def get_ro_details(request: RoDetailsRequest):
         )
         response.raise_for_status()
         tables = parse_html_tables(response.text)
-        tables = add_fallback_ro_actions(tables, request)
+        tables = add_fallback_ro_actions(tables, request, response.text)
         return {
             "remote_status_code": response.status_code,
             "duration_ms": duration_ms,
@@ -627,6 +678,11 @@ def get_ro_details(request: RoDetailsRequest):
 def get_ro_quantity_details(request: RoQuantityDetailsRequest):
     if not request.ro_no:
         raise HTTPException(status_code=400, detail="RO number is required to load quantity details")
+    if not request.release_order_id_aso:
+        raise HTTPException(
+            status_code=400,
+            detail="SCM did not provide the release order id for this row. Refresh RO Details and try again.",
+        )
 
     ro_parts = [part for part in request.ro_no.strip().split("/") if part]
     month_int = request.month_int

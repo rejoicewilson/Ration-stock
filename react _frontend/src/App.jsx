@@ -1433,7 +1433,7 @@ export default function App() {
                       <Box component="tbody">
                         {(table.rows || []).slice(0, 30).map((row, rowIndex) => {
                           const actionParams = table.row_actions?.[rowIndex];
-                          const isClickable = actionParams && Object.keys(actionParams).length > 0;
+                          const isClickable = Boolean(actionParams?.release_order_id_aso);
 
                           return (
                           <Box
