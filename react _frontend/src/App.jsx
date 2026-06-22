@@ -484,35 +484,6 @@ export default function App() {
     </Box>
   );
 
-  const renderRoDetailFields = (table) => {
-    const row = table?.rows?.[0] || [];
-    return (
-      <Grid container spacing={1}>
-        {(table?.headers || []).map((header, index) => (
-          <Grid item xs={6} sm={4} key={`${header}-${index}`}>
-            <Box
-              sx={{
-                py: 1,
-                px: 1.2,
-                borderRadius: 2,
-                background: '#f8fafc',
-                border: '1px solid #e6ebf3',
-                minHeight: 64,
-              }}
-            >
-              <Typography sx={{ fontSize: 10, color: '#748094', fontWeight: 800, textTransform: 'uppercase' }}>
-                {header}
-              </Typography>
-              <Typography sx={{ mt: 0.5, fontSize: 13, color: '#17233c', fontWeight: 900, lineHeight: 1.25 }}>
-                {row[index] || '-'}
-              </Typography>
-            </Box>
-          </Grid>
-        ))}
-      </Grid>
-    );
-  };
-
   const getRoFieldValue = (table, label) => {
     const headerIndex = (table?.headers || []).findIndex((header) => header === label);
     return headerIndex >= 0 ? table?.rows?.[0]?.[headerIndex] || '' : '';
@@ -574,28 +545,35 @@ export default function App() {
   const renderInfoValue = (label, value, options = {}) => (
     <Box
       sx={{
-        p: 1.15,
-        borderRadius: 2,
+        p: 1.25,
+        borderRadius: 2.5,
         background: options.bg || '#f8fafc',
-        border: '1px solid #e6ebf3',
-        minHeight: 64,
+        border: options.border || '1px solid #e6ebf3',
+        minHeight: options.compact ? 58 : 76,
+        boxShadow: options.shadow === false ? 'none' : '0 8px 18px rgba(26, 58, 109, 0.06)',
+        display: 'flex',
+        gap: 1,
+        alignItems: 'flex-start',
       }}
     >
-      <Typography sx={{ color: '#748094', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
-        {label}
-      </Typography>
-      <Typography
-        sx={{
-          mt: 0.4,
-          color: options.color || '#17233c',
-          fontSize: options.large ? 16 : 13,
-          fontWeight: 900,
-          lineHeight: 1.25,
-          wordBreak: 'break-word',
-        }}
-      >
-        {value || '-'}
-      </Typography>
+      {options.icon && renderIconBadge(options.icon, options.iconBg || '#eef5ff', options.iconColor || '#245ef5')}
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography sx={{ color: '#748094', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
+          {label}
+        </Typography>
+        <Typography
+          sx={{
+            mt: 0.45,
+            color: options.color || '#17233c',
+            fontSize: options.large ? 17 : 14,
+            fontWeight: 900,
+            lineHeight: 1.25,
+            wordBreak: 'break-word',
+          }}
+        >
+          {value || '-'}
+        </Typography>
+      </Box>
     </Box>
   );
 
@@ -821,12 +799,26 @@ export default function App() {
               iconColor: '#0369a1',
               children: (
                 <Grid container spacing={1}>
-                  <Grid item xs={6}>{renderInfoValue('District', district)}</Grid>
-                  <Grid item xs={6}>{renderInfoValue('Taluk', taluk)}</Grid>
-                  <Grid item xs={6}>{renderInfoValue('Dispatch Date', dispatchedDate)}</Grid>
-                  <Grid item xs={6}>{renderInfoValue('Dispatch Time', dispatchTime)}</Grid>
-                  <Grid item xs={12}>{renderInfoValue('Truck No', truckNo, { bg: '#eef5ff', color: '#245ef5', large: true })}</Grid>
-                  <Grid item xs={12}>{renderInfoValue('Truck Chit No', truckChitNo)}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('District', district, { icon: '📍', compact: true })}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('Taluk', taluk, { icon: '🗺️', compact: true })}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('Dispatch Date', dispatchedDate, { icon: '📅', compact: true })}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('Dispatch Time', dispatchTime, { icon: '🕒', compact: true })}</Grid>
+                  <Grid item xs={12}>
+                    {renderInfoValue('Truck No', truckNo, {
+                      icon: '🚚',
+                      bg: '#eef5ff',
+                      border: '1px solid #c7d8ff',
+                      color: '#245ef5',
+                      large: true,
+                    })}
+                  </Grid>
+                  <Grid item xs={12}>
+                    {renderInfoValue('Truck Chit No', truckChitNo, {
+                      icon: '📄',
+                      bg: '#f8fafc',
+                      large: true,
+                    })}
+                  </Grid>
                 </Grid>
               ),
             })
@@ -840,12 +832,28 @@ export default function App() {
               iconColor: '#92400e',
               children: (
                 <Grid container spacing={1}>
-                  <Grid item xs={6}>{renderInfoValue('FPS Shop Number', shopNo)}</Grid>
-                  <Grid item xs={6}>{renderInfoValue('Shop Name', shopName)}</Grid>
-                  <Grid item xs={12}>{renderInfoValue('Shop Owner Name', shopOwner, { large: true })}</Grid>
-                  <Grid item xs={12}>{renderInfoValue('Shop Address', shopAddress)}</Grid>
-                  <Grid item xs={6}>{renderInfoValue('No. of Bags', bags, { bg: '#fff7ed', color: '#c2410c', large: true })}</Grid>
-                  <Grid item xs={6}>{renderInfoValue('Amount Paid', formatCurrency(amountPaid), { bg: '#f0fdf4', color: '#15803d', large: true })}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('FPS Shop Number', shopNo, { icon: '🏪', compact: true })}</Grid>
+                  <Grid item xs={6}>{renderInfoValue('Shop Name', shopName, { icon: '🏷️', compact: true })}</Grid>
+                  <Grid item xs={12}>{renderInfoValue('Shop Owner Name', shopOwner, { icon: '👤', large: true })}</Grid>
+                  <Grid item xs={12}>{renderInfoValue('Shop Address', shopAddress, { icon: '📌' })}</Grid>
+                  <Grid item xs={6}>
+                    {renderInfoValue('No. of Bags', bags, {
+                      icon: '🛍️',
+                      bg: '#fff7ed',
+                      border: '1px solid #fed7aa',
+                      color: '#c2410c',
+                      large: true,
+                    })}
+                  </Grid>
+                  <Grid item xs={6}>
+                    {renderInfoValue('Amount Paid', formatCurrency(amountPaid), {
+                      icon: '💳',
+                      bg: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      color: '#15803d',
+                      large: true,
+                    })}
+                  </Grid>
                 </Grid>
               ),
             })
