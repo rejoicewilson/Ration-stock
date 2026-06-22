@@ -337,27 +337,67 @@ def normalize_report_row(row, width):
     return normalized
 
 
-def parse_ro_quantity_report(html: str):
-    soup = BeautifulSoup(html, "html.parser")
-    raw_rows = []
-    seen_consecutive = None
+def strip_html_text(value: str):
+    soup = BeautifulSoup(value or "", "html.parser")
+    for nested in soup.find_all(["script", "style"]):
+        nested.decompose()
+    return soup.get_text(" ", strip=True)
 
-    for tr in soup.find_all("tr"):
-        cells = [
-            cell_text_without_nested(cell)
-            for cell in tr.find_all(["th", "td"], recursive=False)
-        ]
-        cells = [cell for cell in cells if cell != ""]
-        if not cells:
-            cells = [cell.get_text(" ", strip=True) for cell in tr.find_all(["th", "td"])]
-            if len(cells) > 1:
-                cells = cells[: max(len(headers) for headers in RO_QUANTITY_HEADERS)]
-        if not cells or not any(cells):
-            continue
+
+def extract_cells_from_row_markup(row_html: str):
+    cell_starts = list(re.finditer(r"<t[dh]\b[^>]*>", row_html, re.IGNORECASE))
+    cells = []
+
+    for index, match in enumerate(cell_starts):
+        start = match.end()
+        end_candidates = []
+        next_cell_start = cell_starts[index + 1].start() if index + 1 < len(cell_starts) else None
+        close_cell = re.search(r"</t[dh]\s*>", row_html[start:], re.IGNORECASE)
+        close_row = re.search(r"</tr\s*>", row_html[start:], re.IGNORECASE)
+
+        if next_cell_start is not None:
+            end_candidates.append(next_cell_start)
+        if close_cell:
+            end_candidates.append(start + close_cell.start())
+        if close_row:
+            end_candidates.append(start + close_row.start())
+
+        end = min(end_candidates) if end_candidates else len(row_html)
+        text = strip_html_text(row_html[start:end])
+        if text:
+            cells.append(text)
+
+    return cells
+
+
+def extract_raw_report_rows(html: str):
+    rows = []
+    row_matches = list(re.finditer(r"<tr\b[^>]*>", html or "", re.IGNORECASE))
+
+    for index, match in enumerate(row_matches):
+        start = match.start()
+        next_row_start = row_matches[index + 1].start() if index + 1 < len(row_matches) else len(html)
+        close_row = re.search(r"</tr\s*>", html[match.end():next_row_start], re.IGNORECASE)
+        end = match.end() + close_row.end() if close_row else next_row_start
+        cells = extract_cells_from_row_markup(html[start:end])
+        if cells:
+            rows.append(cells)
+
+    return rows
+
+
+def parse_ro_quantity_report(html: str):
+    raw_rows = extract_raw_report_rows(html)
+    seen_consecutive = None
+    deduped_rows = []
+
+    for cells in raw_rows:
         if cells == seen_consecutive:
             continue
         seen_consecutive = cells
-        raw_rows.append(cells)
+        deduped_rows.append(cells)
+
+    raw_rows = deduped_rows
 
     tables = []
     current_table = None
@@ -862,12 +902,13 @@ def get_ro_quantity_details(request: RoQuantityDetailsRequest):
         tables = parse_ro_quantity_report(response.text)
         if not any(table.get("rows") for table in tables):
             tables = parse_html_tables(response.text)
+        has_rows = any(table.get("rows") for table in tables)
         return {
             "remote_status_code": response.status_code,
             "duration_ms": duration_ms,
             "table_count": len(tables),
             "tables": tables,
-            "response_preview": response.text[:500] if not tables else "",
+            "response_preview": response.text[:1200] if not has_rows else "",
         }
     except requests.RequestException as e:
         logger.exception("ro_quantity_details_upstream_error payload=%s", params)
