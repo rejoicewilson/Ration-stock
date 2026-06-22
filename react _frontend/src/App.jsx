@@ -1450,9 +1450,9 @@ export default function App() {
                                 }}
                               >
                                 {cell}
-                                {isClickable && cellIndex === 0 && (
+                                {isClickable && cellIndex === 1 && (
                                   <Typography component="span" sx={{ color: '#2f64f8', fontWeight: 900, ml: 0.8 }}>
-                                    View
+                                    Tap
                                   </Typography>
                                 )}
                               </Box>

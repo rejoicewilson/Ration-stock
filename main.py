@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from urllib.parse import parse_qs, urlparse
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -93,7 +94,7 @@ class RoDetailsRequest(BaseModel):
 
 
 class RoQuantityDetailsRequest(BaseModel):
-    release_order_id_aso: str
+    release_order_id_aso: Optional[str] = ""
     ro_no: str
     month_int: int
     year_int: int
@@ -176,6 +177,8 @@ def parse_html_tables(html: str):
                             break
                     if action_params:
                         break
+                if not action_params:
+                    action_params = extract_scm_detail_params(str(tr))
                 row_actions.append(action_params)
 
         if not rows:
@@ -213,6 +216,73 @@ def parse_html_tables(html: str):
         )
 
     return parsed_tables
+
+
+def normalize_header(value: str):
+    return re.sub(r"[^a-z0-9]+", "", (value or "").lower())
+
+
+def get_row_value_by_header(headers, row, header_names):
+    normalized_targets = {normalize_header(name) for name in header_names}
+    for index, header in enumerate(headers or []):
+        if normalize_header(header) in normalized_targets and index < len(row):
+            return row[index]
+    return ""
+
+
+def normalize_ro_date(value: str):
+    value = (value or "").strip()
+    match = re.match(r"(\d{2})-(\d{2})-(\d{4})$", value)
+    if match:
+        day, month, year = match.groups()
+        return f"{year}-{month}-{day}"
+    return value
+
+
+def truckchit_from_ro_no(ro_no: str):
+    if not ro_no:
+        return ""
+    parts = [part for part in ro_no.strip().split("/") if part]
+    if len(parts) >= 8 and parts[0].upper() == "RO":
+        return "TC-" + "-".join(parts[1:])
+    return ""
+
+
+def add_fallback_ro_actions(tables, request: RoDetailsRequest):
+    for table in tables:
+        headers = table.get("headers") or []
+        row_actions = table.get("row_actions") or []
+        for index, row in enumerate(table.get("rows") or []):
+            existing = row_actions[index] if index < len(row_actions) else {}
+            if existing:
+                continue
+
+            ro_no = get_row_value_by_header(headers, row, ["RELEASE ORDER NO", "RO NO"])
+            ro_date = get_row_value_by_header(headers, row, ["RO DATE", "DATE"])
+            shop_number = get_row_value_by_header(headers, row, ["SHOP NO", "SHOP NUMBER"])
+            if not ro_no:
+                continue
+
+            action = {
+                "release_order_id_aso": "",
+                "ro_no": ro_no,
+                "month_int": str(request.month),
+                "year_int": str(request.year),
+                "ro_date": normalize_ro_date(ro_date),
+                "shop_number": re.sub(r"\D+", "", shop_number) or str(request.shop_no),
+                "district_code": str(request.dist_code),
+                "truckchit_number": truckchit_from_ro_no(ro_no),
+            }
+            if index < len(row_actions):
+                row_actions[index] = action
+            else:
+                row_actions.append(action)
+
+            if index < len(table.get("records") or []):
+                table["records"][index]["_action_params"] = action
+        table["row_actions"] = row_actions
+
+    return tables
 
 
 TRANSACTION_HEADERS = [
@@ -537,6 +607,7 @@ def get_ro_details(request: RoDetailsRequest):
         )
         response.raise_for_status()
         tables = parse_html_tables(response.text)
+        tables = add_fallback_ro_actions(tables, request)
         return {
             "remote_status_code": response.status_code,
             "duration_ms": duration_ms,
@@ -565,6 +636,7 @@ def get_ro_quantity_details(request: RoQuantityDetailsRequest):
         "district_code": request.district_code,
         "truckchit_number": request.truckchit_number,
     }
+    params = {key: value for key, value in params.items() if value not in ("", None)}
     start_time = time.perf_counter()
     logger.info("ro_quantity_details_start payload=%s", params)
     try:
