@@ -96,12 +96,12 @@ class RoDetailsRequest(BaseModel):
 class RoQuantityDetailsRequest(BaseModel):
     release_order_id_aso: Optional[str] = ""
     ro_no: str
-    month_int: int
-    year_int: int
-    ro_date: str
-    shop_number: int
-    district_code: int
-    truckchit_number: str
+    month_int: Optional[int] = None
+    year_int: Optional[int] = None
+    ro_date: Optional[str] = ""
+    shop_number: Optional[int] = None
+    district_code: Optional[int] = None
+    truckchit_number: Optional[str] = ""
 
 
 SCM_RO_DETAIL_KEYS = {
@@ -625,16 +625,30 @@ def get_ro_details(request: RoDetailsRequest):
 
 @app.post("/ro-quantity-details")
 def get_ro_quantity_details(request: RoQuantityDetailsRequest):
+    if not request.ro_no:
+        raise HTTPException(status_code=400, detail="RO number is required to load quantity details")
+
+    ro_parts = [part for part in request.ro_no.strip().split("/") if part]
+    month_int = request.month_int
+    year_int = request.year_int
+    shop_number = request.shop_number
+    district_code = request.district_code
+    if len(ro_parts) >= 7:
+        district_code = district_code or int(ro_parts[2]) if ro_parts[2].isdigit() else district_code
+        shop_number = shop_number or int(ro_parts[3]) if ro_parts[3].isdigit() else shop_number
+        month_int = month_int or int(ro_parts[4]) if ro_parts[4].isdigit() else month_int
+        year_int = year_int or int(ro_parts[5]) if ro_parts[5].isdigit() else year_int
+
     url = "https://scm.kerala.gov.in/ro_quantity_details_load.jsp"
     params = {
         "release_order_id_aso": request.release_order_id_aso,
         "ro_no": request.ro_no,
-        "month_int": request.month_int,
-        "year_int": request.year_int,
+        "month_int": month_int,
+        "year_int": year_int,
         "ro_date": request.ro_date,
-        "shop_number": request.shop_number,
-        "district_code": request.district_code,
-        "truckchit_number": request.truckchit_number,
+        "shop_number": shop_number,
+        "district_code": district_code,
+        "truckchit_number": request.truckchit_number or truckchit_from_ro_no(request.ro_no),
     }
     params = {key: value for key, value in params.items() if value not in ("", None)}
     start_time = time.perf_counter()

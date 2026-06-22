@@ -382,6 +382,22 @@ export default function App() {
   const handleRoQuantityClick = async (actionParams) => {
     if (!actionParams || Object.keys(actionParams).length === 0) return;
 
+    const roParts = String(actionParams.ro_no || '').split('/').filter(Boolean);
+    const toNumberOrFallback = (value, fallback) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && value !== undefined && value !== '' ? parsed : fallback;
+    };
+    const payload = {
+      release_order_id_aso: actionParams.release_order_id_aso || '',
+      ro_no: actionParams.ro_no || '',
+      month_int: toNumberOrFallback(actionParams.month_int, toNumberOrFallback(roParts[4], Number(settingsForm.month))),
+      year_int: toNumberOrFallback(actionParams.year_int, toNumberOrFallback(roParts[5], Number(settingsForm.year))),
+      ro_date: actionParams.ro_date || '',
+      shop_number: toNumberOrFallback(actionParams.shop_number, toNumberOrFallback(roParts[3], Number(settingsForm.shop_no))),
+      district_code: toNumberOrFallback(actionParams.district_code, toNumberOrFallback(roParts[2], Number(settingsForm.dist_code))),
+      truckchit_number: actionParams.truckchit_number || (roParts.length >= 8 ? `TC-${roParts.slice(1).join('-')}` : ''),
+    };
+
     setRoQuantityLoading(true);
     setRoQuantityError('');
     setRoQuantityResult(null);
@@ -389,16 +405,7 @@ export default function App() {
       const res = await fetch(RO_QUANTITY_DETAILS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          release_order_id_aso: actionParams.release_order_id_aso,
-          ro_no: actionParams.ro_no,
-          month_int: Number(actionParams.month_int),
-          year_int: Number(actionParams.year_int),
-          ro_date: actionParams.ro_date,
-          shop_number: Number(actionParams.shop_number),
-          district_code: Number(actionParams.district_code),
-          truckchit_number: actionParams.truckchit_number,
-        }),
+        body: JSON.stringify(payload),
       });
       const responseText = await res.text();
       let data = {};
@@ -409,11 +416,13 @@ export default function App() {
       }
       if (!res.ok) {
         const requestId = res.headers.get('X-Request-ID');
-        const detail = data?.detail || data?.message || 'Server error';
+        const detail = Array.isArray(data?.detail)
+          ? data.detail.map((item) => item.msg || JSON.stringify(item)).join('; ')
+          : data?.detail || data?.message || 'Server error';
         const suffix = requestId ? ` Request ID: ${requestId}` : '';
         throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
       }
-      setRoQuantityResult({ ...data, request: actionParams });
+      setRoQuantityResult({ ...data, request: payload });
     } catch (err) {
       console.error('RO quantity details fetch failed:', err);
       setRoQuantityError(err.message || 'Failed to fetch RO quantity details.');
