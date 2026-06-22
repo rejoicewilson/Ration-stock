@@ -298,6 +298,110 @@ def parse_html_tables(html: str):
     return parsed_tables
 
 
+RO_QUANTITY_HEADERS = [
+    ["District", "Taluk Name", "Dispatched Date", "Dispatch Time", "Truck NO", "TruckChit NO"],
+    ["FP Shop Number", "Shop Name", "Shop Owner Name", "Shop Address", "No Of Bags", "Amount Paid"],
+    [
+        "Scheme",
+        "Commodity",
+        "Unit",
+        "Allotment Qty",
+        "Earlier Dispatched Qty",
+        "Dispatched Qty",
+        "Cost",
+        "Balance Qty",
+    ],
+]
+
+
+def cell_text_without_nested(cell):
+    cell_soup = BeautifulSoup(str(cell), "html.parser")
+    clean_cell = cell_soup.find(["th", "td"])
+    if not clean_cell:
+        return ""
+    for nested in clean_cell.find_all(["table", "script", "style"]):
+        nested.decompose()
+    return clean_cell.get_text(" ", strip=True)
+
+
+def row_matches_header(row, expected_headers):
+    normalized_row = [normalize_header(value) for value in row]
+    normalized_expected = [normalize_header(value) for value in expected_headers]
+    return normalized_row[:len(normalized_expected)] == normalized_expected
+
+
+def normalize_report_row(row, width):
+    normalized = list(row[:width])
+    if len(normalized) < width:
+        normalized.extend([""] * (width - len(normalized)))
+    return normalized
+
+
+def parse_ro_quantity_report(html: str):
+    soup = BeautifulSoup(html, "html.parser")
+    raw_rows = []
+    seen_consecutive = None
+
+    for tr in soup.find_all("tr"):
+        cells = [
+            cell_text_without_nested(cell)
+            for cell in tr.find_all(["th", "td"], recursive=False)
+        ]
+        cells = [cell for cell in cells if cell != ""]
+        if not cells:
+            cells = [cell.get_text(" ", strip=True) for cell in tr.find_all(["th", "td"])]
+            if len(cells) > 1:
+                cells = cells[: max(len(headers) for headers in RO_QUANTITY_HEADERS)]
+        if not cells or not any(cells):
+            continue
+        if cells == seen_consecutive:
+            continue
+        seen_consecutive = cells
+        raw_rows.append(cells)
+
+    tables = []
+    current_table = None
+    pending_title = []
+
+    for row in raw_rows:
+        first_cell = row[0] if row else ""
+        if len(row) == 1 and "ro no" in first_cell.lower():
+            pending_title = [row]
+            continue
+
+        matched_headers = next(
+            (headers for headers in RO_QUANTITY_HEADERS if row_matches_header(row, headers)),
+            None,
+        )
+        if matched_headers:
+            current_table = {
+                "title_rows": pending_title,
+                "headers": matched_headers,
+                "rows": [],
+                "row_actions": [],
+                "records": [],
+            }
+            pending_title = []
+            tables.append(current_table)
+            continue
+
+        if not current_table:
+            continue
+
+        headers = current_table["headers"]
+        if any(row_matches_header(row, known_headers) for known_headers in RO_QUANTITY_HEADERS):
+            continue
+        if len(row) < 2:
+            continue
+
+        data_row = normalize_report_row(row, len(headers))
+        current_table["rows"].append(data_row)
+        current_table["row_actions"].append({})
+        current_table["records"].append(dict(zip(headers, data_row)))
+
+    return [table for table in tables if table["headers"]]
+
+
 def normalize_header(value: str):
     return re.sub(r"[^a-z0-9]+", "", (value or "").lower())
 
@@ -755,7 +859,9 @@ def get_ro_quantity_details(request: RoQuantityDetailsRequest):
             duration_ms,
         )
         response.raise_for_status()
-        tables = parse_html_tables(response.text)
+        tables = parse_ro_quantity_report(response.text)
+        if not any(table.get("rows") for table in tables):
+            tables = parse_html_tables(response.text)
         return {
             "remote_status_code": response.status_code,
             "duration_ms": duration_ms,
