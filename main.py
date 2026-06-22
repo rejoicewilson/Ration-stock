@@ -231,14 +231,23 @@ def parse_html_tables(html: str):
     parsed_tables = []
 
     for table in soup.find_all("table"):
-        if table.find("table"):
-            continue
-
         rows = []
         row_actions = []
         for tr in table.find_all("tr"):
-            cells = [cell.get_text(" ", strip=True) for cell in tr.find_all(["th", "td"], recursive=False)]
-            if cells:
+            if tr.find_parent("table") is not table:
+                continue
+
+            cells = []
+            for cell in tr.find_all(["th", "td"], recursive=False):
+                cell_soup = BeautifulSoup(str(cell), "html.parser")
+                clean_cell = cell_soup.find(["th", "td"])
+                if not clean_cell:
+                    continue
+                for nested_table in clean_cell.find_all("table"):
+                    nested_table.decompose()
+                cells.append(clean_cell.get_text(" ", strip=True))
+
+            if cells and any(cells):
                 rows.append(cells)
                 action_params = {}
                 for element in tr.find_all(["a", "button"]):
