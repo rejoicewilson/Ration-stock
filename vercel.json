@@ -27,6 +27,14 @@
       "dest": "api/index.py"
     },
     {
+      "src": "/ro-details",
+      "dest": "api/index.py"
+    },
+    {
+      "src": "/ro-quantity-details",
+      "dest": "api/index.py"
+    },
+    {
       "src": "/docs",
       "dest": "api/index.py"
     },
