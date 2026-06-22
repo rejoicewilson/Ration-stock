@@ -4,6 +4,7 @@ import re
 import time
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
+from urllib.parse import parse_qs, urlparse
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -91,16 +92,91 @@ class RoDetailsRequest(BaseModel):
     depot_id: str
 
 
+class RoQuantityDetailsRequest(BaseModel):
+    release_order_id_aso: str
+    ro_no: str
+    month_int: int
+    year_int: int
+    ro_date: str
+    shop_number: int
+    district_code: int
+    truckchit_number: str
+
+
+SCM_RO_DETAIL_KEYS = {
+    "release_order_id_aso",
+    "ro_no",
+    "month_int",
+    "year_int",
+    "ro_date",
+    "shop_number",
+    "district_code",
+    "truckchit_number",
+}
+
+
+def extract_scm_detail_params(raw_value: str):
+    if not raw_value:
+        return {}
+
+    parsed = urlparse(raw_value)
+    query = parsed.query or raw_value
+    parsed_params = parse_qs(query, keep_blank_values=True)
+    params = {
+        key: values[0]
+        for key, values in parsed_params.items()
+        if key in SCM_RO_DETAIL_KEYS and values
+    }
+
+    if params:
+        return params
+
+    params = {}
+    for key in SCM_RO_DETAIL_KEYS:
+        match = re.search(rf"{re.escape(key)}\s*=\s*([^&'\"\s)]+)", raw_value)
+        if match:
+            params[key] = match.group(1)
+    if params:
+        return params
+
+    quoted_values = re.findall(r"'([^']*)'|\"([^\"]*)\"", raw_value)
+    positional_values = [single or double for single, double in quoted_values]
+    if len(positional_values) >= 8:
+        ordered_keys = [
+            "release_order_id_aso",
+            "ro_no",
+            "month_int",
+            "year_int",
+            "ro_date",
+            "shop_number",
+            "district_code",
+            "truckchit_number",
+        ]
+        return dict(zip(ordered_keys, positional_values[:8]))
+
+    return {}
+
+
 def parse_html_tables(html: str):
     soup = BeautifulSoup(html, "html.parser")
     parsed_tables = []
 
     for table in soup.find_all("table"):
         rows = []
+        row_actions = []
         for tr in table.find_all("tr"):
             cells = [cell.get_text(" ", strip=True) for cell in tr.find_all(["th", "td"])]
             if cells:
                 rows.append(cells)
+                action_params = {}
+                for element in tr.find_all(["a", "button"]):
+                    for attr in ("href", "onclick"):
+                        action_params = extract_scm_detail_params(element.get(attr, ""))
+                        if action_params:
+                            break
+                    if action_params:
+                        break
+                row_actions.append(action_params)
 
         if not rows:
             continue
@@ -110,19 +186,28 @@ def parse_html_tables(html: str):
         title_rows = rows[:header_index]
         headers = rows[header_index]
         data_rows = [row for row in rows[header_index + 1:] if len(row) > 1]
+        data_actions = [
+            row_actions[index]
+            for index, row in enumerate(rows[header_index + 1:], start=header_index + 1)
+            if len(row) > 1
+        ]
         records = []
         if headers and data_rows:
-            for row in data_rows:
+            for index, row in enumerate(data_rows):
                 if len(row) == len(headers):
-                    records.append(dict(zip(headers, row)))
+                    record = dict(zip(headers, row))
                 else:
-                    records.append({"cells": row})
+                    record = {"cells": row}
+                if index < len(data_actions) and data_actions[index]:
+                    record["_action_params"] = data_actions[index]
+                records.append(record)
 
         parsed_tables.append(
             {
                 "title_rows": title_rows,
                 "headers": headers,
                 "rows": data_rows,
+                "row_actions": data_actions,
                 "records": records,
             }
         )
@@ -464,6 +549,47 @@ def get_ro_details(request: RoDetailsRequest):
         raise HTTPException(status_code=500, detail=f"Upstream SCM request failed: {e}")
     except Exception as e:
         logger.exception("ro_details_parse_error payload=%s", params)
+        raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
+
+
+@app.post("/ro-quantity-details")
+def get_ro_quantity_details(request: RoQuantityDetailsRequest):
+    url = "https://scm.kerala.gov.in/ro_quantity_details_load.jsp"
+    params = {
+        "release_order_id_aso": request.release_order_id_aso,
+        "ro_no": request.ro_no,
+        "month_int": request.month_int,
+        "year_int": request.year_int,
+        "ro_date": request.ro_date,
+        "shop_number": request.shop_number,
+        "district_code": request.district_code,
+        "truckchit_number": request.truckchit_number,
+    }
+    start_time = time.perf_counter()
+    logger.info("ro_quantity_details_start payload=%s", params)
+    try:
+        response = EPOS_SESSION.get(url, params=params, timeout=EPOS_TIMEOUT)
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        logger.info(
+            "ro_quantity_details_upstream_response status_code=%s content_length=%s duration_ms=%s",
+            response.status_code,
+            len(response.text),
+            duration_ms,
+        )
+        response.raise_for_status()
+        tables = parse_html_tables(response.text)
+        return {
+            "remote_status_code": response.status_code,
+            "duration_ms": duration_ms,
+            "table_count": len(tables),
+            "tables": tables,
+            "response_preview": response.text[:500] if not tables else "",
+        }
+    except requests.RequestException as e:
+        logger.exception("ro_quantity_details_upstream_error payload=%s", params)
+        raise HTTPException(status_code=500, detail=f"Upstream SCM quantity request failed: {e}")
+    except Exception as e:
+        logger.exception("ro_quantity_details_parse_error payload=%s", params)
         raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
 
 

@@ -19,6 +19,7 @@ import sugarIcon from './assets/sugar-cubes.svg';
 const API_URL = import.meta.env.VITE_API_URL || '/count';
 const TRANSACTIONS_API_URL = import.meta.env.VITE_TRANSACTIONS_API_URL || '/transactions';
 const RO_DETAILS_API_URL = import.meta.env.VITE_RO_DETAILS_API_URL || '/ro-details';
+const RO_QUANTITY_DETAILS_API_URL = import.meta.env.VITE_RO_QUANTITY_DETAILS_API_URL || '/ro-quantity-details';
 
 const todayForDateInput = () => new Date().toISOString().slice(0, 10);
 
@@ -209,9 +210,12 @@ export default function App() {
   const [error, setError] = useState('');
   const [transactionsError, setTransactionsError] = useState('');
   const [settingsError, setSettingsError] = useState('');
+  const [roQuantityLoading, setRoQuantityLoading] = useState(false);
+  const [roQuantityError, setRoQuantityError] = useState('');
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
   const [settingsResult, setSettingsResult] = useState(null);
+  const [roQuantityResult, setRoQuantityResult] = useState(null);
 
   const summarySections = [
     { key: 'RAW_RICE', label: 'RAW RICE', icon: '🍚', color: '#e9d7d7ff' },
@@ -339,6 +343,8 @@ export default function App() {
     setSettingsLoading(true);
     setSettingsError('');
     setSettingsResult(null);
+    setRoQuantityResult(null);
+    setRoQuantityError('');
     try {
       const res = await fetch(RO_DETAILS_API_URL, {
         method: 'POST',
@@ -370,6 +376,49 @@ export default function App() {
       setSettingsError(err.message || 'Failed to fetch RO details.');
     } finally {
       setSettingsLoading(false);
+    }
+  };
+
+  const handleRoQuantityClick = async (actionParams) => {
+    if (!actionParams || Object.keys(actionParams).length === 0) return;
+
+    setRoQuantityLoading(true);
+    setRoQuantityError('');
+    setRoQuantityResult(null);
+    try {
+      const res = await fetch(RO_QUANTITY_DETAILS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          release_order_id_aso: actionParams.release_order_id_aso,
+          ro_no: actionParams.ro_no,
+          month_int: Number(actionParams.month_int),
+          year_int: Number(actionParams.year_int),
+          ro_date: actionParams.ro_date,
+          shop_number: Number(actionParams.shop_number),
+          district_code: Number(actionParams.district_code),
+          truckchit_number: actionParams.truckchit_number,
+        }),
+      });
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { detail: responseText || 'Server returned an empty response' };
+      }
+      if (!res.ok) {
+        const requestId = res.headers.get('X-Request-ID');
+        const detail = data?.detail || data?.message || 'Server error';
+        const suffix = requestId ? ` Request ID: ${requestId}` : '';
+        throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
+      }
+      setRoQuantityResult({ ...data, request: actionParams });
+    } catch (err) {
+      console.error('RO quantity details fetch failed:', err);
+      setRoQuantityError(err.message || 'Failed to fetch RO quantity details.');
+    } finally {
+      setRoQuantityLoading(false);
     }
   };
 
@@ -1373,8 +1422,21 @@ export default function App() {
                         </Box>
                       </Box>
                       <Box component="tbody">
-                        {(table.rows || []).slice(0, 30).map((row, rowIndex) => (
-                          <Box component="tr" key={rowIndex}>
+                        {(table.rows || []).slice(0, 30).map((row, rowIndex) => {
+                          const actionParams = table.row_actions?.[rowIndex];
+                          const isClickable = actionParams && Object.keys(actionParams).length > 0;
+
+                          return (
+                          <Box
+                            component="tr"
+                            key={rowIndex}
+                            onClick={() => isClickable && handleRoQuantityClick(actionParams)}
+                            sx={{
+                              cursor: isClickable ? 'pointer' : 'default',
+                              background: isClickable ? '#fbfdff' : 'transparent',
+                              '&:hover': isClickable ? { background: '#eef5ff' } : undefined,
+                            }}
+                          >
                             {row.map((cell, cellIndex) => (
                               <Box
                                 component="td"
@@ -1388,10 +1450,16 @@ export default function App() {
                                 }}
                               >
                                 {cell}
+                                {isClickable && cellIndex === 0 && (
+                                  <Typography component="span" sx={{ color: '#2f64f8', fontWeight: 900, ml: 0.8 }}>
+                                    View
+                                  </Typography>
+                                )}
                               </Box>
                             ))}
                           </Box>
-                        ))}
+                          );
+                        })}
                       </Box>
                     </Box>
                   </Paper>
@@ -1401,6 +1469,112 @@ export default function App() {
                   <Alert severity="warning">
                     No table found in SCM response. {settingsResult.response_preview || ''}
                   </Alert>
+                )}
+
+                {roQuantityLoading && (
+                  <Paper
+                    elevation={0}
+                    sx={{ p: 2, borderRadius: 3, background: '#ffffff', border: '1px solid #e8edf7' }}
+                  >
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                      <CircularProgress size={20} />
+                      <Typography sx={{ fontWeight: 800, color: '#31415f' }}>
+                        Loading order quantity details...
+                      </Typography>
+                    </Stack>
+                  </Paper>
+                )}
+
+                {roQuantityError && (
+                  <Alert severity="error">
+                    {roQuantityError}
+                  </Alert>
+                )}
+
+                {roQuantityResult && (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      borderRadius: 3,
+                      background: '#ffffff',
+                      border: '1px solid #e8edf7',
+                      boxShadow: '0 12px 28px rgba(26, 58, 109, 0.08)',
+                      overflowX: 'auto',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, mb: 1.5 }}>
+                      <Box>
+                        <Typography sx={{ fontWeight: 900, color: '#17233c' }}>
+                          Order Quantity Details
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#6d7584', fontWeight: 700 }}>
+                          {roQuantityResult.request?.ro_no || ''}
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ color: '#3b63f4', fontWeight: 800 }}>
+                        {Math.round(roQuantityResult.duration_ms || 0)} ms
+                      </Typography>
+                    </Box>
+
+                    {(roQuantityResult.tables || []).map((table, tableIndex) => (
+                      <Box key={tableIndex} sx={{ mb: tableIndex === roQuantityResult.tables.length - 1 ? 0 : 2 }}>
+                        {table.title_rows?.flat()?.length > 0 && (
+                          <Typography sx={{ fontWeight: 800, mb: 1, color: '#31415f' }}>
+                            {table.title_rows.flat().join(' ')}
+                          </Typography>
+                        )}
+                        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
+                          <Box component="thead">
+                            <Box component="tr">
+                              {(table.headers || []).map((header, index) => (
+                                <Box
+                                  component="th"
+                                  key={`${header}-${index}`}
+                                  sx={{
+                                    textAlign: 'left',
+                                    p: 1,
+                                    fontSize: 12,
+                                    color: '#6d7584',
+                                    borderBottom: '1px solid #e8edf7',
+                                  }}
+                                >
+                                  {header}
+                                </Box>
+                              ))}
+                            </Box>
+                          </Box>
+                          <Box component="tbody">
+                            {(table.rows || []).map((row, rowIndex) => (
+                              <Box component="tr" key={rowIndex}>
+                                {row.map((cell, cellIndex) => (
+                                  <Box
+                                    component="td"
+                                    key={cellIndex}
+                                    sx={{
+                                      p: 1,
+                                      fontSize: 13,
+                                      fontWeight: 600,
+                                      color: '#17233c',
+                                      borderBottom: '1px solid #f0f3f8',
+                                    }}
+                                  >
+                                    {cell}
+                                  </Box>
+                                ))}
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      </Box>
+                    ))}
+
+                    {roQuantityResult.table_count === 0 && (
+                      <Alert severity="warning">
+                        No quantity table found. {roQuantityResult.response_preview || ''}
+                      </Alert>
+                    )}
+                  </Paper>
                 )}
               </Stack>
             )}
