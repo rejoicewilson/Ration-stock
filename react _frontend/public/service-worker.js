@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ration-stock-v1';
+const CACHE_NAME = 'ration-stock-v2';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/app-icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -19,7 +19,9 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  if (request.method !== 'GET' || url.pathname === '/count' || url.pathname === '/fps-stock') {
+  const apiPaths = ['/count', '/fps-stock', '/transactions', '/ro-details', '/ro-quantity-details'];
+
+  if (request.method !== 'GET' || apiPaths.includes(url.pathname)) {
     return;
   }
 
