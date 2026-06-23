@@ -176,6 +176,24 @@ export default function App() {
       ['81', 'Manjeswaram'],
     ],
   };
+  const depotOptionsByDistrict = {
+    '18': [
+      ['0803807', 'NFSA DEPOT KOTHAPARMB NFSA GODOWN'],
+      ['0803804', 'NFSA DEPOT POOVATHUR NFSA GODOWN'],
+      ['0803808', 'NFSA GODOWN KOTTAPPURAM NFSA GODOWN'],
+      ['0802802', 'PDS DEPOT 2 VELOOR CHUNGAM Thallappaly'],
+      ['0803806', 'PDS DEPOT CHAKKARAPPADAM NFSA GODOWN'],
+      ['0804801', 'PDS DEPOT CHALAKUDY'],
+      ['0803802', 'PDS DEPOT CHAVAKKAD KUNNAMKULAM'],
+      ['0803805', 'PDS DEPOT KANDASSANKADAV NFSA GODOWN'],
+      ['0803803', 'PDS DEPOT KODUNGALLUR NATTIKA'],
+      ['0801904', 'PDS DEPOT KULANGATTUKARA GODOWN'],
+      ['0804802', 'PDS DEPOT MUKUNDAPURAM'],
+      ['0802801', 'PDS DEPOT THALAPPILLY TALUK'],
+      ['0802803', 'PDS Depot Veloor Chungam Kunnamkulam'],
+      ['0801903', 'TRISSUR AWD'],
+    ],
+  };
   const [activeView, setActiveView] = useState('stock');
   const [picker, setPicker] = useState(null);
   const [pendingPickerValue, setPendingPickerValue] = useState('');
@@ -245,6 +263,15 @@ export default function App() {
   };
 
   const handleSettingsChange = (e) => {
+    if (e.target.name === 'dist_code') {
+      const nextDepotOptions = depotOptionsByDistrict[e.target.value] || [];
+      setSettingsForm({
+        ...settingsForm,
+        dist_code: e.target.value,
+        depot_id: nextDepotOptions[0]?.[0] || '',
+      });
+      return;
+    }
     setSettingsForm({ ...settingsForm, [e.target.name]: e.target.value });
   };
 
@@ -1726,28 +1753,23 @@ export default function App() {
                       pickerType: 'district',
                     })}
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid item xs={12}>
                     <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
-                      DEPOT ID *
+                      DEPOT *
                     </Typography>
-                    <Box
-                      component="input"
-                      name="depot_id"
-                      value={settingsForm.depot_id}
-                      onChange={handleSettingsChange}
-                      required
-                      placeholder="0802801"
-                      style={{
-                        width: '100%',
-                        padding: '14px',
-                        borderRadius: 12,
-                        border: '1px solid #dfe5f0',
-                        background: '#fbfcff',
-                        outline: 'none',
-                        fontSize: 16,
-                        fontWeight: 600,
-                      }}
-                    />
+                    {renderSelectControl({
+                      selectKey: 'settings-depot',
+                      name: 'depot_id',
+                      value: settingsForm.depot_id,
+                      onChange: handleSettingsChange,
+                      placeholder:
+                        depotOptionsByDistrict[settingsForm.dist_code]?.length
+                          ? 'Select depot'
+                          : 'Depot list pending',
+                      options: depotOptionsByDistrict[settingsForm.dist_code] || [],
+                      pickerType: 'district',
+                      disabled: !depotOptionsByDistrict[settingsForm.dist_code]?.length,
+                    })}
                   </Grid>
                 </Grid>
 
