@@ -222,6 +222,14 @@ export default function App() {
       ['0802803', 'PDS Depot Veloor Chungam Kunnamkulam'],
       ['0801903', 'TRISSUR AWD'],
     ],
+    '23': [
+      ['1302804', 'NFSA GODOWN VELIYAMPARAMBU IRITTY'],
+      ['1302802', 'PDS DEPOT IRITTY'],
+      ['1301801', 'PDS DEPOT KANNUR'],
+      ['1303802', 'PDS DEPOT PAYYANNUR'],
+      ['1302803', 'PDS DEPOT THALASSEY'],
+      ['1303801', 'PDS DEPOT THALIPARAMBA'],
+    ],
   };
   const [activeView, setActiveView] = useState('stock');
   const [picker, setPicker] = useState(null);
