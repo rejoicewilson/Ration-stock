@@ -177,6 +177,16 @@ export default function App() {
     ],
   };
   const depotOptionsByDistrict = {
+    '14': [
+      ['0401903', 'ALAPPUZHA AWD (AMBALAPUZHA)'],
+      ['0404802', 'CHENGANNUR RATION SUB DEPOT'],
+      ['0405801', 'CHERTHALA PDS DEPOT'],
+      ['0402801', 'KARTHIKAPPALLY PDS DEPOT'],
+      ['0405803', 'NFSA DEPOT VAYALAR'],
+      ['0405802', 'PDS DEPOT KALAVAMKODAM'],
+      ['0403801', 'PDS DEPOT MAVELIKKARA'],
+      ['0401801', 'PDS DEPOT THAKAZY'],
+    ],
     '18': [
       ['0803807', 'NFSA DEPOT KOTHAPARMB NFSA GODOWN'],
       ['0803804', 'NFSA DEPOT POOVATHUR NFSA GODOWN'],
