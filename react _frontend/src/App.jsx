@@ -187,6 +187,13 @@ export default function App() {
       ['0403801', 'PDS DEPOT MAVELIKKARA'],
       ['0401801', 'PDS DEPOT THAKAZY'],
     ],
+    '16': [
+      ['0604801', 'PDS DEPOT KATTAPPANA'],
+      ['0603801', 'PDS DEPOT MUNNAR'],
+      ['0604802', 'PDS DEPOT NEDUMKANDAM'],
+      ['0601801', 'PDS DEPOT THODUPUZHA'],
+      ['0602901', 'PEERAMADE DEPOT'],
+    ],
     '17': [
       ['0703803', 'ALUVA NFSA SUB DEPOT'],
       ['0705803', 'KOTHAMANGALAM TALUK NFSA DEPOT'],
