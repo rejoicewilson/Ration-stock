@@ -177,6 +177,18 @@ export default function App() {
     ],
   };
   const depotOptionsByDistrict = {
+    '12': [
+      ['0201903', 'CONTONMENT - AWD (KOLLAM MAIN)'],
+      ['0202801', 'KARUNAGAPPALLY SUB DEPOT'],
+      ['0201905', 'KILIKOLLOOR - AWD, KOLLAM'],
+      ['0203801', 'KOTTARAKKARA PDS DEPOT'],
+      ['0202802', 'KUNNATHUR SUB DEPOT'],
+      ['0201904', 'PARAVOOR AWD, KOLLAM'],
+      ['0204802', 'PATHANAPURAM RATION SUB DEPOT'],
+      ['0203802', 'PDS DEPOT KADAKKAL'],
+      ['0203803', 'PDS DEPOT POOYAPPALLY KOTTARAKKARA'],
+      ['0204801', 'PUNALUR RATION SUB DEPOT'],
+    ],
     '14': [
       ['0401903', 'ALAPPUZHA AWD (AMBALAPUZHA)'],
       ['0404802', 'CHENGANNUR RATION SUB DEPOT'],
