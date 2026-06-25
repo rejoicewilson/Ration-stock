@@ -230,6 +230,14 @@ export default function App() {
       ['1302803', 'PDS DEPOT THALASSEY'],
       ['1303801', 'PDS DEPOT THALIPARAMBA'],
     ],
+    '24': [
+      ['1401802', 'KASARAGOD PDS DEPOT'],
+      ['1401801', 'MANJESHWARAM PDS DEPOT'],
+      ['1402801', 'PDS DEPOT KANJANGAD'],
+      ['1402803', 'PDS DEPOT NEELESHWARAM'],
+      ['1402802', 'PDS DEPOT VELLARIKKUND'],
+      ['1401803', 'VELIYAMPARAMBA'],
+    ],
   };
   const [activeView, setActiveView] = useState('stock');
   const [picker, setPicker] = useState(null);
