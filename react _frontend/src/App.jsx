@@ -199,6 +199,17 @@ export default function App() {
       ['0403801', 'PDS DEPOT MAVELIKKARA'],
       ['0401801', 'PDS DEPOT THAKAZY'],
     ],
+    '15': [
+      ['0504801', 'KANJIRAPPALLY AWD'],
+      ['0501802', 'NFSA DEPOT MAVILANG'],
+      ['0505802', 'NFSA DEPOT THENGANA'],
+      ['0502803', 'NFSA DEPOT VALLICHIRA'],
+      ['0502802', 'PDS DEPOT ANDOOR'],
+      ['0501801', 'PDS DEPOT KOTTAYAM'],
+      ['0502801', 'PDS DEPOT PALA'],
+      ['0505801', 'PDS SUB DEPOT CHANGANASERRY'],
+      ['0503801', 'PDS SUB DEPOT VAIKOM TALUK'],
+    ],
     '16': [
       ['0604801', 'PDS DEPOT KATTAPPANA'],
       ['0603801', 'PDS DEPOT MUNNAR'],
