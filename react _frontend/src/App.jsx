@@ -1965,7 +1965,7 @@ export default function App() {
                       },
                     }}
                   >
-                    <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
+                    <Box component="table" sx={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 10px', minWidth: 520 }}>
                       <Box component="thead">
                         <Box component="tr">
                           {(table.headers || []).map((header, index) => (
@@ -1974,10 +1974,10 @@ export default function App() {
                               key={`${header}-${index}`}
                               sx={{
                                 textAlign: 'left',
-                                p: 1,
+                                px: 1,
+                                py: 0.6,
                                 fontSize: 12,
                                 color: '#6d7584',
-                                borderBottom: '1px solid #e8edf7',
                               }}
                             >
                               {header}
@@ -1997,16 +1997,20 @@ export default function App() {
                             onClick={() => isClickable && handleRoQuantityClick(actionParams)}
                             sx={{
                               cursor: isClickable ? 'pointer' : 'default',
-                              background: isClickable ? '#fbfdff' : 'transparent',
                               animation: isClickable ? 'roRowHint 2.4s ease-in-out infinite' : 'none',
-                              transition: 'background 0.18s ease, box-shadow 0.18s ease',
+                              transition: 'transform 0.18s ease, box-shadow 0.18s ease',
                               '&:hover': isClickable
                                 ? {
-                                  background: '#eaf2ff',
-                                  boxShadow: 'inset 3px 0 0 #2f64f8',
+                                  transform: 'translateY(-1px)',
+                                  boxShadow: '0 10px 22px rgba(47, 100, 248, 0.14)',
                                   animationPlayState: 'paused',
+                                  '& td': {
+                                    background: '#eef5ff',
+                                    borderColor: '#bcd0ff',
+                                  },
                                 }
                                 : undefined,
+                              '&:active': isClickable ? { transform: 'translateY(0)' } : undefined,
                             }}
                           >
                             {row.map((cell, cellIndex) => (
@@ -2014,11 +2018,21 @@ export default function App() {
                                 component="td"
                                 key={cellIndex}
                                 sx={{
-                                  p: 1,
+                                  px: 1,
+                                  py: 1.2,
                                   fontSize: 13,
-                                  fontWeight: 600,
+                                  fontWeight: 800,
                                   color: '#17233c',
-                                  borderBottom: '1px solid #f0f3f8',
+                                  background: isClickable ? '#fbfdff' : '#ffffff',
+                                  animation: isClickable ? 'roRowHint 2.4s ease-in-out infinite' : 'none',
+                                  borderTop: isClickable ? '1px solid #dbe7ff' : '1px solid #f0f3f8',
+                                  borderBottom: isClickable ? '1px solid #dbe7ff' : '1px solid #f0f3f8',
+                                  borderLeft: cellIndex === 0 ? '1px solid #dbe7ff' : 0,
+                                  borderRight: cellIndex === row.length - 1 ? '1px solid #dbe7ff' : 0,
+                                  borderTopLeftRadius: cellIndex === 0 ? 12 : 0,
+                                  borderBottomLeftRadius: cellIndex === 0 ? 12 : 0,
+                                  borderTopRightRadius: cellIndex === row.length - 1 ? 12 : 0,
+                                  borderBottomRightRadius: cellIndex === row.length - 1 ? 12 : 0,
                                 }}
                               >
                                 {cell}
