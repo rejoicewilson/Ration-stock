@@ -1959,13 +1959,12 @@ export default function App() {
                       border: '1px solid #e8edf7',
                       boxShadow: '0 12px 28px rgba(26, 58, 109, 0.08)',
                       overflowX: 'auto',
+                      '@keyframes roRowHint': {
+                        '0%, 100%': { backgroundColor: '#fbfdff' },
+                        '50%': { backgroundColor: '#eef5ff' },
+                      },
                     }}
                   >
-                    {table.title_rows?.flat()?.length > 0 && (
-                      <Typography sx={{ fontWeight: 800, mb: 1.5, color: '#31415f' }}>
-                        {table.title_rows.flat().join(' ')}
-                      </Typography>
-                    )}
                     <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
                       <Box component="thead">
                         <Box component="tr">
@@ -1999,7 +1998,15 @@ export default function App() {
                             sx={{
                               cursor: isClickable ? 'pointer' : 'default',
                               background: isClickable ? '#fbfdff' : 'transparent',
-                              '&:hover': isClickable ? { background: '#eef5ff' } : undefined,
+                              animation: isClickable ? 'roRowHint 2.4s ease-in-out infinite' : 'none',
+                              transition: 'background 0.18s ease, box-shadow 0.18s ease',
+                              '&:hover': isClickable
+                                ? {
+                                  background: '#eaf2ff',
+                                  boxShadow: 'inset 3px 0 0 #2f64f8',
+                                  animationPlayState: 'paused',
+                                }
+                                : undefined,
                             }}
                           >
                             {row.map((cell, cellIndex) => (
@@ -2015,11 +2022,6 @@ export default function App() {
                                 }}
                               >
                                 {cell}
-                                {isClickable && cellIndex === 1 && (
-                                  <Typography component="span" sx={{ color: '#2f64f8', fontWeight: 900, ml: 0.8 }}>
-                                    Tap
-                                  </Typography>
-                                )}
                               </Box>
                             ))}
                           </Box>
