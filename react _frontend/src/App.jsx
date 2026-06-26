@@ -667,6 +667,24 @@ export default function App() {
     return `Rs. ${amount.toFixed(2)}`;
   };
 
+  const renderCommodityIcon = (iconConfig, label) => (
+    iconConfig?.iconType === 'image' ? (
+      <img src={iconConfig.icon} alt={label} style={{ width: 22, height: 22 }} />
+    ) : (
+      iconConfig?.icon || '📦'
+    )
+  );
+
+  const getCommodityIconConfig = (commodityName = '') => {
+    const name = String(commodityName).toLowerCase();
+    if (name.includes('atta')) return stockSections.find((section) => section.key === 'ATTA');
+    if (name.includes('sugar')) return stockSections.find((section) => section.key === 'SUGAR');
+    if (name.includes('wheat')) return stockSections.find((section) => section.key === 'WHEAT');
+    if (name.includes('cmr') || name.includes('rice')) return stockSections.find((section) => section.key === 'MATTA_CMR');
+    if (name.includes('koil') || name.includes('oil')) return stockSections.find((section) => section.key === 'KOIL');
+    return null;
+  };
+
   const renderIconBadge = (icon, bg = '#eef5ff', color = '#245ef5') => (
     <Box
       sx={{
@@ -772,15 +790,21 @@ export default function App() {
               const totalDispatched = earlier + current;
               const balance = parseQuantity(value(row, 'Balance Qty'));
               const progress = allotment > 0 ? Math.min((totalDispatched / allotment) * 100, 100) : 0;
+              const commodity = value(row, 'Commodity');
+              const commodityIcon = getCommodityIconConfig(commodity);
 
               return (
                 <>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.2, mb: 1.3 }}>
                     <Stack direction="row" spacing={1.1} alignItems="center" sx={{ minWidth: 0 }}>
-                      {renderIconBadge('🌾', '#eefbf3', '#15803d')}
+                      {renderIconBadge(
+                        renderCommodityIcon(commodityIcon, commodity),
+                        `${commodityIcon?.color || '#15803d'}1f`,
+                        commodityIcon?.color || '#15803d',
+                      )}
                       <Box sx={{ minWidth: 0 }}>
                         <Typography sx={{ color: '#17233c', fontSize: 18, fontWeight: 900 }}>
-                          {value(row, 'Commodity')}
+                          {commodity}
                         </Typography>
                         <Typography sx={{ color: '#17233c', fontSize: 12, fontWeight: 900 }}>
                           Scheme {value(row, 'Scheme')} | Unit {value(row, 'Unit')}
