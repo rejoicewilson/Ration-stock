@@ -2084,7 +2084,7 @@ export default function App() {
         {[
           { label: 'Stock', icon: '🏠', view: 'stock' },
           { label: 'Transactions', icon: '🕑', view: 'transactions' },
-          { label: 'Settings', icon: '⚙️', view: 'settings' },
+          { label: 'Orders', icon: '📦', view: 'settings' },
         ].map((item) => (
           <Box
             key={item.label}
