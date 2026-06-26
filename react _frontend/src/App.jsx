@@ -177,6 +177,22 @@ export default function App() {
     ],
   };
   const depotOptionsByDistrict = {
+    '11': [
+      ['0101903', 'CHALA AWD'],
+      ['0101902', 'CHALA AWD(Annex)'],
+      ['0104801', 'CHIRAYINKEEZHU PDS(NFSA)SUB DEPOT'],
+      ['0102801', 'NEDUMANGAD NFSA GODOWN'],
+      ['0104804', 'NFSA DEPOT KALLAMBALAM'],
+      ['0102804', 'NFSA DEPOT MUNDELA'],
+      ['0103802', 'PDS DEPOT KATTAKADA'],
+      ['0104803', 'PDS DEPOT MAMAM'],
+      ['0101801', 'PDS DEPOT MENAMKULAM'],
+      ['0103801', 'PDS DEPOT NEYYATTINKRA'],
+      ['0103803', 'PDS DEPOT PALLICHAL'],
+      ['0102803', 'PDS DEPOT PARAKKARA'],
+      ['0104802', 'VARKALA PDS(NFSA) SUB DEPOT'],
+      ['0102802', 'VENJARAMOOD NFSA SUB DEPOT'],
+    ],
     '12': [
       ['0201903', 'CONTONMENT - AWD (KOLLAM MAIN)'],
       ['0202801', 'KARUNAGAPPALLY SUB DEPOT'],
