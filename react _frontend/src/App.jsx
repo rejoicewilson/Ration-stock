@@ -245,6 +245,15 @@ export default function App() {
       ['0802803', 'PDS Depot Veloor Chungam Kunnamkulam'],
       ['0801903', 'TRISSUR AWD'],
     ],
+    '21': [
+      ['1103802', 'NFSA DEPOT PUTHIYAPPU'],
+      ['1101801', 'PDS DEPOT KOZHIKODE CRO NORTH'],
+      ['1101802', 'PDS DEPOT KOZHIKODE CRO SOUTH'],
+      ['1101902', 'PDS DEPOT KOZHIKODE TSO'],
+      ['1102801', 'QUILANDY PDS DEPOT'],
+      ['1104801', 'SUPPLYCO SUB DEPOT EXTENTION COUNTER KODUVALLY'],
+      ['1103801', 'VADAKARA PDS DEPOT'],
+    ],
     '23': [
       ['1302804', 'NFSA GODOWN VELIYAMPARAMBU IRITTY'],
       ['1302802', 'PDS DEPOT IRITTY'],
