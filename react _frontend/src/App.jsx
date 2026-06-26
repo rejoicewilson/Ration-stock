@@ -896,16 +896,16 @@ export default function App() {
         <Box
           sx={{
             p: 2.2,
-            background: 'linear-gradient(135deg, #173b7a 0%, #2563eb 68%, #0891b2 100%)',
-            color: '#ffffff',
+            background: 'linear-gradient(135deg, #eef6ff 0%, #e9fbf6 100%)',
+            color: '#17233c',
           }}
         >
           <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, mb: 1.6 }}>
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 900, color: '#ffffff', fontSize: 20, lineHeight: 1.15 }}>
+              <Typography sx={{ fontWeight: 900, color: '#10213f', fontSize: 20, lineHeight: 1.15 }}>
                 Order Quantity Details
               </Typography>
-              <Typography sx={{ color: 'rgba(255,255,255,0.82)', fontWeight: 800, fontSize: 12, mt: 0.65 }}>
+              <Typography sx={{ color: '#4a5f82', fontWeight: 800, fontSize: 12, mt: 0.65 }}>
                 {roQuantityResult.request?.ro_no || ''}
               </Typography>
             </Box>
@@ -915,16 +915,17 @@ export default function App() {
                   px: 1.15,
                   py: 0.55,
                   borderRadius: 999,
-                  background: '#dcfce7',
+                  background: '#dffbea',
                   color: '#166534',
                   fontSize: 12,
                   fontWeight: 900,
                   mb: 0.6,
+                  border: '1px solid #b7efcd',
                 }}
               >
                 Dispatched
               </Box>
-              <Typography sx={{ color: 'rgba(255,255,255,0.84)', fontWeight: 800, fontSize: 11 }}>
+              <Typography sx={{ color: '#48617d', fontWeight: 800, fontSize: 11 }}>
                 {Math.round(roQuantityResult.duration_ms || 0)} ms
               </Typography>
             </Box>
@@ -932,21 +933,21 @@ export default function App() {
 
           <Grid container spacing={1}>
             <Grid item xs={12} sm={8}>
-              <Box sx={{ p: 1.2, borderRadius: 2.5, background: 'rgba(255,255,255,0.12)' }}>
-                <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
+              <Box sx={{ p: 1.2, borderRadius: 2.5, background: '#ffffff', border: '1px solid #dce9fb' }}>
+                <Typography sx={{ color: '#6b7a90', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
                   RO Number
                 </Typography>
-                <Typography sx={{ color: '#ffffff', fontSize: 13, fontWeight: 900, mt: 0.35, wordBreak: 'break-word' }}>
+                <Typography sx={{ color: '#18365f', fontSize: 13, fontWeight: 900, mt: 0.35, wordBreak: 'break-word' }}>
                   {roQuantityResult.request?.ro_no || '-'}
                 </Typography>
               </Box>
             </Grid>
             <Grid item xs={12} sm={4}>
-              <Box sx={{ p: 1.2, borderRadius: 2.5, background: 'rgba(255,255,255,0.12)' }}>
-                <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
+              <Box sx={{ p: 1.2, borderRadius: 2.5, background: '#ffffff', border: '1px solid #dce9fb' }}>
+                <Typography sx={{ color: '#6b7a90', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}>
                   Month
                 </Typography>
-                <Typography sx={{ color: '#ffffff', fontSize: 13, fontWeight: 900, mt: 0.35 }}>
+                <Typography sx={{ color: '#18365f', fontSize: 13, fontWeight: 900, mt: 0.35 }}>
                   {orderMonth || '-'}
                 </Typography>
               </Box>
