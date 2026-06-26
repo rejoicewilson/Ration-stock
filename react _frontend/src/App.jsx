@@ -2074,6 +2074,21 @@ export default function App() {
                 )}
 
                 {roQuantityResult && renderRoQuantityReport()}
+
+                <Typography
+                  variant="caption"
+                  sx={{ display: 'block', color: '#6d7584', textAlign: 'center' }}
+                >
+                  Data sourced from{' '}
+                  <a
+                    href="https://scm.kerala.gov.in/"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ color: '#2f64f8', fontWeight: 700 }}
+                  >
+                    scm.kerala.gov.in
+                  </a>
+                </Typography>
               </Stack>
             )}
           </>
