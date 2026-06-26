@@ -1878,7 +1878,7 @@ export default function App() {
                       }}
                     />
                   </Grid>
-                  <Grid item xs={6}>
+                  <Grid item xs={12} sx={{ flexBasis: '100%', maxWidth: '100%', width: '100%' }}>
                     <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
                       DISTRICT *
                     </Typography>
@@ -1892,7 +1892,7 @@ export default function App() {
                       pickerType: 'district',
                     })}
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid item xs={12} sx={{ flexBasis: '100%', maxWidth: '100%', width: '100%' }}>
                     <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
                       DEPOT *
                     </Typography>
