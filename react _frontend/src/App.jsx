@@ -2031,8 +2031,8 @@ export default function App() {
                 ))}
 
                 {settingsResult.table_count === 0 && (
-                  <Alert severity="warning">
-                    No table found in SCM response. {settingsResult.response_preview || ''}
+                  <Alert severity="warning" sx={{ alignItems: 'flex-start' }}>
+                    No RO details found for this selection. Please check that the shop number, district, and depot are correct, then try again.
                   </Alert>
                 )}
 
