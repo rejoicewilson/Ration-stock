@@ -369,7 +369,6 @@ export default function App() {
   const [settingsError, setSettingsError] = useState('');
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
-  const [showStockBoard, setShowStockBoard] = useState(false);
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
   const [settingsResult, setSettingsResult] = useState(null);
@@ -1400,8 +1399,7 @@ export default function App() {
             type="button"
             elevation={0}
             onClick={() => {
-              setActiveView('stock');
-              setShowStockBoard((current) => !current);
+              setActiveView('stockBoard');
             }}
             sx={{
               width: 118,
@@ -1601,8 +1599,6 @@ export default function App() {
           </Alert>
         )}
 
-        {showStockBoard && renderStockBoard()}
-
         {result && (
           <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
@@ -1693,6 +1689,27 @@ export default function App() {
             </Typography>
           </Box>
         )}
+          </>
+        ) : activeView === 'stockBoard' ? (
+          <>
+            <Stack spacing={2}>
+              <Button
+                type="button"
+                variant="outlined"
+                onClick={() => setActiveView('stock')}
+                sx={{
+                  alignSelf: 'flex-start',
+                  borderRadius: 999,
+                  px: 2,
+                  fontWeight: 800,
+                  textTransform: 'none',
+                  background: '#ffffff',
+                }}
+              >
+                Back to Stock
+              </Button>
+              {renderStockBoard()}
+            </Stack>
           </>
         ) : activeView === 'transactions' ? (
           <>
