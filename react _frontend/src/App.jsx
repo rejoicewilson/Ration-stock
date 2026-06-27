@@ -369,6 +369,7 @@ export default function App() {
   const [settingsError, setSettingsError] = useState('');
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
+  const [showStockBoard, setShowStockBoard] = useState(false);
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
   const [settingsResult, setSettingsResult] = useState(null);
@@ -1066,6 +1067,103 @@ export default function App() {
     return `${monthNames[idx]} ${form.year}`;
   };
 
+  const renderStockBoard = () => {
+    const stockRows = summarySections.map((section) => {
+      const unit = section.key === 'KOIL' ? 'ltr' : 'kg';
+      return {
+        label: section.label,
+        cb: formatStatValue(getStat(section.key, 'cb_sum', `0 ${unit}`), unit),
+        bags: section.key === 'KOIL' ? '-' : formatStatValue(getStat(section.key, 'bag_count', '0'), ''),
+        remaining: formatStatValue(getStat(section.key, section.key === 'KOIL' ? 'remaining_ltr' : 'remaining_kg', `0 ${unit}`), unit),
+      };
+    });
+
+    return (
+      <Paper
+        elevation={0}
+        sx={{
+          mt: 3,
+          borderRadius: 2,
+          overflow: 'hidden',
+          background: '#ffffff',
+          border: '1px solid #d7dce8',
+          boxShadow: '0 12px 28px rgba(26, 58, 109, 0.10)',
+        }}
+      >
+        <Box sx={{ background: '#2f3192', color: '#ffffff', textAlign: 'center', py: 1.2, px: 1 }}>
+          <Typography sx={{ fontSize: { xs: 24, sm: 34 }, fontWeight: 1000, lineHeight: 1.1 }}>
+            പൊതുവിതരണ കേന്ദ്രം
+          </Typography>
+          <Typography sx={{ fontSize: { xs: 13, sm: 18 }, fontWeight: 900, mt: 0.4 }}>
+            സിവിൽ സപ്ലൈസ് വകുപ്പ്, കേരള സർക്കാർ അംഗീകാരമുള്ളത്
+          </Typography>
+        </Box>
+
+        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
+          <Box component="tbody">
+            <Box component="tr">
+              <Box component="td" sx={{ p: 1.4, width: '32%', fontWeight: 900, color: '#111827' }}>
+                റേഷൻ നമ്പർ/ARD No. :
+              </Box>
+              <Box component="td" sx={{ p: 1.4, width: '18%', fontWeight: 900, color: '#111827' }}>
+                {form.fps_id || '-'}
+              </Box>
+              <Box component="td" sx={{ p: 1.4, width: '25%', fontWeight: 900, color: '#111827' }}>
+                താലൂക്ക് :
+              </Box>
+              <Box component="td" sx={{ p: 1.4, width: '25%', fontWeight: 900, color: '#111827' }}>
+                -
+              </Box>
+            </Box>
+            <Box component="tr">
+              <Box component="td" sx={{ p: 1.4, fontWeight: 900, color: '#111827' }}>
+                ലൈസൻസിയുടെ പേര് :
+              </Box>
+              <Box component="td" sx={{ p: 1.4, fontWeight: 900, color: '#111827' }}>
+                -
+              </Box>
+              <Box component="td" sx={{ p: 1.4, fontWeight: 900, color: '#111827' }}>
+                പ്രവർത്തന മാസം :
+              </Box>
+              <Box component="td" sx={{ p: 1.4, fontWeight: 900, color: '#111827' }}>
+                {monthYearLabel() || '-'}
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+
+        {result && (
+          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', borderTop: '2px solid #111827' }}>
+            <Box component="thead">
+              <Box component="tr">
+                {['Commodity', 'CB Sum', 'Bags', 'Remaining'].map((header) => (
+                  <Box
+                    component="th"
+                    key={header}
+                    sx={{ p: 1, border: '1px solid #111827', background: '#f3f4f6', fontWeight: 1000, textAlign: 'left' }}
+                  >
+                    {header}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+            <Box component="tbody">
+              {stockRows.map((row) => (
+                <Box component="tr" key={row.label}>
+                  {[row.label, row.cb, row.bags, row.remaining].map((cell, index) => (
+                    <Box component="td" key={`${row.label}-${index}`} sx={{ p: 1, border: '1px solid #111827', fontWeight: 800 }}>
+                      {cell}
+                    </Box>
+                  ))}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        )}
+      </Paper>
+    );
+  };
+
   const renderSelectControl = ({ selectKey, name, value, onChange, placeholder, options, pickerType, disabled = false }) => {
     const selectedOption = options.find((option) => {
       const optionValue = Array.isArray(option) ? option[0] : option;
@@ -1298,7 +1396,13 @@ export default function App() {
             </Typography>
           </Box>
           <Paper
+            component="button"
+            type="button"
             elevation={0}
+            onClick={() => {
+              setActiveView('stock');
+              setShowStockBoard((current) => !current);
+            }}
             sx={{
               width: 118,
               height: 48,
@@ -1309,6 +1413,9 @@ export default function App() {
               border: '3px solid #b60000',
               boxShadow: 'inset 0 0 0 2px #ffef78, 0 8px 18px rgba(139, 0, 0, 0.12)',
               flex: '0 0 auto',
+              cursor: 'pointer',
+              p: 0,
+              '&:active': { transform: 'translateY(1px)' },
             }}
           >
             <Typography
@@ -1493,6 +1600,8 @@ export default function App() {
             {error}
           </Alert>
         )}
+
+        {showStockBoard && renderStockBoard()}
 
         {result && (
           <Box>
