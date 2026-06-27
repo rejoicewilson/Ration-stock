@@ -27,6 +27,10 @@
       "dest": "api/index.py"
     },
     {
+      "src": "/stock-register",
+      "dest": "api/index.py"
+    },
+    {
       "src": "/ro-details",
       "dest": "api/index.py"
     },

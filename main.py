@@ -86,6 +86,14 @@ class TransactionsRequest(BaseModel):
     year: int
 
 
+class StockRegisterRequest(BaseModel):
+    dist_code: int
+    fps_id: int
+    month: int
+    year: int
+    office_code: int
+
+
 class RoDetailsRequest(BaseModel):
     month: int
     year: int
@@ -813,6 +821,38 @@ def fetch_transactions(request: TransactionsRequest):
 @app.post("/transactions")
 def get_transactions(request: TransactionsRequest):
     return fetch_transactions(request)
+
+
+@app.post("/stock-register")
+def get_stock_register(request: StockRegisterRequest):
+    url = "https://epos.kerala.gov.in/fps_stock_register.action"
+    payload = request.model_dump()
+    start_time = time.perf_counter()
+    logger.info("stock_register_start payload=%s", payload)
+    try:
+        response = EPOS_SESSION.post(url, data=payload, timeout=EPOS_TIMEOUT)
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        logger.info(
+            "stock_register_upstream_response status_code=%s content_length=%s duration_ms=%s",
+            response.status_code,
+            len(response.text),
+            duration_ms,
+        )
+        response.raise_for_status()
+        tables = parse_html_tables(response.text)
+        return {
+            "remote_status_code": response.status_code,
+            "duration_ms": duration_ms,
+            "table_count": len(tables),
+            "tables": tables,
+            "response_preview": response.text[:800] if not tables else "",
+        }
+    except requests.RequestException as e:
+        logger.exception("stock_register_upstream_error payload=%s", payload)
+        raise HTTPException(status_code=500, detail=f"Upstream ePoS stock register request failed: {e}")
+    except Exception as e:
+        logger.exception("stock_register_parse_error payload=%s", payload)
+        raise HTTPException(status_code=500, detail=f"Backend stock register parse error: {e}")
 
 
 @app.post("/ro-details")

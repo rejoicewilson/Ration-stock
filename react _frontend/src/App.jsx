@@ -18,6 +18,7 @@ import sugarIcon from './assets/sugar-cubes.svg';
 // Same-origin by default in production; override locally with VITE_API_URL if needed.
 const API_URL = import.meta.env.VITE_API_URL || '/count';
 const TRANSACTIONS_API_URL = import.meta.env.VITE_TRANSACTIONS_API_URL || '/transactions';
+const STOCK_REGISTER_API_URL = import.meta.env.VITE_STOCK_REGISTER_API_URL || '/stock-register';
 const RO_DETAILS_API_URL = import.meta.env.VITE_RO_DETAILS_API_URL || '/ro-details';
 const RO_QUANTITY_DETAILS_API_URL = import.meta.env.VITE_RO_QUANTITY_DETAILS_API_URL || '/ro-quantity-details';
 
@@ -370,14 +371,17 @@ export default function App() {
   });
   const [loading, setLoading] = useState(false);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [stockBoardLoading, setStockBoardLoading] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [error, setError] = useState('');
   const [transactionsError, setTransactionsError] = useState('');
+  const [stockBoardError, setStockBoardError] = useState('');
   const [settingsError, setSettingsError] = useState('');
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
+  const [stockBoardResult, setStockBoardResult] = useState(null);
   const [settingsResult, setSettingsResult] = useState(null);
   const [roQuantityResult, setRoQuantityResult] = useState(null);
 
@@ -521,6 +525,49 @@ export default function App() {
       setTransactionsError(err.message || 'Failed to fetch transactions.');
     } finally {
       setTransactionsLoading(false);
+    }
+  };
+
+  const handleStockBoardSubmit = async (e) => {
+    e.preventDefault();
+    if (!stockBoardForm.office_code) {
+      setStockBoardError('Office list is not added for the selected district yet. Please select the correct district.');
+      return;
+    }
+    setStockBoardLoading(true);
+    setStockBoardError('');
+    setStockBoardResult(null);
+    try {
+      const res = await fetch(STOCK_REGISTER_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dist_code: Number(stockBoardForm.dist_code),
+          fps_id: Number(stockBoardForm.fps_id),
+          month: Number(stockBoardForm.month),
+          year: Number(stockBoardForm.year),
+          office_code: Number(stockBoardForm.office_code),
+        }),
+      });
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { detail: responseText || 'Server returned an empty response' };
+      }
+      if (!res.ok) {
+        const requestId = res.headers.get('X-Request-ID');
+        const detail = data?.detail || data?.message || 'Server error';
+        const suffix = requestId ? ` Request ID: ${requestId}` : '';
+        throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
+      }
+      setStockBoardResult(data);
+    } catch (err) {
+      console.error('Stock board register fetch failed:', err);
+      setStockBoardError(err.message || 'Failed to fetch stock board register.');
+    } finally {
+      setStockBoardLoading(false);
     }
   };
 
@@ -1099,7 +1146,7 @@ export default function App() {
 
     return (
       <Paper elevation={0} sx={{ borderRadius: 3, background: '#ffffff', border: '1px solid #e8edf7', boxShadow: '0 16px 34px rgba(26, 58, 109, 0.10)', overflow: 'hidden' }}>
-        <Box sx={{ p: 2, background: '#ffffff' }}>
+        <Box component="form" onSubmit={handleStockBoardSubmit} sx={{ p: 2, background: '#ffffff' }}>
           <Grid container spacing={1.5}>
             {[
               ['fps_id', 'FPS ID'],
@@ -1169,6 +1216,36 @@ export default function App() {
               </Grid>
             ))}
           </Grid>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={stockBoardLoading}
+            sx={{
+              width: '100%',
+              mt: 2,
+              py: 1.35,
+              fontSize: 15,
+              fontWeight: 800,
+              textTransform: 'none',
+              borderRadius: 12,
+              background: 'linear-gradient(135deg, #2767f7 0%, #2255e6 100%)',
+              boxShadow: '0 12px 24px rgba(36, 94, 255, 0.30)',
+            }}
+          >
+            {stockBoardLoading ? <CircularProgress size={22} color="inherit" /> : 'Get Stock Register'}
+          </Button>
+          {stockBoardError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {stockBoardError}
+            </Alert>
+          )}
+          {stockBoardResult && (
+            <Alert severity={stockBoardResult.table_count ? 'success' : 'warning'} sx={{ mt: 2 }}>
+              {stockBoardResult.table_count
+                ? `Stock register loaded. ${stockBoardResult.table_count} table(s) found.`
+                : 'No stock register table found for this selection. Please check FPS ID, district, office, month, and year.'}
+            </Alert>
+          )}
         </Box>
 
         <Box sx={{ background: '#2f3192', color: '#ffffff', textAlign: 'center', py: 1.2, px: 1 }}>
