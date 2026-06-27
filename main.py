@@ -28,6 +28,8 @@ EPOS_HEADERS = {
 EPOS_TIMEOUT = (5, 15)
 TRANSACTIONS_CACHE_TTL_SECONDS = 300
 TRANSACTIONS_CACHE = {}
+FPS_DEALER_CACHE_TTL_SECONDS = 3600
+FPS_DEALER_CACHE = {}
 EPOS_SESSION = requests.Session()
 EPOS_SESSION.headers.update(EPOS_HEADERS)
 
@@ -304,6 +306,101 @@ def parse_html_tables(html: str):
         )
 
     return parsed_tables
+
+
+STOCK_REGISTER_HEADERS = [
+    "Sl.No",
+    "Scheme",
+    "Commodity",
+    "Units",
+    "Alloted Regular",
+    "Alloted Extra",
+    "OB Qty",
+    "Received Regular",
+    "Received Extra",
+    "Received Moved",
+    "Issued Qty",
+    "CB Qty",
+]
+
+
+def parse_stock_register_tables(html: str):
+    soup = BeautifulSoup(html, "html.parser")
+    parsed_tables = []
+
+    for table in soup.find_all("table"):
+        extracted_rows = []
+        for tr in table.find_all("tr"):
+            if tr.find_parent("table") is not table:
+                continue
+            cells = [cell_text_without_nested(cell) for cell in tr.find_all(["th", "td"], recursive=False)]
+            cells = [cell for cell in cells if cell != ""]
+            if cells:
+                extracted_rows.append(cells)
+
+        data_rows = [
+            normalize_report_row(row, len(STOCK_REGISTER_HEADERS))
+            for row in extracted_rows
+            if len(row) >= len(STOCK_REGISTER_HEADERS) and str(row[0]).strip().isdigit()
+        ]
+        if not data_rows:
+            continue
+
+        title_text = next(
+            (
+                " ".join(row)
+                for row in extracted_rows
+                if row and "Scheme Wise Stock Register" in " ".join(row)
+            ),
+            "",
+        )
+        records = [dict(zip(STOCK_REGISTER_HEADERS, row)) for row in data_rows]
+        parsed_tables.append(
+            {
+                "title_rows": [[title_text]] if title_text else [],
+                "headers": STOCK_REGISTER_HEADERS,
+                "rows": data_rows,
+                "records": records,
+            }
+        )
+
+    return parsed_tables
+
+
+def parse_fps_dealer_names(html: str):
+    soup = BeautifulSoup(html, "html.parser")
+    dealer_names = {}
+
+    for row in soup.find_all("tr"):
+        cells = [cell.get_text(" ", strip=True) for cell in row.find_all("td", recursive=False)]
+        if len(cells) < 4:
+            continue
+
+        fps_id = re.sub(r"\D+", "", cells[1])
+        dealer_name = cells[3].strip()
+        if fps_id and dealer_name and dealer_name.upper() != "-NA-":
+            dealer_names[fps_id] = dealer_name
+
+    return dealer_names
+
+
+def get_fps_dealer_name(dist_code: int, fps_id: int):
+    cached = FPS_DEALER_CACHE.get(dist_code)
+    if cached and time.time() - cached["stored_at"] <= FPS_DEALER_CACHE_TTL_SECONDS:
+        return cached["dealer_names"].get(str(fps_id), "")
+
+    response = EPOS_SESSION.post(
+        "https://epos.kerala.gov.in/fps_device.action",
+        data={"dist_code": dist_code},
+        timeout=EPOS_TIMEOUT,
+    )
+    response.raise_for_status()
+    dealer_names = parse_fps_dealer_names(response.text)
+    FPS_DEALER_CACHE[dist_code] = {
+        "stored_at": time.time(),
+        "dealer_names": dealer_names,
+    }
+    return dealer_names.get(str(fps_id), "")
 
 
 RO_QUANTITY_HEADERS = [
@@ -825,6 +922,22 @@ def get_transactions(request: TransactionsRequest):
 
 @app.post("/stock-register")
 def get_stock_register(request: StockRegisterRequest):
+    fps_id = str(request.fps_id)
+    if len(fps_id) != 7 or not fps_id.isdigit():
+        raise HTTPException(status_code=400, detail="FPS ID must contain exactly 7 digits")
+
+    fps_district_code = int(fps_id[:2])
+    fps_office_code = int(fps_id[2:4])
+    if request.dist_code != fps_district_code or request.office_code != fps_office_code:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"FPS ID {fps_id} belongs to district code {fps_district_code} "
+                f"and office code {fps_office_code}, not district code {request.dist_code} "
+                f"and office code {request.office_code}"
+            ),
+        )
+
     url = "https://epos.kerala.gov.in/fps_stock_register.action"
     payload = request.model_dump()
     start_time = time.perf_counter()
@@ -839,12 +952,23 @@ def get_stock_register(request: StockRegisterRequest):
             duration_ms,
         )
         response.raise_for_status()
-        tables = parse_html_tables(response.text)
+        tables = parse_stock_register_tables(response.text)
+        licensee_name = ""
+        try:
+            licensee_name = get_fps_dealer_name(request.dist_code, request.fps_id)
+        except Exception:
+            logger.warning(
+                "fps_dealer_lookup_failed dist_code=%s fps_id=%s",
+                request.dist_code,
+                request.fps_id,
+                exc_info=True,
+            )
         return {
             "remote_status_code": response.status_code,
             "duration_ms": duration_ms,
             "table_count": len(tables),
             "tables": tables,
+            "licensee_name": licensee_name,
             "response_preview": response.text[:800] if not tables else "",
         }
     except requests.RequestException as e:

@@ -534,6 +534,21 @@ export default function App() {
       setStockBoardError('Office list is not added for the selected district yet. Please select the correct district.');
       return;
     }
+    const fpsId = String(stockBoardForm.fps_id || '').trim();
+    if (!/^\d{7}$/.test(fpsId)) {
+      setStockBoardError('FPS ID must contain exactly 7 digits.');
+      setStockBoardResult(null);
+      return;
+    }
+    const fpsDistrictCode = fpsId.slice(0, 2);
+    const fpsOfficeCode = fpsId.slice(2, 4);
+    if (stockBoardForm.dist_code !== fpsDistrictCode || stockBoardForm.office_code !== fpsOfficeCode) {
+      setStockBoardError(
+        `FPS ID ${fpsId} belongs to district code ${fpsDistrictCode} and office code ${fpsOfficeCode}. Please select the matching district and office.`
+      );
+      setStockBoardResult(null);
+      return;
+    }
     setStockBoardLoading(true);
     setStockBoardError('');
     setStockBoardResult(null);
@@ -1134,6 +1149,290 @@ export default function App() {
   };
 
   const renderStockBoard = () => {
+    const stockRegisterTable = stockBoardResult?.tables?.[0];
+    const selectedOfficeLabel =
+      (afsoOptionsByDistrict[stockBoardForm.dist_code] || []).find(
+        ([officeCode]) => officeCode === stockBoardForm.office_code
+      )?.[1] || '-';
+    const stockBoardInfoCellSx = {
+      px: { xs: 1.1, sm: 1.4 },
+      py: 1.1,
+      minWidth: 0,
+      display: 'flex',
+      alignItems: 'center',
+      color: '#111827',
+      fontSize: { xs: 13, sm: 15 },
+      fontWeight: 900,
+      lineHeight: 1.35,
+    };
+    const stockInfoHeaders = ['ഇനം', 'എ.എ.വൈ', 'മുൻഗണന', 'എൻ.പി.എസ്', 'എൻ.പി.എൻ.എസ്'];
+    const stockInfoRows = [
+      'അരി (പുഴുക്കലരി)',
+      'പച്ചരി',
+      'മട്ട അരി',
+      'ഗോതമ്പ്',
+      'ആട്ട',
+      'മണ്ണെണ്ണ',
+      'പഞ്ചസാര',
+      'സ്പെഷ്യൽ വിതരണം',
+    ];
+    const normalizeStockText = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const boiledRiceAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isAay = scheme.includes('aay');
+      const isBoiledRice = commodity.includes('br') || commodity.includes('boiled');
+
+      return isAay && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const boiledRicePhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isPhh = scheme.includes('phh');
+      const isBoiledRice = commodity.includes('br') || commodity.includes('boiled');
+
+      return isPhh && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const boiledRiceNpsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNps = scheme.includes('nps');
+      const isBoiledRice = commodity.includes('br') || commodity.includes('boiled');
+
+      return isNps && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const boiledRiceNpnsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNpns = scheme.includes('npns');
+      const isBoiledRice = commodity.includes('br') || commodity.includes('boiled');
+
+      return isNpns && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const rawRiceAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isAay = scheme.includes('aay');
+      const isRawRice = commodity.includes('raw') || commodity.includes('rr');
+
+      return isAay && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const rawRicePhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isPhh = scheme.includes('phh');
+      const isRawRice = commodity.includes('raw') || commodity.includes('rr');
+
+      return isPhh && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const rawRiceNpsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNps = scheme.includes('nps');
+      const isRawRice = commodity.includes('raw') || commodity.includes('rr');
+
+      return isNps && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const rawRiceNpnsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNpns = scheme.includes('npns');
+      const isRawRice = commodity.includes('raw') || commodity.includes('rr');
+
+      return isNpns && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const mattaRiceAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isAay = scheme.includes('aay');
+      const isMattaRice = commodity.includes('matta') || commodity.includes('cmr');
+
+      return isAay && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const mattaRicePhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isPhh = scheme.includes('phh');
+      const isMattaRice = commodity.includes('matta') || commodity.includes('cmr');
+
+      return isPhh && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const mattaRiceNpsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNps = scheme.includes('nps');
+      const isMattaRice = commodity.includes('matta') || commodity.includes('cmr');
+
+      return isNps && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const mattaRiceNpnsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNpns = scheme.includes('npns');
+      const isMattaRice = commodity.includes('matta') || commodity.includes('cmr');
+
+      return isNpns && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const wheatAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isAay = scheme.includes('aay');
+      const isWheat = commodity.includes('wheat');
+
+      return isAay && isWheat ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const wheatPhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isPhh = scheme.includes('phh');
+      const isWheat = commodity.includes('wheat');
+
+      return isPhh && isWheat ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const wheatNpsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNps = scheme.includes('nps');
+      const isWheat = commodity.includes('wheat');
+
+      return isNps && isWheat ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const wheatNpnsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNpns = scheme.includes('npns');
+      const isWheat = commodity.includes('wheat');
+
+      return isNpns && isWheat ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const isAttaCommodity = (value) => /(^|[^a-z])atta([^a-z]|$)/i.test(String(value || ''));
+    const attaAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const isAay = scheme.includes('aay');
+
+      return isAay && isAttaCommodity(record.Commodity) ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const attaPhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const isPhh = scheme.includes('phh');
+
+      return isPhh && isAttaCommodity(record.Commodity) ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const attaAllCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const isAll = scheme === 'all';
+
+      return isAll && isAttaCommodity(record.Commodity) ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const keroseneAllCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isAll = scheme === 'all';
+      const isKerosene = commodity.includes('koil');
+
+      return isAll && isKerosene ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const sugarAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isAay = scheme.includes('aay');
+      const isSugar = commodity.includes('sugar');
+
+      return isAay && isSugar ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const sugarPhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isPhh = scheme.includes('phh');
+      const isSugar = commodity.includes('sugar');
+
+      return isPhh && isSugar ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const sugarNpsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNps = scheme.includes('nps');
+      const isSugar = commodity.includes('sugar');
+
+      return isNps && isSugar ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const sugarNpnsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNpns = scheme.includes('npns');
+      const isSugar = commodity.includes('sugar');
+
+      return isNpns && isSugar ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const stockInfoValue = (rowIndex, columnIndex) => {
+      if (rowIndex === 0 && columnIndex === 0) {
+        return formatStatValue(boiledRiceAayCbQty, 'kg');
+      }
+      if (rowIndex === 0 && columnIndex === 1) {
+        return formatStatValue(boiledRicePhhCbQty, 'kg');
+      }
+      if (rowIndex === 0 && columnIndex === 2) {
+        return formatStatValue(boiledRiceNpsCbQty, 'kg');
+      }
+      if (rowIndex === 0 && columnIndex === 3) {
+        return formatStatValue(boiledRiceNpnsCbQty, 'kg');
+      }
+      if (rowIndex === 1 && columnIndex === 0) {
+        return formatStatValue(rawRiceAayCbQty, 'kg');
+      }
+      if (rowIndex === 1 && columnIndex === 1) {
+        return formatStatValue(rawRicePhhCbQty, 'kg');
+      }
+      if (rowIndex === 1 && columnIndex === 2) {
+        return formatStatValue(rawRiceNpsCbQty, 'kg');
+      }
+      if (rowIndex === 1 && columnIndex === 3) {
+        return formatStatValue(rawRiceNpnsCbQty, 'kg');
+      }
+      if (rowIndex === 2 && columnIndex === 0) {
+        return formatStatValue(mattaRiceAayCbQty, 'kg');
+      }
+      if (rowIndex === 2 && columnIndex === 1) {
+        return formatStatValue(mattaRicePhhCbQty, 'kg');
+      }
+      if (rowIndex === 2 && columnIndex === 2) {
+        return formatStatValue(mattaRiceNpsCbQty, 'kg');
+      }
+      if (rowIndex === 2 && columnIndex === 3) {
+        return formatStatValue(mattaRiceNpnsCbQty, 'kg');
+      }
+      if (rowIndex === 3 && columnIndex === 0) {
+        return formatStatValue(wheatAayCbQty, 'kg');
+      }
+      if (rowIndex === 3 && columnIndex === 1) {
+        return formatStatValue(wheatPhhCbQty, 'kg');
+      }
+      if (rowIndex === 3 && columnIndex === 2) {
+        return formatStatValue(wheatNpsCbQty, 'kg');
+      }
+      if (rowIndex === 3 && columnIndex === 3) {
+        return formatStatValue(wheatNpnsCbQty, 'kg');
+      }
+      if (rowIndex === 4 && columnIndex === 0) {
+        return formatStatValue(attaAayCbQty, 'kg');
+      }
+      if (rowIndex === 4 && columnIndex === 1) {
+        return formatStatValue(attaPhhCbQty, 'kg');
+      }
+      if (rowIndex === 6 && columnIndex === 0) {
+        return formatStatValue(sugarAayCbQty, 'kg');
+      }
+      if (rowIndex === 6 && columnIndex === 1) {
+        return formatStatValue(sugarPhhCbQty, 'kg');
+      }
+      if (rowIndex === 6 && columnIndex === 2) {
+        return formatStatValue(sugarNpsCbQty, 'kg');
+      }
+      if (rowIndex === 6 && columnIndex === 3) {
+        return formatStatValue(sugarNpnsCbQty, 'kg');
+      }
+      return '';
+    };
     const stockRows = summarySections.map((section) => {
       const unit = section.key === 'KOIL' ? 'ltr' : 'kg';
       return {
@@ -1239,15 +1538,10 @@ export default function App() {
               {stockBoardError}
             </Alert>
           )}
-          {stockBoardResult && (
-            <Alert severity={stockBoardResult.table_count ? 'success' : 'warning'} sx={{ mt: 2 }}>
-              {stockBoardResult.table_count
-                ? `Stock register loaded. ${stockBoardResult.table_count} table(s) found.`
-                : 'No stock register table found for this selection. Please check FPS ID, district, office, month, and year.'}
-            </Alert>
-          )}
         </Box>
 
+        {stockBoardResult && (
+          <>
         <Box sx={{ background: '#2f3192', color: '#ffffff', textAlign: 'center', py: 1.2, px: 1 }}>
           <Typography sx={{ fontSize: { xs: 24, sm: 34 }, fontWeight: 1000, lineHeight: 1.1 }}>
             പൊതുവിതരണ കേന്ദ്രം
@@ -1257,36 +1551,35 @@ export default function App() {
           </Typography>
         </Box>
 
-        <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse' }}>
-          <Box component="tbody">
-            <Box component="tr">
-              <Box component="td" sx={{ p: 1.4, width: '32%', fontWeight: 900, color: '#111827' }}>
-                റേഷൻ നമ്പർ/ARD No. :
-              </Box>
-              <Box component="td" sx={{ p: 1.4, width: '18%', fontWeight: 900, color: '#111827' }}>
-                {stockBoardForm.fps_id || '-'}
-              </Box>
-              <Box component="td" sx={{ p: 1.4, width: '25%', fontWeight: 900, color: '#111827' }}>
-                താലൂക്ക് :
-              </Box>
-              <Box component="td" sx={{ p: 1.4, width: '25%', fontWeight: 900, color: '#111827' }}>
-                -
-              </Box>
-            </Box>
-            <Box component="tr">
-              <Box component="td" sx={{ p: 1.4, fontWeight: 900, color: '#111827' }}>
-                ലൈസൻസിയുടെ പേര് :
-              </Box>
-              <Box component="td" sx={{ p: 1.4, fontWeight: 900, color: '#111827' }}>
-                -
-              </Box>
-              <Box component="td" sx={{ p: 1.4, fontWeight: 900, color: '#111827' }}>
-                പ്രവർത്തന മാസം :
-              </Box>
-              <Box component="td" sx={{ p: 1.4, fontWeight: 900, color: '#111827' }}>
-                {monthYearLabel(stockBoardForm.month, stockBoardForm.year) || '-'}
-              </Box>
-            </Box>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(145px, 0.9fr) minmax(0, 1.1fr)',
+            borderBottom: '2px solid #111827',
+            '& > *': { borderTop: '1px solid #d1d5db' },
+            '& > :nth-of-type(odd)': {
+              background: '#f8fafc',
+              borderRight: '1px solid #d1d5db',
+            },
+          }}
+        >
+          <Box sx={stockBoardInfoCellSx}>റേഷൻ നമ്പർ/ARD No. :</Box>
+          <Box sx={{ ...stockBoardInfoCellSx, whiteSpace: 'nowrap' }}>
+            {stockBoardForm.fps_id || '-'}
+          </Box>
+          <Box sx={stockBoardInfoCellSx}>TSO :</Box>
+          <Box sx={{ ...stockBoardInfoCellSx, overflowWrap: 'anywhere' }}>
+            {selectedOfficeLabel}
+          </Box>
+          <Box sx={stockBoardInfoCellSx}>ലൈസൻസിയുടെ പേര് :</Box>
+          <Box sx={{ ...stockBoardInfoCellSx, overflowWrap: 'anywhere' }}>
+            {stockBoardResult?.licensee_name || '-'}
+          </Box>
+          <Box sx={stockBoardInfoCellSx}>പ്രവർത്തന സമയം :</Box>
+          <Box sx={{ ...stockBoardInfoCellSx, display: 'block', whiteSpace: 'nowrap' }}>
+            9 AM - 12 PM
+            <br />
+            4 PM - 7 PM
           </Box>
         </Box>
 
@@ -1317,6 +1610,138 @@ export default function App() {
               ))}
             </Box>
           </Box>
+        )}
+
+        <Box sx={{ p: 1.5, borderTop: '2px solid #111827', overflowX: 'auto' }}>
+          <Typography
+            sx={{
+              textAlign: 'center',
+              color: '#e11d24',
+              fontSize: { xs: 24, sm: 34 },
+              fontWeight: 1000,
+              lineHeight: 1.05,
+              mb: 1,
+            }}
+          >
+            സ്റ്റോക്ക് വിവരം{' '}
+            <Box component="span" sx={{ color: '#2f3192', fontSize: { xs: 15, sm: 20 }, fontWeight: 1000 }}>
+              (കി.ഗ്രാമിൽ)
+            </Box>
+          </Typography>
+          <Box component="table" sx={{ width: '100%', minWidth: 520, borderCollapse: 'collapse' }}>
+            <Box component="thead">
+              <Box component="tr">
+                {stockInfoHeaders.map((header, index) => (
+                  <Box
+                    component="th"
+                    key={header}
+                    sx={{
+                      p: 0.8,
+                      border: '3px solid #111111',
+                      background: index === 0 ? '#ffffff' : index === 1 ? '#ffea00' : index === 2 ? '#f26aaa' : index === 3 ? '#22a7c8' : '#ffffff',
+                      color: '#000000',
+                      fontSize: { xs: 12, sm: 15 },
+                      fontWeight: 1000,
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {header}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+            <Box component="tbody">
+              {stockInfoRows.map((item, rowIndex) => (
+                <Box component="tr" key={item}>
+                  <Box
+                    component="td"
+                    sx={{
+                      p: 0.75,
+                      border: '3px solid #111111',
+                      color: '#2f3192',
+                      fontSize: { xs: 12, sm: 15 },
+                      fontWeight: 1000,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {item}
+                  </Box>
+                  {rowIndex === 5 ? (
+                    <Box
+                      component="td"
+                      colSpan={4}
+                      sx={{
+                        p: 0.75,
+                        border: '3px solid #111111',
+                        height: 28,
+                        color: '#111827',
+                        fontSize: { xs: 12, sm: 15 },
+                        fontWeight: 900,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {formatStatValue(keroseneAllCbQty, 'ltr')}
+                    </Box>
+                  ) : rowIndex === 4 ? (
+                    <>
+                      {stockInfoHeaders.slice(1, 3).map((header, columnIndex) => (
+                        <Box
+                          component="td"
+                          key={`${item}-${header}`}
+                          sx={{
+                            p: 0.75,
+                            border: '3px solid #111111',
+                            height: 28,
+                            color: '#111827',
+                            fontSize: { xs: 12, sm: 15 },
+                            fontWeight: 900,
+                            textAlign: 'center',
+                          }}
+                        >
+                          {stockInfoValue(rowIndex, columnIndex)}
+                        </Box>
+                      ))}
+                      <Box
+                        component="td"
+                        colSpan={2}
+                        sx={{
+                          p: 0.75,
+                          border: '3px solid #111111',
+                          height: 28,
+                          color: '#111827',
+                          fontSize: { xs: 12, sm: 15 },
+                          fontWeight: 900,
+                          textAlign: 'center',
+                        }}
+                      >
+                        {formatStatValue(attaAllCbQty, 'kg')}
+                      </Box>
+                    </>
+                  ) : stockInfoHeaders.slice(1).map((header, columnIndex) => (
+                    <Box
+                      component="td"
+                      key={`${item}-${header}`}
+                      sx={{
+                        p: 0.75,
+                        border: '3px solid #111111',
+                        height: 28,
+                        color: '#111827',
+                        fontSize: { xs: 12, sm: 15 },
+                        fontWeight: 900,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {stockInfoValue(rowIndex, columnIndex)}
+                    </Box>
+                  ))}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+
+          </>
         )}
       </Paper>
     );
