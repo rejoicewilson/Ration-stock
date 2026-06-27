@@ -1300,18 +1300,31 @@ export default function App() {
           <Paper
             elevation={0}
             sx={{
-              width: 44,
-              height: 44,
-              borderRadius: '50%',
+              width: 118,
+              height: 48,
+              borderRadius: 1.5,
               display: 'grid',
               placeItems: 'center',
-              background: 'linear-gradient(145deg, #ffffff 0%, #eef2f9 100%)',
-              border: '1px solid #e5e9f2',
+              background: 'linear-gradient(180deg, #ffd827 0%, #ffc400 100%)',
+              border: '3px solid #b60000',
+              boxShadow: 'inset 0 0 0 2px #ffef78, 0 8px 18px rgba(139, 0, 0, 0.12)',
+              flex: '0 0 auto',
             }}
           >
-            <span role="img" aria-label="bell" style={{ fontSize: 20 }}>
-              🔔
-            </span>
+            <Typography
+              component="span"
+              sx={{
+                color: '#b60000',
+                fontSize: 13,
+                fontWeight: 1000,
+                lineHeight: 1.05,
+                textAlign: 'center',
+              }}
+            >
+              RATION STOCK
+              <br />
+              BOARD
+            </Typography>
           </Paper>
         </Box>
 
