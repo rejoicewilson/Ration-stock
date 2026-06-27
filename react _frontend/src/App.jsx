@@ -354,6 +354,13 @@ export default function App() {
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
   });
+  const [stockBoardForm, setStockBoardForm] = useState({
+    dist_code: '22',
+    office_code: '62',
+    fps_id: '',
+    month: String(new Date().getMonth() + 1).padStart(2, '0'),
+    year: String(new Date().getFullYear()),
+  });
   const [settingsForm, setSettingsForm] = useState({
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
@@ -399,6 +406,19 @@ export default function App() {
       return;
     }
     setTransactionForm({ ...transactionForm, [e.target.name]: e.target.value });
+  };
+
+  const handleStockBoardChange = (e) => {
+    if (e.target.name === 'dist_code') {
+      const nextOfficeOptions = afsoOptionsByDistrict[e.target.value] || [];
+      setStockBoardForm({
+        ...stockBoardForm,
+        dist_code: e.target.value,
+        office_code: nextOfficeOptions[0]?.[0] || '',
+      });
+      return;
+    }
+    setStockBoardForm({ ...stockBoardForm, [e.target.name]: e.target.value });
   };
 
   const handleSettingsChange = (e) => {
@@ -1046,8 +1066,8 @@ export default function App() {
     );
   };
 
-  const monthYearLabel = () => {
-    if (!form.month || !form.year) return '';
+  const monthYearLabel = (month = form.month, year = form.year) => {
+    if (!month || !year) return '';
     const monthNames = [
       'Jan',
       'Feb',
@@ -1062,8 +1082,8 @@ export default function App() {
       'Nov',
       'Dec',
     ];
-    const idx = Math.min(Math.max(Number(form.month) - 1, 0), 11);
-    return `${monthNames[idx]} ${form.year}`;
+    const idx = Math.min(Math.max(Number(month) - 1, 0), 11);
+    return `${monthNames[idx]} ${year}`;
   };
 
   const renderStockBoard = () => {
@@ -1078,17 +1098,79 @@ export default function App() {
     });
 
     return (
-      <Paper
-        elevation={0}
-        sx={{
-          mt: 3,
-          borderRadius: 2,
-          overflow: 'hidden',
-          background: '#ffffff',
-          border: '1px solid #d7dce8',
-          boxShadow: '0 12px 28px rgba(26, 58, 109, 0.10)',
-        }}
-      >
+      <Paper elevation={0} sx={{ borderRadius: 3, background: '#ffffff', border: '1px solid #e8edf7', boxShadow: '0 16px 34px rgba(26, 58, 109, 0.10)', overflow: 'hidden' }}>
+        <Box sx={{ p: 2, background: '#ffffff' }}>
+          <Grid container spacing={1.5}>
+            {[
+              ['fps_id', 'FPS ID'],
+              ['dist_code', 'DISTRICT'],
+              ['office_code', 'OFFICE CODE'],
+              ['month', 'MONTH'],
+              ['year', 'YEAR'],
+            ].map(([name, label]) => (
+              <Grid item xs={name === 'fps_id' ? 12 : 6} key={name}>
+                <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                  {label} *
+                </Typography>
+                {name === 'dist_code' ? (
+                  renderSelectControl({
+                    selectKey: 'stock-board-district',
+                    name,
+                    value: stockBoardForm[name],
+                    onChange: handleStockBoardChange,
+                    placeholder: 'Select district',
+                    options: districtOptions,
+                    pickerType: 'district',
+                  })
+                ) : name === 'office_code' ? (
+                  renderSelectControl({
+                    selectKey: 'stock-board-office',
+                    name,
+                    value: stockBoardForm[name],
+                    onChange: handleStockBoardChange,
+                    placeholder: afsoOptionsByDistrict[stockBoardForm.dist_code]?.length
+                      ? 'Select office'
+                      : 'Office list pending',
+                    options: afsoOptionsByDistrict[stockBoardForm.dist_code] || [],
+                    pickerType: 'district',
+                    disabled: !(afsoOptionsByDistrict[stockBoardForm.dist_code]?.length),
+                  })
+                ) : name === 'month' || name === 'year' ? (
+                  renderSelectControl({
+                    selectKey: `stock-board-${name}`,
+                    name,
+                    value: stockBoardForm[name],
+                    onChange: handleStockBoardChange,
+                    placeholder: name === 'month' ? 'Select month' : 'Select year',
+                    options: name === 'month' ? monthOptions : yearOptions,
+                    pickerType: name === 'month' ? 'month' : 'year',
+                  })
+                ) : (
+                  <Box
+                    component="input"
+                    name={name}
+                    value={stockBoardForm[name]}
+                    onChange={handleStockBoardChange}
+                    required
+                    type="number"
+                    placeholder="Enter FPS ID"
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      borderRadius: 12,
+                      border: '1px solid #dfe5f0',
+                      background: '#fbfcff',
+                      outline: 'none',
+                      fontSize: 16,
+                      fontWeight: 600,
+                    }}
+                  />
+                )}
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+
         <Box sx={{ background: '#2f3192', color: '#ffffff', textAlign: 'center', py: 1.2, px: 1 }}>
           <Typography sx={{ fontSize: { xs: 24, sm: 34 }, fontWeight: 1000, lineHeight: 1.1 }}>
             പൊതുവിതരണ കേന്ദ്രം
@@ -1105,7 +1187,7 @@ export default function App() {
                 റേഷൻ നമ്പർ/ARD No. :
               </Box>
               <Box component="td" sx={{ p: 1.4, width: '18%', fontWeight: 900, color: '#111827' }}>
-                {form.fps_id || '-'}
+                {stockBoardForm.fps_id || '-'}
               </Box>
               <Box component="td" sx={{ p: 1.4, width: '25%', fontWeight: 900, color: '#111827' }}>
                 താലൂക്ക് :
@@ -1125,7 +1207,7 @@ export default function App() {
                 പ്രവർത്തന മാസം :
               </Box>
               <Box component="td" sx={{ p: 1.4, fontWeight: 900, color: '#111827' }}>
-                {monthYearLabel() || '-'}
+                {monthYearLabel(stockBoardForm.month, stockBoardForm.year) || '-'}
               </Box>
             </Box>
           </Box>
