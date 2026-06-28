@@ -73,6 +73,9 @@ class StockRequest(BaseModel):
     month: int
     year: int
     rice_bag_weight: float = Field(default=50, gt=0)
+    raw_rice_bag_weight: Optional[float] = Field(default=None, gt=0)
+    boiled_rice_bag_weight: Optional[float] = Field(default=None, gt=0)
+    matta_cmr_bag_weight: Optional[float] = Field(default=None, gt=0)
     wheat_bag_weight: float = Field(default=50, gt=0)
     sugar_bag_weight: float = Field(default=50, gt=0)
     atta_bag_weight: float = Field(default=50, gt=0)
@@ -1165,19 +1168,21 @@ def get_raw_rice_cb_sum(request: StockRequest):
                         koil_cb_sum += float(cols[10].text.strip())
                     except ValueError:
                         pass
-        rice_bag_weight = request.rice_bag_weight
+        raw_rice_bag_weight = request.raw_rice_bag_weight or request.rice_bag_weight
+        boiled_rice_bag_weight = request.boiled_rice_bag_weight or request.rice_bag_weight
+        matta_cmr_bag_weight = request.matta_cmr_bag_weight or request.rice_bag_weight
         wheat_bag_weight = request.wheat_bag_weight
         sugar_bag_weight = request.sugar_bag_weight
         atta_bag_weight = request.atta_bag_weight
         # RAW RICE bags
-        raw_bag_count = int(raw_cb_sum // rice_bag_weight)
-        raw_remaining_kg = raw_cb_sum % rice_bag_weight
+        raw_bag_count = int(raw_cb_sum // raw_rice_bag_weight)
+        raw_remaining_kg = raw_cb_sum % raw_rice_bag_weight
         # BOILED RICE bags
-        br_bag_count = int(br_cb_sum // rice_bag_weight)
-        br_remaining_kg = br_cb_sum % rice_bag_weight
+        br_bag_count = int(br_cb_sum // boiled_rice_bag_weight)
+        br_remaining_kg = br_cb_sum % boiled_rice_bag_weight
         # Matta/CMR bags (combined)
-        matta_cmr_bag_count = int(matta_cmr_cb_sum // rice_bag_weight)
-        matta_cmr_remaining_kg = matta_cmr_cb_sum % rice_bag_weight
+        matta_cmr_bag_count = int(matta_cmr_cb_sum // matta_cmr_bag_weight)
+        matta_cmr_remaining_kg = matta_cmr_cb_sum % matta_cmr_bag_weight
         # Wheat bags
         wheat_bag_count = int(wheat_cb_sum // wheat_bag_weight)
         wheat_remaining_kg = wheat_cb_sum % wheat_bag_weight
@@ -1189,7 +1194,10 @@ def get_raw_rice_cb_sum(request: StockRequest):
         atta_remaining_kg = atta_cb_sum % atta_bag_weight
         result = {
             "bag_weights": {
-                "rice": f"{rice_bag_weight} kg",
+                "rice": f"{request.rice_bag_weight} kg",
+                "raw_rice": f"{raw_rice_bag_weight} kg",
+                "boiled_rice": f"{boiled_rice_bag_weight} kg",
+                "matta_cmr": f"{matta_cmr_bag_weight} kg",
                 "wheat": f"{wheat_bag_weight} kg",
                 "sugar": f"{sugar_bag_weight} kg",
                 "atta": f"{atta_bag_weight} kg",

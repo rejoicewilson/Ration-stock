@@ -6,8 +6,12 @@ import {
   Button,
   CircularProgress,
   Container,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   Divider,
   Grid,
+  IconButton,
   Paper,
   Stack,
   Typography,
@@ -341,7 +345,9 @@ export default function App() {
     fps_id: '',
     month: '',
     year: '',
-    rice_bag_weight: '50',
+    raw_rice_bag_weight: '50',
+    boiled_rice_bag_weight: '50',
+    matta_cmr_bag_weight: '50',
     wheat_bag_weight: '50',
     sugar_bag_weight: '50',
     atta_bag_weight: '50',
@@ -372,6 +378,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [stockBoardLoading, setStockBoardLoading] = useState(false);
+  const [stockTableOpen, setStockTableOpen] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [error, setError] = useState('');
   const [transactionsError, setTransactionsError] = useState('');
@@ -455,7 +462,9 @@ export default function App() {
           fps_id: Number(form.fps_id),
           month: Number(form.month),
           year: Number(form.year),
-          rice_bag_weight: Number(form.rice_bag_weight),
+          raw_rice_bag_weight: Number(form.raw_rice_bag_weight),
+          boiled_rice_bag_weight: Number(form.boiled_rice_bag_weight),
+          matta_cmr_bag_weight: Number(form.matta_cmr_bag_weight),
           wheat_bag_weight: Number(form.wheat_bag_weight),
           sugar_bag_weight: Number(form.sugar_bag_weight),
           atta_bag_weight: Number(form.atta_bag_weight),
@@ -1433,16 +1442,106 @@ export default function App() {
       }
       return '';
     };
-    const stockRows = summarySections.map((section) => {
-      const unit = section.key === 'KOIL' ? 'ltr' : 'kg';
-      return {
-        label: section.label,
-        cb: formatStatValue(getStat(section.key, 'cb_sum', `0 ${unit}`), unit),
-        bags: section.key === 'KOIL' ? '-' : formatStatValue(getStat(section.key, 'bag_count', '0'), ''),
-        remaining: formatStatValue(getStat(section.key, section.key === 'KOIL' ? 'remaining_ltr' : 'remaining_kg', `0 ${unit}`), unit),
-      };
-    });
+    const renderStockInfoTable = (expanded = false) => {
+      const border = expanded ? '2px solid #111111' : '3px solid #111111';
+      const cellFontSize = expanded ? { xs: 9, sm: 12 } : { xs: 12, sm: 15 };
+      const cellPadding = expanded ? 0.45 : 0.75;
 
+      return (
+        <Box
+          component="table"
+          sx={{
+            width: '100%',
+            minWidth: expanded ? 0 : 520,
+            tableLayout: expanded ? 'fixed' : 'auto',
+            borderCollapse: 'collapse',
+          }}
+        >
+          <Box component="thead">
+            <Box component="tr">
+              {stockInfoHeaders.map((header, index) => (
+                <Box
+                  component="th"
+                  key={header}
+                  sx={{
+                    width: expanded ? (index === 0 ? '32%' : '17%') : 'auto',
+                    p: expanded ? 0.45 : 0.8,
+                    border,
+                    background: index === 0 ? '#ffffff' : index === 1 ? '#ffea00' : index === 2 ? '#f26aaa' : index === 3 ? '#22a7c8' : '#ffffff',
+                    color: '#000000',
+                    fontSize: cellFontSize,
+                    fontWeight: 1000,
+                    lineHeight: 1.15,
+                    textAlign: 'center',
+                    whiteSpace: expanded ? 'normal' : 'nowrap',
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  {header}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+          <Box component="tbody">
+            {stockInfoRows.map((item, rowIndex) => (
+              <Box component="tr" key={item}>
+                <Box
+                  component="td"
+                  sx={{
+                    p: cellPadding,
+                    border,
+                    color: '#2f3192',
+                    fontSize: cellFontSize,
+                    fontWeight: 1000,
+                    lineHeight: 1.15,
+                    whiteSpace: expanded ? 'normal' : 'nowrap',
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  {item}
+                </Box>
+                {rowIndex === 5 ? (
+                  <Box
+                    component="td"
+                    colSpan={4}
+                    sx={{ p: cellPadding, border, height: expanded ? 30 : 28, color: '#111827', fontSize: cellFontSize, fontWeight: 900, textAlign: 'center' }}
+                  >
+                    {formatStatValue(keroseneAllCbQty, 'ltr')}
+                  </Box>
+                ) : rowIndex === 4 ? (
+                  <>
+                    {stockInfoHeaders.slice(1, 3).map((header, columnIndex) => (
+                      <Box
+                        component="td"
+                        key={`${item}-${header}`}
+                        sx={{ p: cellPadding, border, height: expanded ? 30 : 28, color: '#111827', fontSize: cellFontSize, fontWeight: 900, textAlign: 'center', overflowWrap: 'anywhere' }}
+                      >
+                        {stockInfoValue(rowIndex, columnIndex)}
+                      </Box>
+                    ))}
+                    <Box
+                      component="td"
+                      colSpan={2}
+                      sx={{ p: cellPadding, border, height: expanded ? 30 : 28, color: '#111827', fontSize: cellFontSize, fontWeight: 900, textAlign: 'center', overflowWrap: 'anywhere' }}
+                    >
+                      {formatStatValue(attaAllCbQty, 'kg')}
+                    </Box>
+                  </>
+                ) : stockInfoHeaders.slice(1).map((header, columnIndex) => (
+                  <Box
+                    component="td"
+                    key={`${item}-${header}`}
+                    sx={{ p: cellPadding, border, height: expanded ? 30 : 28, color: '#111827', fontSize: cellFontSize, fontWeight: 900, textAlign: 'center', overflowWrap: 'anywhere' }}
+                  >
+                    {stockInfoValue(rowIndex, columnIndex)}
+                  </Box>
+                ))}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      );
+    };
     return (
       <Paper elevation={0} sx={{ borderRadius: 3, background: '#ffffff', border: '1px solid #e8edf7', boxShadow: '0 16px 34px rgba(26, 58, 109, 0.10)', overflow: 'hidden' }}>
         <Box component="form" onSubmit={handleStockBoardSubmit} sx={{ p: 2, background: '#ffffff' }}>
@@ -1583,35 +1682,6 @@ export default function App() {
           </Box>
         </Box>
 
-        {result && (
-          <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', borderTop: '2px solid #111827' }}>
-            <Box component="thead">
-              <Box component="tr">
-                {['Commodity', 'CB Sum', 'Bags', 'Remaining'].map((header) => (
-                  <Box
-                    component="th"
-                    key={header}
-                    sx={{ p: 1, border: '1px solid #111827', background: '#f3f4f6', fontWeight: 1000, textAlign: 'left' }}
-                  >
-                    {header}
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-            <Box component="tbody">
-              {stockRows.map((row) => (
-                <Box component="tr" key={row.label}>
-                  {[row.label, row.cb, row.bags, row.remaining].map((cell, index) => (
-                    <Box component="td" key={`${row.label}-${index}`} sx={{ p: 1, border: '1px solid #111827', fontWeight: 800 }}>
-                      {cell}
-                    </Box>
-                  ))}
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        )}
-
         <Box sx={{ p: 1.5, borderTop: '2px solid #111827', overflowX: 'auto' }}>
           <Typography
             sx={{
@@ -1628,118 +1698,54 @@ export default function App() {
               (കി.ഗ്രാമിൽ)
             </Box>
           </Typography>
-          <Box component="table" sx={{ width: '100%', minWidth: 520, borderCollapse: 'collapse' }}>
-            <Box component="thead">
-              <Box component="tr">
-                {stockInfoHeaders.map((header, index) => (
-                  <Box
-                    component="th"
-                    key={header}
-                    sx={{
-                      p: 0.8,
-                      border: '3px solid #111111',
-                      background: index === 0 ? '#ffffff' : index === 1 ? '#ffea00' : index === 2 ? '#f26aaa' : index === 3 ? '#22a7c8' : '#ffffff',
-                      color: '#000000',
-                      fontSize: { xs: 12, sm: 15 },
-                      fontWeight: 1000,
-                      textAlign: 'center',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {header}
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-            <Box component="tbody">
-              {stockInfoRows.map((item, rowIndex) => (
-                <Box component="tr" key={item}>
-                  <Box
-                    component="td"
-                    sx={{
-                      p: 0.75,
-                      border: '3px solid #111111',
-                      color: '#2f3192',
-                      fontSize: { xs: 12, sm: 15 },
-                      fontWeight: 1000,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {item}
-                  </Box>
-                  {rowIndex === 5 ? (
-                    <Box
-                      component="td"
-                      colSpan={4}
-                      sx={{
-                        p: 0.75,
-                        border: '3px solid #111111',
-                        height: 28,
-                        color: '#111827',
-                        fontSize: { xs: 12, sm: 15 },
-                        fontWeight: 900,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {formatStatValue(keroseneAllCbQty, 'ltr')}
-                    </Box>
-                  ) : rowIndex === 4 ? (
-                    <>
-                      {stockInfoHeaders.slice(1, 3).map((header, columnIndex) => (
-                        <Box
-                          component="td"
-                          key={`${item}-${header}`}
-                          sx={{
-                            p: 0.75,
-                            border: '3px solid #111111',
-                            height: 28,
-                            color: '#111827',
-                            fontSize: { xs: 12, sm: 15 },
-                            fontWeight: 900,
-                            textAlign: 'center',
-                          }}
-                        >
-                          {stockInfoValue(rowIndex, columnIndex)}
-                        </Box>
-                      ))}
-                      <Box
-                        component="td"
-                        colSpan={2}
-                        sx={{
-                          p: 0.75,
-                          border: '3px solid #111111',
-                          height: 28,
-                          color: '#111827',
-                          fontSize: { xs: 12, sm: 15 },
-                          fontWeight: 900,
-                          textAlign: 'center',
-                        }}
-                      >
-                        {formatStatValue(attaAllCbQty, 'kg')}
-                      </Box>
-                    </>
-                  ) : stockInfoHeaders.slice(1).map((header, columnIndex) => (
-                    <Box
-                      component="td"
-                      key={`${item}-${header}`}
-                      sx={{
-                        p: 0.75,
-                        border: '3px solid #111111',
-                        height: 28,
-                        color: '#111827',
-                        fontSize: { xs: 12, sm: 15 },
-                        fontWeight: 900,
-                        textAlign: 'center',
-                      }}
-                    >
-                      {stockInfoValue(rowIndex, columnIndex)}
-                    </Box>
-                  ))}
-                </Box>
-              ))}
-            </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
+            <Button
+              type="button"
+              variant="outlined"
+              size="small"
+              onClick={() => setStockTableOpen(true)}
+              sx={{ fontWeight: 800, textTransform: 'none' }}
+            >
+              View full table
+            </Button>
           </Box>
+          {renderStockInfoTable()}
         </Box>
+
+        <Dialog
+          fullScreen
+          open={stockTableOpen}
+          onClose={() => setStockTableOpen(false)}
+          aria-labelledby="stock-table-dialog-title"
+        >
+          <DialogTitle
+            id="stock-table-dialog-title"
+            sx={{
+              minHeight: 52,
+              px: 1.5,
+              py: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              color: '#e11d24',
+              fontWeight: 1000,
+            }}
+          >
+            സ്റ്റോക്ക് വിവരം (കി.ഗ്രാമിൽ)
+            <IconButton
+              type="button"
+              aria-label="Close full table"
+              title="Close"
+              onClick={() => setStockTableOpen(false)}
+              sx={{ width: 40, height: 40, color: '#111827', fontSize: 28 }}
+            >
+              ×
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ p: 1, overflow: 'hidden' }}>
+            {renderStockInfoTable(true)}
+          </DialogContent>
+        </Dialog>
 
           </>
         )}
@@ -2123,7 +2129,9 @@ export default function App() {
               </Typography>
               <Grid container spacing={1.5}>
                 {[
-                  ['rice_bag_weight', 'RICE'],
+                  ['raw_rice_bag_weight', 'RAW RICE'],
+                  ['boiled_rice_bag_weight', 'BOILED RICE'],
+                  ['matta_cmr_bag_weight', 'MATTA / CMR'],
                   ['wheat_bag_weight', 'WHEAT'],
                   ['sugar_bag_weight', 'SUGAR'],
                   ['atta_bag_weight', 'ATTA'],
