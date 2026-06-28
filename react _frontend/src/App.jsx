@@ -338,7 +338,7 @@ export default function App() {
       ['1401803', 'VELIYAMPARAMBA'],
     ],
   };
-  const [activeView, setActiveView] = useState('stock');
+  const [activeView, setActiveView] = useState('home');
   const [picker, setPicker] = useState(null);
   const [pendingPickerValue, setPendingPickerValue] = useState('');
   const [form, setForm] = useState({
@@ -401,6 +401,13 @@ export default function App() {
     { key: 'ATTA', label: 'ATTA', icon: attaIcon, iconType: 'image', color: '#d7a16c' },
     { key: 'KOIL', label: 'KOIL', icon: '🛢️', color: '#8a6bff' },
   ];
+  const featurePages = [
+    { title: 'Stock Summary', category: 'കടയിലെ സ്റ്റോക്ക് നോക്കാൻ', view: 'stock', mark: 'ST', color: '#2563eb', background: '#eff6ff' },
+    { title: 'Ration Stock Board', category: 'സ്റ്റോക്ക് ബോർഡ് എഴുതാൻ', view: 'stockBoard', mark: 'RB', color: '#b42318', background: '#fff4e5' },
+    { title: 'Transactions', category: 'ദിവസ ചിലവ് / വരവ് അറിയാൻ', view: 'transactions', mark: 'TX', color: '#087f5b', background: '#ecfdf3' },
+    { title: 'RO Orders', category: 'സ്വീകരിച്ച സാധനകളുടെ റിപ്പോർട്ട്', view: 'settings', mark: 'RO', color: '#9f1239', background: '#fff1f2' },
+  ];
+  const activeViewTitle = featurePages.find((page) => page.view === activeView)?.title || 'Ration Stock';
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -1969,61 +1976,156 @@ export default function App() {
         minHeight: '100vh',
         bgcolor: '#f4f6fb',
         background: 'linear-gradient(180deg, #e8f0ff 0%, #f5f7fb 40%, #f6f8fc 100%)',
-        pb: 12,
+        pb: 4,
       }}
     >
       <Analytics />
       {renderPickerModal()}
-      <Container maxWidth="sm" sx={{ pt: 3, pb: 10 }}>
+      <Container maxWidth="sm" sx={{ pt: 3, pb: 4 }}>
+        {activeView !== 'home' && (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
           <Box>
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              Ration Stock
+              {activeViewTitle}
             </Typography>
             <Typography variant="body2" sx={{ color: '#6d7584' }}>
-              Manage your inventory
+              Civil Supplies operations
             </Typography>
           </Box>
-          <Paper
-            component="button"
-            type="button"
-            elevation={0}
-            onClick={() => {
-              setActiveView('stockBoard');
-            }}
-            sx={{
-              width: 118,
-              height: 48,
-              borderRadius: 1.5,
-              display: 'grid',
-              placeItems: 'center',
-              background: 'linear-gradient(180deg, #ffd827 0%, #ffc400 100%)',
-              border: '3px solid #b60000',
-              boxShadow: 'inset 0 0 0 2px #ffef78, 0 8px 18px rgba(139, 0, 0, 0.12)',
-              flex: '0 0 auto',
-              cursor: 'pointer',
-              p: 0,
-              '&:active': { transform: 'translateY(1px)' },
-            }}
-          >
-            <Typography
-              component="span"
+          <Button
+              type="button"
+              variant="outlined"
+              onClick={() => setActiveView('home')}
               sx={{
-                color: '#b60000',
-                fontSize: 13,
-                fontWeight: 1000,
-                lineHeight: 1.05,
-                textAlign: 'center',
+                height: 40,
+                borderRadius: 2,
+                px: 2,
+                fontWeight: 800,
+                textTransform: 'none',
+                background: '#ffffff',
               }}
             >
-              RATION STOCK
-              <br />
-              BOARD
-            </Typography>
-          </Paper>
+              Home
+          </Button>
         </Box>
+        )}
 
-        {activeView === 'stock' ? (
+        {activeView === 'home' ? (
+          <Box component="section" aria-labelledby="services-title">
+            <Box
+              aria-label="റേഷൻ കട"
+              sx={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '3 / 1',
+                mb: 2.5,
+                display: 'grid',
+                placeItems: 'center',
+                containerType: 'inline-size',
+                overflow: 'hidden',
+                borderRadius: 2,
+                background: '#df0505',
+                boxShadow: '0 10px 24px rgba(108, 24, 24, 0.18)',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  inset: 0,
+                  background: '#ffd21a',
+                  clipPath: 'polygon(86% 0, 100% 0, 100% 100%, 35% 100%)',
+                },
+              }}
+            >
+              <Typography
+                component="div"
+                sx={{
+                  position: 'relative',
+                  zIndex: 1,
+                  maxWidth: 'calc(100% - 24px)',
+                  color: '#07156f',
+                  fontSize: 40,
+                  fontWeight: 1000,
+                  lineHeight: 1.2,
+                  letterSpacing: 0,
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center',
+                  WebkitTextStroke: '2px #ffffff',
+                  paintOrder: 'stroke fill',
+                  textShadow: '0 6px 3px rgba(0, 0, 0, 0.28)',
+                  '@container (min-width: 480px)': {
+                    fontSize: 68,
+                    WebkitTextStroke: '3px #ffffff',
+                  },
+                }}
+              >
+                റേഷൻ കട
+              </Typography>
+            </Box>
+            <Typography id="services-title" sx={{ mb: 1.5, color: '#31415f', fontSize: 14, fontWeight: 800 }}>
+              Services
+            </Typography>
+            <Grid container spacing={1.5}>
+              {featurePages.map((page) => (
+                <Grid item xs={12} sm={6} key={page.view}>
+                  <Paper
+                    component="button"
+                    type="button"
+                    elevation={0}
+                    onClick={() => setActiveView(page.view)}
+                    sx={{
+                      width: '100%',
+                      minHeight: 96,
+                      p: 2,
+                      display: 'grid',
+                      gridTemplateColumns: '48px minmax(0, 1fr) 24px',
+                      alignItems: 'center',
+                      gap: 1.5,
+                      textAlign: 'left',
+                      borderRadius: 2,
+                      border: '1px solid #dfe5f0',
+                      background: '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease',
+                      '&:hover': {
+                        borderColor: page.color,
+                        boxShadow: '0 8px 18px rgba(26, 58, 109, 0.10)',
+                        transform: 'translateY(-1px)',
+                      },
+                      '&:active': { transform: 'translateY(0)' },
+                    }}
+                  >
+                    <Box
+                      aria-hidden="true"
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        display: 'grid',
+                        placeItems: 'center',
+                        borderRadius: 2,
+                        color: page.color,
+                        background: page.background,
+                        fontSize: 14,
+                        fontWeight: 1000,
+                      }}
+                    >
+                      {page.mark}
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography sx={{ color: '#17233c', fontSize: 15, fontWeight: 900, lineHeight: 1.25 }}>
+                        {page.title}
+                      </Typography>
+                      <Typography sx={{ mt: 0.35, color: '#7b8395', fontSize: 12, fontWeight: 700 }}>
+                        {page.category}
+                      </Typography>
+                    </Box>
+                    <Typography aria-hidden="true" sx={{ color: '#64748b', fontSize: 28, lineHeight: 1, textAlign: 'center' }}>
+                      ›
+                    </Typography>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        ) : activeView === 'stock' ? (
           <>
         <Paper
           elevation={0}
@@ -2283,26 +2385,7 @@ export default function App() {
         )}
           </>
         ) : activeView === 'stockBoard' ? (
-          <>
-            <Stack spacing={2}>
-              <Button
-                type="button"
-                variant="outlined"
-                onClick={() => setActiveView('stock')}
-                sx={{
-                  alignSelf: 'flex-start',
-                  borderRadius: 999,
-                  px: 2,
-                  fontWeight: 800,
-                  textTransform: 'none',
-                  background: '#ffffff',
-                }}
-              >
-                Back to Stock
-              </Button>
-              {renderStockBoard()}
-            </Stack>
-          </>
+          renderStockBoard()
         ) : activeView === 'transactions' ? (
           <>
             <Paper
@@ -2825,46 +2908,6 @@ export default function App() {
           </>
         )}
       </Container>
-
-      {/* Bottom nav */}
-      <Paper
-        elevation={10}
-        sx={{
-          position: 'fixed',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          borderRadius: '18px 18px 0 0',
-          px: 4,
-          py: 1,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          maxWidth: '600px',
-          margin: '0 auto',
-        }}
-      >
-        {[
-          { label: 'Stock', icon: '🏠', view: 'stock' },
-          { label: 'Transactions', icon: '🕑', view: 'transactions' },
-          { label: 'RO Orders', icon: '📦', view: 'settings' },
-        ].map((item) => (
-          <Box
-            key={item.label}
-            onClick={() => setActiveView(item.view)}
-            sx={{
-              textAlign: 'center',
-              color: activeView === item.view ? '#2f64f8' : '#7b8395',
-              cursor: 'pointer',
-            }}
-          >
-            <div style={{ fontSize: 20 }}>{item.icon}</div>
-            <Typography variant="caption" sx={{ fontWeight: 700 }}>
-              {item.label}
-            </Typography>
-          </Box>
-        ))}
-      </Paper>
     </Box>
   );
 }
