@@ -516,7 +516,7 @@ export default function App() {
           from_date: toEposDate(transactionForm.from_date),
           to_date: toEposDate(transactionForm.to_date),
           dist_code: Number(transactionForm.dist_code),
-          afso: Number(transactionForm.afso),
+          afso: transactionForm.afso,
           fps_id: Number(transactionForm.fps_id),
           month: Number(transactionForm.month),
           year: Number(transactionForm.year),

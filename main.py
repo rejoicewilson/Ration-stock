@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 import requests
 from bs4 import BeautifulSoup
 
@@ -85,10 +85,18 @@ class TransactionsRequest(BaseModel):
     from_date: str
     to_date: str
     dist_code: int
-    afso: int
+    afso: str
     fps_id: int
     month: int
     year: int
+
+    @field_validator("afso", mode="before")
+    @classmethod
+    def normalize_afso(cls, value):
+        normalized = str(value or "").strip()
+        if not normalized.isdigit() or len(normalized) > 2:
+            raise ValueError("AFSO code must contain one or two digits")
+        return normalized.zfill(2)
 
 
 class StockRegisterRequest(BaseModel):
