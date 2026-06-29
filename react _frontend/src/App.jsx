@@ -2591,10 +2591,10 @@ export default function App() {
                       {renderStat('TRANSACTIONS', transactionsResult.summary?.transaction_count || 0)}
                     </Grid>
                     <Grid item xs={6} sm={4}>
-                      {renderStat('FROM', toEposDate(transactionForm.from_date))}
+                      {renderStat('FROM', transactionsResult.summary?.from_date || toEposDate(transactionForm.from_date))}
                     </Grid>
                     <Grid item xs={6} sm={4}>
-                      {renderStat('TO', toEposDate(transactionForm.to_date))}
+                      {renderStat('TO', transactionsResult.summary?.to_date || toEposDate(transactionForm.to_date))}
                     </Grid>
                   </Grid>
                   <Divider sx={{ my: 2 }} />

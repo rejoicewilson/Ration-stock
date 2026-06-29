@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import time
+from datetime import datetime
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from urllib.parse import parse_qs, urlparse
@@ -32,6 +33,8 @@ FPS_DEALER_CACHE_TTL_SECONDS = 3600
 FPS_DEALER_CACHE = {}
 EPOS_SESSION = requests.Session()
 EPOS_SESSION.headers.update(EPOS_HEADERS)
+EPOS_DETAILS_SESSION = requests.Session()
+EPOS_DETAILS_SESSION.headers.update(EPOS_HEADERS)
 
 if REACT_ASSETS_DIR.exists():
     app.mount("/assets", StaticFiles(directory=REACT_ASSETS_DIR), name="assets")
@@ -660,6 +663,21 @@ TRANSACTION_HEADERS = [
     "auth_trans_time",
 ]
 
+FPS_TRANSACTION_FIXED_HEADERS = [
+    "sl_no",
+    "rc_no",
+    "scheme",
+    "avail_type",
+    "receipt_no",
+    "date",
+]
+
+FPS_TRANSACTION_TRAILING_HEADERS = [
+    "amount",
+    "portability",
+    "auth_trans_time",
+]
+
 
 def parse_transaction_report(html: str):
     soup = BeautifulSoup(html, "html.parser")
@@ -685,6 +703,47 @@ def parse_transaction_report(html: str):
             transactions.append(dict(zip(TRANSACTION_HEADERS, chunk)))
 
     return {"title": title, "headers": TRANSACTION_HEADERS, "transactions": transactions}
+
+
+def parse_fps_transaction_details(html: str):
+    soup = BeautifulSoup(html, "html.parser")
+    table = soup.find("table", id="Report")
+    if not table:
+        return {"title": "", "transactions": []}
+
+    title_cell = table.find("th", colspan=True)
+    title = title_cell.get_text(" ", strip=True) if title_cell else ""
+    header_rows = table.select("thead tr")
+    quantity_headers = []
+    if header_rows:
+        quantity_headers = [
+            cell.get_text(" ", strip=True)
+            for cell in header_rows[-1].find_all("th")
+        ]
+
+    transactions = []
+    for row in table.select("tbody tr"):
+        cells = [cell.get_text(" ", strip=True) for cell in row.find_all("td")]
+        quantity_count = (
+            len(cells)
+            - len(FPS_TRANSACTION_FIXED_HEADERS)
+            - len(FPS_TRANSACTION_TRAILING_HEADERS)
+        )
+        if quantity_count <= 0 or len(quantity_headers) != quantity_count:
+            continue
+
+        fixed_end = len(FPS_TRANSACTION_FIXED_HEADERS)
+        trailing_start = fixed_end + quantity_count
+        transaction = dict(zip(FPS_TRANSACTION_FIXED_HEADERS, cells[:fixed_end]))
+        transaction["commodity_quantities"] = dict(
+            zip(quantity_headers, cells[fixed_end:trailing_start])
+        )
+        transaction.update(
+            zip(FPS_TRANSACTION_TRAILING_HEADERS, cells[trailing_start:])
+        )
+        transactions.append(transaction)
+
+    return {"title": title, "transactions": transactions}
 
 
 def to_float(value):
@@ -718,6 +777,66 @@ def summarize_transactions(transactions):
     return {
         "total_amount": round(sum(to_float(transaction.get("amount")) for transaction in transactions), 2),
         "transaction_count": len(transactions),
+        "commodity_totals": commodity_totals,
+    }
+
+
+def summarize_fps_transaction_details(transactions, from_date: str, to_date: str):
+    start_date = datetime.strptime(from_date, "%d-%m-%Y").date()
+    end_date = datetime.strptime(to_date, "%d-%m-%Y").date()
+    if start_date > end_date:
+        raise ValueError("From date must be on or before to date")
+
+    filtered = []
+    for transaction in transactions:
+        try:
+            transaction_date = datetime.strptime(transaction.get("date", ""), "%d-%m-%Y").date()
+        except ValueError:
+            continue
+        if start_date <= transaction_date <= end_date:
+            filtered.append(transaction)
+
+    def commodity_group(header):
+        normalized = re.sub(r"[^A-Z0-9]+", "", header.upper())
+        if "CMR" in normalized:
+            return "cmr"
+        if "RR" in normalized:
+            return "rr"
+        if "BR" in normalized:
+            return "br"
+        if "ATTA" in normalized:
+            return "atta"
+        if "WHEAT" in normalized:
+            return "wheat"
+        if "KOIL" in normalized or "KEROSENE" in normalized:
+            return "koil"
+        if "SUGAR" in normalized:
+            return "sugar"
+        return None
+
+    commodity_keys = ("wheat", "atta", "rr", "br", "cmr", "sugar", "koil")
+    commodity_totals = {
+        key: round(
+            sum(
+                to_float(quantity)
+                for transaction in filtered
+                for header, quantity in transaction.get("commodity_quantities", {}).items()
+                if commodity_group(header) == key
+            ),
+            3,
+        )
+        for key in commodity_keys
+    }
+
+    filtered_dates = [
+        datetime.strptime(transaction["date"], "%d-%m-%Y").date()
+        for transaction in filtered
+    ]
+
+    return {
+        "transaction_count": len(filtered),
+        "from_date": min(filtered_dates).strftime("%d-%m-%Y") if filtered_dates else from_date,
+        "to_date": max(filtered_dates).strftime("%d-%m-%Y") if filtered_dates else to_date,
         "commodity_totals": commodity_totals,
     }
 
@@ -841,6 +960,7 @@ def get_fps_stock(request: StockRequest):
 
 def fetch_transactions(request: TransactionsRequest):
     url = "https://epos.kerala.gov.in/day_wise_trans.action"
+    details_url = "https://epos.kerala.gov.in/FPS_Trans_Details.jsp"
     payload = request.model_dump()
     cache_key = tuple(sorted(payload.items()))
     cached = TRANSACTIONS_CACHE.get(cache_key)
@@ -873,6 +993,35 @@ def fetch_transactions(request: TransactionsRequest):
         parse_start_time = time.perf_counter()
         transaction_report = parse_transaction_report(response.text)
         transactions = transaction_report["transactions"]
+
+        details_payload = {
+            "dist_code": request.dist_code,
+            "fps_id": request.fps_id,
+            "month": request.month,
+            "year": request.year,
+        }
+        details_start_time = time.perf_counter()
+        details_response = EPOS_DETAILS_SESSION.post(
+            details_url, data=details_payload, timeout=EPOS_TIMEOUT
+        )
+        details_duration_ms = round((time.perf_counter() - details_start_time) * 1000, 2)
+        logger.info(
+            "fps_transaction_details_upstream_response status_code=%s content_length=%s duration_ms=%s",
+            details_response.status_code,
+            len(details_response.text),
+            details_duration_ms,
+        )
+        details_response.raise_for_status()
+        details_report = parse_fps_transaction_details(details_response.text)
+        details_summary = summarize_fps_transaction_details(
+            details_report["transactions"], request.from_date, request.to_date
+        )
+        amount_summary = summarize_transactions(transactions)
+        summary = {
+            **details_summary,
+            "total_amount": amount_summary["total_amount"],
+        }
+
         parse_duration_ms = round((time.perf_counter() - parse_start_time) * 1000, 2)
         total_duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
         if not transactions:
@@ -885,17 +1034,18 @@ def fetch_transactions(request: TransactionsRequest):
                 "remote_status_code": response.status_code,
                 "cache_hit": False,
                 "upstream_duration_ms": upstream_duration_ms,
+                "details_duration_ms": details_duration_ms,
                 "parse_duration_ms": parse_duration_ms,
                 "total_duration_ms": total_duration_ms,
-                "title": transaction_report["title"],
-                "summary": summarize_transactions([]),
+                "title": details_report["title"] or transaction_report["title"],
+                "summary": summary,
                 "transactions": [],
                 "content_preview": response.text[:1000],
             }
             TRANSACTIONS_CACHE[cache_key] = {"stored_at": time.time(), "data": result}
             return result
 
-        row_count = len(transactions)
+        row_count = details_summary["transaction_count"]
         logger.info(
             "transactions_success row_count=%s upstream_ms=%s parse_ms=%s total_ms=%s",
             row_count,
@@ -907,12 +1057,13 @@ def fetch_transactions(request: TransactionsRequest):
             "remote_status_code": response.status_code,
             "cache_hit": False,
             "upstream_duration_ms": upstream_duration_ms,
+            "details_duration_ms": details_duration_ms,
             "parse_duration_ms": parse_duration_ms,
             "total_duration_ms": total_duration_ms,
             "table_count": 1,
             "row_count": row_count,
-            "title": transaction_report["title"],
-            "summary": summarize_transactions(transactions),
+            "title": details_report["title"] or transaction_report["title"],
+            "summary": summary,
             "headers": transaction_report["headers"],
             "transactions": transactions,
         }
