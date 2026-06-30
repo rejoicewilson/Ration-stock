@@ -406,6 +406,7 @@ export default function App() {
     { title: 'Ration Stock Board', category: 'സ്റ്റോക്ക് ബോർഡ് എഴുതാൻ', view: 'stockBoard', mark: 'RB', color: '#b42318', background: '#fff4e5' },
     { title: 'Transactions', category: 'ദിവസ ചിലവ് / വരവ് അറിയാൻ', view: 'transactions', mark: 'TX', color: '#087f5b', background: '#ecfdf3' },
     { title: 'RO Orders', category: 'സ്വീകരിച്ച സാധനകളുടെ റിപ്പോർട്ട്', view: 'settings', mark: 'RO', color: '#9f1239', background: '#fff1f2' },
+    { title: 'Commission Calculator', category: 'റേഷൻ കമ്മിഷൻ നോക്കാൻ', view: 'commission', mark: 'CC', color: '#7c3aed', background: '#f5f3ff' },
   ];
   const activeViewTitle = featurePages.find((page) => page.view === activeView)?.title || 'Ration Stock';
 
@@ -2623,6 +2624,8 @@ export default function App() {
               </Box>
             )}
           </>
+        ) : activeView === 'commission' ? (
+          <Box />
         ) : (
           <>
             <Paper
