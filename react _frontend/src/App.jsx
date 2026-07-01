@@ -3137,6 +3137,26 @@ export default function App() {
             )}
           </>
         )}
+
+        <Alert
+          severity="warning"
+          sx={{
+            mt: 4,
+            borderRadius: 2,
+            border: '1px solid #f5c86b',
+            background: '#fff8e6',
+            color: '#6b4700',
+            alignItems: 'flex-start',
+          }}
+        >
+          <Typography sx={{ fontWeight: 900 }}>Disclaimer</Typography>
+          <Typography variant="body2" sx={{ mt: 0.25, fontWeight: 700 }}>
+            This is a private initiative and is not an official government app.
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 0.25, fontWeight: 700 }}>
+            ഇത് ഒരു സ്വകാര്യ സംരംഭമാണ്. ഇത് ഔദ്യോഗിക സർക്കാർ ആപ്പ് അല്ല.
+          </Typography>
+        </Alert>
       </Container>
     </Box>
   );
