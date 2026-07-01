@@ -867,7 +867,19 @@ export default function App() {
         border: '1px dashed #e3e7ef',
       }}
     >
-      <Typography variant="caption" sx={{ color: '#7b8395', fontWeight: 700, letterSpacing: 0.3 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          minHeight: 32,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#7b8395',
+          fontWeight: 700,
+          lineHeight: 1.2,
+          letterSpacing: 0.3,
+        }}
+      >
         {label}
       </Typography>
       <Typography variant="subtitle1" sx={{ fontWeight: 600, mt: 0.5 }}>
