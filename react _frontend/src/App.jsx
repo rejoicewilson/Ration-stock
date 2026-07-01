@@ -34,6 +34,84 @@ const toEposDate = (value) => {
   return `${day}-${month}-${year}`;
 };
 
+const calculateCommission = (summary) => {
+  const totals = summary?.commodity_totals || {};
+  const schemeTotals = summary?.scheme_commodity_totals || {};
+  const eligibleKg = ['wheat', 'atta', 'rr', 'br', 'cmr'].reduce(
+    (sum, key) => sum + (Number(totals[key]) || 0),
+    0
+  );
+  const riceSchemes = ['NPS', 'NPNS', 'NPI'];
+  const attaSchemes = ['NPS', 'NPNS', 'NPI', 'PHH'];
+  const riceCollectedKg = riceSchemes.reduce(
+    (sum, scheme) => sum + ['rr', 'br', 'cmr'].reduce(
+      (schemeSum, key) => schemeSum + (Number(schemeTotals[scheme]?.[key]) || 0),
+      0
+    ),
+    0
+  );
+  const attaCollectedKg = attaSchemes.reduce(
+    (sum, scheme) => sum + (Number(schemeTotals[scheme]?.atta) || 0),
+    0
+  );
+  const alreadyCollectedKg = riceCollectedKg + attaCollectedKg;
+  const alreadyCollectedAmount = alreadyCollectedKg * 2;
+
+  const collectionDetails = {
+    riceCollectedKg,
+    attaCollectedKg,
+    alreadyCollectedKg,
+    alreadyCollectedAmount,
+  };
+
+  if (eligibleKg <= 0) {
+    return {
+      ...collectionDetails,
+      eligibleKg: 0,
+      commission: 0,
+      tier: 'No eligible sales',
+      formula: 'Commission starts when eligible sales are recorded.',
+      requiresOldCommissionCap: false,
+    };
+  }
+
+  if (eligibleKg <= 1500) {
+    return {
+      ...collectionDetails,
+      eligibleKg,
+      commission: 6800,
+      tier: 'Tier 1 · Up to 15 quintals',
+      formula: 'Fixed commission: Rs. 6,800',
+      requiresOldCommissionCap: false,
+    };
+  }
+
+  if (eligibleKg <= 4500) {
+    const calculated = 9000 + eligibleKg * 2.7;
+    return {
+      ...collectionDetails,
+      eligibleKg,
+      commission: Math.min(calculated, 21000),
+      tier: 'Tier 2 · Above 15 and up to 45 quintals',
+      formula: `Rs. 9,000 + (${formatNumber(eligibleKg)} kg × Rs. 2.70)${calculated > 21000 ? ' · capped at Rs. 21,000' : ''}`,
+      requiresOldCommissionCap: false,
+    };
+  }
+
+  const extraKg = eligibleKg - 4500;
+  return {
+    ...collectionDetails,
+    eligibleKg,
+    commission: 21000 + extraKg * 2,
+    tier: 'Tier 3 · Above 45 quintals',
+    formula: `Rs. 21,000 + (${formatNumber(extraKg)} kg × Rs. 2.00)`,
+    requiresOldCommissionCap: eligibleKg > 29400,
+  };
+};
+
+const formatNumber = (value, maximumFractionDigits = 2) =>
+  Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits });
+
 export default function App() {
   const currentYear = new Date().getFullYear();
   const monthOptions = [
@@ -361,6 +439,15 @@ export default function App() {
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
   });
+  const [commissionForm, setCommissionForm] = useState({
+    from_date: todayForDateInput(),
+    to_date: todayForDateInput(),
+    dist_code: '18',
+    afso: '42',
+    fps_id: '',
+    month: String(new Date().getMonth() + 1).padStart(2, '0'),
+    year: String(new Date().getFullYear()),
+  });
   const [stockBoardForm, setStockBoardForm] = useState({
     dist_code: '22',
     office_code: '62',
@@ -377,17 +464,20 @@ export default function App() {
   });
   const [loading, setLoading] = useState(false);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [commissionLoading, setCommissionLoading] = useState(false);
   const [stockBoardLoading, setStockBoardLoading] = useState(false);
   const [stockTableOpen, setStockTableOpen] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [error, setError] = useState('');
   const [transactionsError, setTransactionsError] = useState('');
+  const [commissionError, setCommissionError] = useState('');
   const [stockBoardError, setStockBoardError] = useState('');
   const [settingsError, setSettingsError] = useState('');
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
+  const [commissionResult, setCommissionResult] = useState(null);
   const [stockBoardResult, setStockBoardResult] = useState(null);
   const [settingsResult, setSettingsResult] = useState(null);
   const [roQuantityResult, setRoQuantityResult] = useState(null);
@@ -425,6 +515,19 @@ export default function App() {
       return;
     }
     setTransactionForm({ ...transactionForm, [e.target.name]: e.target.value });
+  };
+
+  const handleCommissionChange = (e) => {
+    if (e.target.name === 'dist_code') {
+      const nextAfsoOptions = afsoOptionsByDistrict[e.target.value] || [];
+      setCommissionForm({
+        ...commissionForm,
+        dist_code: e.target.value,
+        afso: nextAfsoOptions[0]?.[0] || '',
+      });
+      return;
+    }
+    setCommissionForm({ ...commissionForm, [e.target.name]: e.target.value });
   };
 
   const handleStockBoardChange = (e) => {
@@ -500,27 +603,38 @@ export default function App() {
     }
   };
 
-  const handleTransactionsSubmit = async (e) => {
+  const submitTransactionRequest = async (
+    e,
+    requestForm,
+    { isCommission = false, setLoading, setError, setResult }
+  ) => {
     e.preventDefault();
-    if (!transactionForm.afso) {
-      setTransactionsError('AFSO list is not added for the selected district yet. Please share this district AFSO list.');
+    if (
+      isCommission
+      && (requestForm.from_date < '2026-01-01' || Number(requestForm.year) < 2026)
+    ) {
+      setError('The new commission rates apply only from January 2026.');
       return;
     }
-    setTransactionsLoading(true);
-    setTransactionsError('');
-    setTransactionsResult(null);
+    if (!requestForm.afso) {
+      setError('AFSO list is not added for the selected district yet. Please share this district AFSO list.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setResult(null);
     try {
       const res = await fetch(TRANSACTIONS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from_date: toEposDate(transactionForm.from_date),
-          to_date: toEposDate(transactionForm.to_date),
-          dist_code: Number(transactionForm.dist_code),
-          afso: transactionForm.afso,
-          fps_id: Number(transactionForm.fps_id),
-          month: Number(transactionForm.month),
-          year: Number(transactionForm.year),
+          from_date: toEposDate(requestForm.from_date),
+          to_date: toEposDate(requestForm.to_date),
+          dist_code: Number(requestForm.dist_code),
+          afso: requestForm.afso,
+          fps_id: Number(requestForm.fps_id),
+          month: Number(requestForm.month),
+          year: Number(requestForm.year),
         }),
       });
       const responseText = await res.text();
@@ -536,14 +650,27 @@ export default function App() {
         const suffix = requestId ? ` Request ID: ${requestId}` : '';
         throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
       }
-      setTransactionsResult(data);
+      setResult(data);
     } catch (err) {
-      console.error('Transactions fetch failed:', err);
-      setTransactionsError(err.message || 'Failed to fetch transactions.');
+      console.error(`${isCommission ? 'Commission' : 'Transactions'} fetch failed:`, err);
+      setError(err.message || `Failed to fetch ${isCommission ? 'commission data' : 'transactions'}.`);
     } finally {
-      setTransactionsLoading(false);
+      setLoading(false);
     }
   };
+
+  const handleTransactionsSubmit = (e) => submitTransactionRequest(e, transactionForm, {
+    setLoading: setTransactionsLoading,
+    setError: setTransactionsError,
+    setResult: setTransactionsResult,
+  });
+
+  const handleCommissionSubmit = (e) => submitTransactionRequest(e, commissionForm, {
+    isCommission: true,
+    setLoading: setCommissionLoading,
+    setError: setCommissionError,
+    setResult: setCommissionResult,
+  });
 
   const handleStockBoardSubmit = async (e) => {
     e.preventDefault();
@@ -1971,6 +2098,15 @@ export default function App() {
     );
   };
 
+  const isCommissionView = activeView === 'commission';
+  const serviceForm = isCommissionView ? commissionForm : transactionForm;
+  const serviceLoading = isCommissionView ? commissionLoading : transactionsLoading;
+  const serviceError = isCommissionView ? commissionError : transactionsError;
+  const serviceResult = isCommissionView ? commissionResult : transactionsResult;
+  const serviceChangeHandler = isCommissionView ? handleCommissionChange : handleTransactionChange;
+  const serviceSubmitHandler = isCommissionView ? handleCommissionSubmit : handleTransactionsSubmit;
+  const commissionCalculation = calculateCommission(commissionResult?.summary);
+
   return (
     <Box
       sx={{
@@ -2387,7 +2523,7 @@ export default function App() {
           </>
         ) : activeView === 'stockBoard' ? (
           renderStockBoard()
-        ) : activeView === 'transactions' ? (
+        ) : activeView === 'transactions' || activeView === 'commission' ? (
           <>
             <Paper
               elevation={0}
@@ -2400,7 +2536,7 @@ export default function App() {
                 mb: 3,
               }}
             >
-              <Stack spacing={2} component="form" onSubmit={handleTransactionsSubmit}>
+              <Stack spacing={2} component="form" onSubmit={serviceSubmitHandler}>
                 <Grid container spacing={1.5}>
                   <Grid item xs={6}>
                     <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
@@ -2409,8 +2545,8 @@ export default function App() {
                     <Box
                       component="input"
                       name="from_date"
-                      value={transactionForm.from_date}
-                      onChange={handleTransactionChange}
+                      value={serviceForm.from_date}
+                      onChange={serviceChangeHandler}
                       required
                       type="date"
                       style={{
@@ -2432,8 +2568,8 @@ export default function App() {
                     <Box
                       component="input"
                       name="to_date"
-                      value={transactionForm.to_date}
-                      onChange={handleTransactionChange}
+                      value={serviceForm.to_date}
+                      onChange={serviceChangeHandler}
                       required
                       type="date"
                       style={{
@@ -2466,8 +2602,8 @@ export default function App() {
                         renderSelectControl({
                           selectKey: 'transactions-district',
                           name,
-                          value: transactionForm[name],
-                          onChange: handleTransactionChange,
+                          value: serviceForm[name],
+                          onChange: serviceChangeHandler,
                           placeholder: 'Select district',
                           options: districtOptions,
                           pickerType: 'district',
@@ -2476,21 +2612,21 @@ export default function App() {
                         renderSelectControl({
                           selectKey: 'transactions-afso',
                           name,
-                          value: transactionForm[name],
-                          onChange: handleTransactionChange,
-                          placeholder: afsoOptionsByDistrict[transactionForm.dist_code]?.length
+                          value: serviceForm[name],
+                          onChange: serviceChangeHandler,
+                          placeholder: afsoOptionsByDistrict[serviceForm.dist_code]?.length
                             ? 'Select AFSO'
                             : 'AFSO list pending',
-                          options: afsoOptionsByDistrict[transactionForm.dist_code] || [],
+                          options: afsoOptionsByDistrict[serviceForm.dist_code] || [],
                           pickerType: 'district',
-                          disabled: !(afsoOptionsByDistrict[transactionForm.dist_code]?.length),
+                          disabled: !(afsoOptionsByDistrict[serviceForm.dist_code]?.length),
                         })
                       ) : name === 'month' || name === 'year' ? (
                         renderSelectControl({
                           selectKey: `transactions-${name}`,
                           name,
-                          value: transactionForm[name],
-                          onChange: handleTransactionChange,
+                          value: serviceForm[name],
+                          onChange: serviceChangeHandler,
                           placeholder: name === 'month' ? 'Select month' : 'Select year',
                           options: name === 'month' ? monthOptions : yearOptions,
                           pickerType: name === 'month' ? 'month' : 'year',
@@ -2499,8 +2635,8 @@ export default function App() {
                         <Box
                           component="input"
                           name={name}
-                          value={transactionForm[name]}
-                          onChange={handleTransactionChange}
+                          value={serviceForm[name]}
+                          onChange={serviceChangeHandler}
                           required
                           type="number"
                           placeholder={label}
@@ -2523,8 +2659,8 @@ export default function App() {
                 <Button
                   type="submit"
                   variant="contained"
-                  disabled={transactionsLoading}
-                  startIcon={!transactionsLoading ? '🕑' : null}
+                  disabled={serviceLoading}
+                  startIcon={!serviceLoading ? '🕑' : null}
                   sx={{
                     py: 1.4,
                     fontSize: 15,
@@ -2535,37 +2671,43 @@ export default function App() {
                     boxShadow: '0 12px 24px rgba(36, 94, 255, 0.35)',
                   }}
                 >
-                  {transactionsLoading ? <CircularProgress size={22} color="inherit" /> : 'Get Transactions'}
+                  {serviceLoading ? (
+                    <CircularProgress size={22} color="inherit" />
+                  ) : activeView === 'commission' ? (
+                    'Calculate Commission'
+                  ) : (
+                    'Get Transactions'
+                  )}
                 </Button>
               </Stack>
             </Paper>
 
-            {transactionsError && (
+            {serviceError && (
               <Alert severity="error" sx={{ mb: 3 }}>
-                {transactionsError}
+                {serviceError}
               </Alert>
             )}
 
-            {transactionsResult && (
+            {serviceResult && (
               <Box>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                   <Box>
                     <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                      Collection Summary
+                      {activeView === 'commission' ? 'Commission Summary' : 'Collection Summary'}
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#6d7584', fontWeight: 700 }}>
-                      {transactionsResult.row_count || 0} records
-                      {transactionsResult.cache_hit ? ' | cached' : ''}
+                      {serviceResult.row_count || 0} records
+                      {serviceResult.cache_hit ? ' | cached' : ''}
                     </Typography>
                   </Box>
                   <Typography variant="body2" sx={{ color: '#3b63f4', fontWeight: 700 }}>
-                    {Math.round(transactionsResult.total_duration_ms || 0)} ms
+                    {Math.round(serviceResult.total_duration_ms || 0)} ms
                   </Typography>
                 </Box>
 
-                {transactionsResult.title && (
+                {serviceResult.title && (
                   <Typography variant="body2" sx={{ color: '#6d7584', mb: 1.5, fontWeight: 700 }}>
-                    {transactionsResult.title}
+                    {serviceResult.title}
                   </Typography>
                 )}
 
@@ -2580,52 +2722,125 @@ export default function App() {
                     textAlign: 'center',
                   }}
                 >
-                  <Typography variant="caption" sx={{ color: '#7b8395', fontWeight: 800, letterSpacing: 0.4 }}>
-                    TOTAL AMOUNT COLLECTED
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 900, color: '#2f64f8', mt: 1 }}>
-                    Rs. {formatStatValue(transactionsResult.summary?.total_amount || 0, '')}
-                  </Typography>
-                  <Divider sx={{ my: 2 }} />
-                  <Grid container spacing={1.5}>
-                    <Grid item xs={12} sm={4}>
-                      {renderStat('TRANSACTIONS', transactionsResult.summary?.transaction_count || 0)}
-                    </Grid>
-                    <Grid item xs={6} sm={4}>
-                      {renderStat('FROM', transactionsResult.summary?.from_date || toEposDate(transactionForm.from_date))}
-                    </Grid>
-                    <Grid item xs={6} sm={4}>
-                      {renderStat('TO', transactionsResult.summary?.to_date || toEposDate(transactionForm.to_date))}
-                    </Grid>
-                  </Grid>
-                  <Divider sx={{ my: 2 }} />
-                  <Grid container spacing={1.5}>
-                    {[
-                      ['WHEAT', 'wheat'],
-                      ['ATTA', 'atta'],
-                      ['RR', 'rr'],
-                      ['BR', 'br'],
-                      ['CMR', 'cmr'],
-                      ['SUGAR', 'sugar'],
-                      ['KOIL', 'koil'],
-                    ].map(([label, key]) => (
-                      <Grid item xs={6} sm={3} key={key}>
-                        {renderStat(
-                          label,
-                          formatStatValue(
-                            transactionsResult.summary?.commodity_totals?.[key] || 0,
-                            key === 'koil' ? 'ltr' : 'kg'
-                          )
-                        )}
+                  {activeView === 'commission' ? (
+                    <>
+                      <Typography variant="caption" sx={{ color: '#7b8395', fontWeight: 800, letterSpacing: 0.4 }}>
+                        GROSS COMMISSION
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 900, color: '#7c3aed', mt: 1 }}>
+                        Rs. {formatNumber(Math.round(commissionCalculation.commission), 0)}
+                      </Typography>
+                      <Typography variant="body2" sx={{ mt: 0.75, color: '#6d7584', fontWeight: 700 }}>
+                        Exact amount: Rs. {formatNumber(commissionCalculation.commission)}
+                      </Typography>
+                      <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
+                        <Grid item xs={6}>
+                          {renderStat(
+                            'TDS @ 2%',
+                            `Rs. ${formatNumber(commissionCalculation.commission * 0.02)}`
+                          )}
+                        </Grid>
+                        <Grid item xs={6}>
+                          {renderStat(
+                            'COLLECTED FROM RC HOLDERS',
+                            `Rs. ${formatNumber(commissionCalculation.alreadyCollectedAmount)}`
+                          )}
+                        </Grid>
                       </Grid>
-                    ))}
-                  </Grid>
+                      <Divider sx={{ my: 2 }} />
+                      <Grid container spacing={1.5}>
+                        <Grid item xs={12} sm={4}>
+                          {renderStat('ELIGIBLE SALES', `${formatNumber(commissionCalculation.eligibleKg)} kg`)}
+                        </Grid>
+                        <Grid item xs={6} sm={4}>
+                          {renderStat('QUINTALS', formatNumber(commissionCalculation.eligibleKg / 100))}
+                        </Grid>
+                        <Grid item xs={6} sm={4}>
+                          {renderStat('TRANSACTIONS', serviceResult.summary?.transaction_count || 0)}
+                        </Grid>
+                      </Grid>
+                      <Box sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: '#f7f5ff', textAlign: 'left' }}>
+                        <Typography sx={{ color: '#5b21b6', fontWeight: 900 }}>
+                          {commissionCalculation.tier}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 0.6, color: '#5f6675', fontWeight: 700 }}>
+                          {commissionCalculation.formula}
+                        </Typography>
+                      </Box>
+                      <Divider sx={{ my: 2 }} />
+                      <Grid container spacing={1.5}>
+                        {[
+                          ['WHEAT', 'wheat'],
+                          ['ATTA', 'atta'],
+                          ['RR', 'rr'],
+                          ['BR', 'br'],
+                          ['CMR', 'cmr'],
+                        ].map(([label, key]) => (
+                          <Grid item xs={6} sm={4} key={key}>
+                            {renderStat(
+                              label,
+                              formatStatValue(serviceResult.summary?.commodity_totals?.[key] || 0, 'kg')
+                            )}
+                          </Grid>
+                        ))}
+                      </Grid>
+                      <Typography variant="caption" sx={{ display: 'block', mt: 2, color: '#7b8395', fontWeight: 700 }}>
+                        Sugar and kerosene are excluded from eligible sales.
+                      </Typography>
+                      {commissionCalculation.requiresOldCommissionCap && (
+                        <Alert severity="warning" sx={{ mt: 2, textAlign: 'left' }}>
+                          Sales exceed 294 quintals. The final commission cannot be more than Rs. 8,000 above the old-method commission. Entering or calculating the old commission is still required to apply this limit.
+                        </Alert>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <Typography variant="caption" sx={{ color: '#7b8395', fontWeight: 800, letterSpacing: 0.4 }}>
+                        TOTAL AMOUNT COLLECTED
+                      </Typography>
+                      <Typography variant="h4" sx={{ fontWeight: 900, color: '#2f64f8', mt: 1 }}>
+                        Rs. {formatStatValue(serviceResult.summary?.total_amount || 0, '')}
+                      </Typography>
+                      <Divider sx={{ my: 2 }} />
+                      <Grid container spacing={1.5}>
+                        <Grid item xs={12} sm={4}>
+                          {renderStat('TRANSACTIONS', serviceResult.summary?.transaction_count || 0)}
+                        </Grid>
+                        <Grid item xs={6} sm={4}>
+                          {renderStat('FROM', serviceResult.summary?.from_date || toEposDate(serviceForm.from_date))}
+                        </Grid>
+                        <Grid item xs={6} sm={4}>
+                          {renderStat('TO', serviceResult.summary?.to_date || toEposDate(serviceForm.to_date))}
+                        </Grid>
+                      </Grid>
+                      <Divider sx={{ my: 2 }} />
+                      <Grid container spacing={1.5}>
+                        {[
+                          ['WHEAT', 'wheat'],
+                          ['ATTA', 'atta'],
+                          ['RR', 'rr'],
+                          ['BR', 'br'],
+                          ['CMR', 'cmr'],
+                          ['SUGAR', 'sugar'],
+                          ['KOIL', 'koil'],
+                        ].map(([label, key]) => (
+                          <Grid item xs={6} sm={3} key={key}>
+                            {renderStat(
+                              label,
+                              formatStatValue(
+                                serviceResult.summary?.commodity_totals?.[key] || 0,
+                                key === 'koil' ? 'ltr' : 'kg'
+                              )
+                            )}
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </>
+                  )}
                 </Paper>
               </Box>
             )}
           </>
-        ) : activeView === 'commission' ? (
-          <Box />
         ) : (
           <>
             <Paper

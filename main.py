@@ -804,6 +804,8 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
             return "rr"
         if "BR" in normalized:
             return "br"
+        if "RICE" in normalized:
+            return "rr"
         if "ATTA" in normalized:
             return "atta"
         if "WHEAT" in normalized:
@@ -828,6 +830,24 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
         for key in commodity_keys
     }
 
+    scheme_commodity_totals = {}
+    for transaction in filtered:
+        scheme = str(transaction.get("scheme", "")).strip().upper()
+        if not scheme:
+            continue
+        scheme_totals = scheme_commodity_totals.setdefault(
+            scheme, {key: 0.0 for key in commodity_keys}
+        )
+        for header, quantity in transaction.get("commodity_quantities", {}).items():
+            group = commodity_group(header)
+            if group:
+                scheme_totals[group] += to_float(quantity)
+
+    scheme_commodity_totals = {
+        scheme: {key: round(value, 3) for key, value in totals.items()}
+        for scheme, totals in scheme_commodity_totals.items()
+    }
+
     filtered_dates = [
         datetime.strptime(transaction["date"], "%d-%m-%Y").date()
         for transaction in filtered
@@ -838,6 +858,7 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
         "from_date": min(filtered_dates).strftime("%d-%m-%Y") if filtered_dates else from_date,
         "to_date": max(filtered_dates).strftime("%d-%m-%Y") if filtered_dates else to_date,
         "commodity_totals": commodity_totals,
+        "scheme_commodity_totals": scheme_commodity_totals,
     }
 
 
