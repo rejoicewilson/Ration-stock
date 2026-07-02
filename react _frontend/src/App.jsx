@@ -1321,7 +1321,7 @@ export default function App() {
       fontWeight: 900,
       lineHeight: 1.35,
     };
-    const stockInfoHeaders = ['ഇനം', 'എ.എ.വൈ', 'മുൻഗണന', 'എൻ.പി.എസ്', 'എൻ.പി.എൻ.എസ്'];
+    const stockInfoHeaders = ['ഇനം', 'എ.എ.വൈ', 'മുൻഗണന', 'എൻ.പി.എസ്', 'എൻ.പി.എൻ.എസ്', 'എൻ.പി.ഐ'];
     const stockInfoRows = [
       'അരി (പുഴുക്കലരി)',
       'പച്ചരി',
@@ -1365,6 +1365,14 @@ export default function App() {
 
       return isNpns && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
+    const boiledRiceNpiCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNpi = scheme.includes('npi');
+      const isBoiledRice = commodity.includes('br') || commodity.includes('boiled');
+
+      return isNpi && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
     const rawRiceAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
       const commodity = normalizeStockText(record.Commodity);
@@ -1396,6 +1404,14 @@ export default function App() {
       const isRawRice = commodity.includes('raw') || commodity.includes('rr');
 
       return isNpns && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const rawRiceNpiCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNpi = scheme.includes('npi');
+      const isRawRice = commodity.includes('raw') || commodity.includes('rr');
+
+      return isNpi && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const mattaRiceAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
@@ -1429,6 +1445,14 @@ export default function App() {
 
       return isNpns && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
+    const mattaRiceNpiCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNpi = scheme.includes('npi');
+      const isMattaRice = commodity.includes('matta') || commodity.includes('cmr');
+
+      return isNpi && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
     const wheatAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
       const commodity = normalizeStockText(record.Commodity);
@@ -1460,6 +1484,14 @@ export default function App() {
       const isWheat = commodity.includes('wheat');
 
       return isNpns && isWheat ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
+    const wheatNpiCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNpi = scheme.includes('npi');
+      const isWheat = commodity.includes('wheat');
+
+      return isNpi && isWheat ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const isAttaCommodity = (value) => /(^|[^a-z])atta([^a-z]|$)/i.test(String(value || ''));
     const attaAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
@@ -1520,6 +1552,14 @@ export default function App() {
 
       return isNpns && isSugar ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
+    const sugarNpiCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
+      const scheme = normalizeStockText(record.Scheme);
+      const commodity = normalizeStockText(record.Commodity);
+      const isNpi = scheme.includes('npi');
+      const isSugar = commodity.includes('sugar');
+
+      return isNpi && isSugar ? total + parseQuantity(record['CB Qty']) : total;
+    }, 0);
     const stockInfoValue = (rowIndex, columnIndex) => {
       if (rowIndex === 0 && columnIndex === 0) {
         return formatStatValue(boiledRiceAayCbQty, 'kg');
@@ -1533,6 +1573,9 @@ export default function App() {
       if (rowIndex === 0 && columnIndex === 3) {
         return formatStatValue(boiledRiceNpnsCbQty, 'kg');
       }
+      if (rowIndex === 0 && columnIndex === 4) {
+        return formatStatValue(boiledRiceNpiCbQty, 'kg');
+      }
       if (rowIndex === 1 && columnIndex === 0) {
         return formatStatValue(rawRiceAayCbQty, 'kg');
       }
@@ -1544,6 +1587,9 @@ export default function App() {
       }
       if (rowIndex === 1 && columnIndex === 3) {
         return formatStatValue(rawRiceNpnsCbQty, 'kg');
+      }
+      if (rowIndex === 1 && columnIndex === 4) {
+        return formatStatValue(rawRiceNpiCbQty, 'kg');
       }
       if (rowIndex === 2 && columnIndex === 0) {
         return formatStatValue(mattaRiceAayCbQty, 'kg');
@@ -1557,6 +1603,9 @@ export default function App() {
       if (rowIndex === 2 && columnIndex === 3) {
         return formatStatValue(mattaRiceNpnsCbQty, 'kg');
       }
+      if (rowIndex === 2 && columnIndex === 4) {
+        return formatStatValue(mattaRiceNpiCbQty, 'kg');
+      }
       if (rowIndex === 3 && columnIndex === 0) {
         return formatStatValue(wheatAayCbQty, 'kg');
       }
@@ -1568,6 +1617,9 @@ export default function App() {
       }
       if (rowIndex === 3 && columnIndex === 3) {
         return formatStatValue(wheatNpnsCbQty, 'kg');
+      }
+      if (rowIndex === 3 && columnIndex === 4) {
+        return formatStatValue(wheatNpiCbQty, 'kg');
       }
       if (rowIndex === 4 && columnIndex === 0) {
         return formatStatValue(attaAayCbQty, 'kg');
@@ -1587,6 +1639,9 @@ export default function App() {
       if (rowIndex === 6 && columnIndex === 3) {
         return formatStatValue(sugarNpnsCbQty, 'kg');
       }
+      if (rowIndex === 6 && columnIndex === 4) {
+        return formatStatValue(sugarNpiCbQty, 'kg');
+      }
       return '';
     };
     const renderStockInfoTable = (expanded = false) => {
@@ -1599,7 +1654,7 @@ export default function App() {
           component="table"
           sx={{
             width: '100%',
-            minWidth: expanded ? 0 : 520,
+            minWidth: expanded ? 0 : 620,
             tableLayout: expanded ? 'fixed' : 'auto',
             borderCollapse: 'collapse',
           }}
@@ -1611,7 +1666,7 @@ export default function App() {
                   component="th"
                   key={header}
                   sx={{
-                    width: expanded ? (index === 0 ? '32%' : '17%') : 'auto',
+                    width: expanded ? (index === 0 ? '30%' : '14%') : 'auto',
                     p: expanded ? 0.45 : 0.8,
                     border,
                     background: index === 0 ? '#ffffff' : index === 1 ? '#ffea00' : index === 2 ? '#f26aaa' : index === 3 ? '#22a7c8' : '#ffffff',
@@ -1650,7 +1705,7 @@ export default function App() {
                 {rowIndex === 5 ? (
                   <Box
                     component="td"
-                    colSpan={4}
+                    colSpan={5}
                     sx={{ p: cellPadding, border, height: expanded ? 30 : 28, color: '#111827', fontSize: cellFontSize, fontWeight: 900, textAlign: 'center' }}
                   >
                     {formatStatValue(keroseneAllCbQty, 'ltr')}
@@ -1668,7 +1723,7 @@ export default function App() {
                     ))}
                     <Box
                       component="td"
-                      colSpan={2}
+                      colSpan={3}
                       sx={{ p: cellPadding, border, height: expanded ? 30 : 28, color: '#111827', fontSize: cellFontSize, fontWeight: 900, textAlign: 'center', overflowWrap: 'anywhere' }}
                     >
                       {formatStatValue(attaAllCbQty, 'kg')}
