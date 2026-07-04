@@ -2192,9 +2192,6 @@ export default function App() {
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
               {activeViewTitle}
             </Typography>
-            <Typography variant="body2" sx={{ color: '#6d7584' }}>
-              Civil Supplies operations
-            </Typography>
           </Box>
           <Button
               type="button"
@@ -2757,24 +2754,35 @@ export default function App() {
 
             {serviceResult && (
               <Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                  <Box>
-                    <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                      {activeView === 'commission' ? 'Commission Summary' : 'Collection Summary'}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#6d7584', fontWeight: 700 }}>
-                      {serviceResult.row_count || 0} records
+                {activeView === 'commission' && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                    <Box>
+                      <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                        Commission Summary
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: '#6d7584', fontWeight: 700 }}>
+                        {serviceResult.row_count || 0} records
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ color: '#3b63f4', fontWeight: 700 }}>
+                      {Math.round(serviceResult.total_duration_ms || 0)} ms
                     </Typography>
                   </Box>
-                  <Typography variant="body2" sx={{ color: '#3b63f4', fontWeight: 700 }}>
-                    {Math.round(serviceResult.total_duration_ms || 0)} ms
-                  </Typography>
-                </Box>
+                )}
 
-                {serviceResult.title && (
-                  <Typography variant="body2" sx={{ color: '#6d7584', mb: 1.5, fontWeight: 700 }}>
-                    {serviceResult.title}
-                  </Typography>
+                {(serviceResult.title || activeView === 'transactions') && (
+                  <Box sx={{ mb: 1.5 }}>
+                    {serviceResult.title && (
+                      <Typography variant="body2" sx={{ color: '#6d7584', fontWeight: 700 }}>
+                        {serviceResult.title}
+                      </Typography>
+                    )}
+                    {activeView === 'transactions' && (
+                      <Typography variant="body2" sx={{ color: '#6d7584', mt: 0.4, fontWeight: 700 }}>
+                        From: {serviceResult.summary?.from_date || toEposDate(serviceForm.from_date)} · To: {serviceResult.summary?.to_date || toEposDate(serviceForm.to_date)}
+                      </Typography>
+                    )}
+                  </Box>
                 )}
 
                 <Paper
@@ -2869,14 +2877,8 @@ export default function App() {
                       </Typography>
                       <Divider sx={{ my: 2 }} />
                       <Grid container spacing={1.5}>
-                        <Grid item xs={12} sm={4}>
+                        <Grid item xs={12}>
                           {renderStat('TRANSACTIONS', serviceResult.summary?.transaction_count || 0)}
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          {renderStat('FROM', serviceResult.summary?.from_date || toEposDate(serviceForm.from_date))}
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          {renderStat('TO', serviceResult.summary?.to_date || toEposDate(serviceForm.to_date))}
                         </Grid>
                       </Grid>
                       <Divider sx={{ my: 2 }} />
@@ -2901,6 +2903,87 @@ export default function App() {
                           </Grid>
                         ))}
                       </Grid>
+                      <Divider sx={{ my: 2 }} />
+                      <Typography
+                        variant="caption"
+                        sx={{ display: 'block', mb: 1, color: '#7b8395', fontWeight: 800, letterSpacing: 0.4 }}
+                      >
+                        SCHEME-WISE TRANSACTIONS
+                      </Typography>
+                      <Box sx={{ overflowX: 'hidden' }}>
+                        <Box
+                          component="table"
+                          sx={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}
+                        >
+                          <Box component="thead">
+                            <Box component="tr">
+                              {[
+                                ['ITEM', '#ffffff'],
+                                ['AAY', '#ffea00'],
+                                ['PHH', '#f26aaa'],
+                                ['NPS', '#22a7c8'],
+                                ['NPNS', '#ffffff'],
+                                ['NPI', '#bbf7d0'],
+                                ['TOTAL', '#e5e7eb'],
+                              ].map(([scheme, background]) => (
+                                <Box
+                                  component="th"
+                                  key={scheme}
+                                  sx={{ width: scheme === 'ITEM' ? '22%' : '13%', p: { xs: 0.35, sm: 0.8 }, border: '2px solid #111111', background, color: '#000000', fontSize: { xs: 9, sm: 12 }, fontWeight: 1000, overflowWrap: 'anywhere' }}
+                                >
+                                  {scheme}
+                                </Box>
+                              ))}
+                            </Box>
+                          </Box>
+                          <Box component="tbody">
+                            {[
+                              ['TRANSACTIONS', null],
+                              ['WHEAT', 'wheat'],
+                              ['ATTA', 'atta'],
+                              ['RR', 'rr'],
+                              ['BR', 'br'],
+                              ['CMR', 'cmr'],
+                              ['SUGAR', 'sugar'],
+                              ['KOIL', 'koil'],
+                            ].map(([label, commodityKey]) => (
+                              <Box component="tr" key={label}>
+                                <Box
+                                  component="td"
+                                  sx={{ p: { xs: 0.35, sm: 0.9 }, border: '2px solid #111111', color: '#2f3192', fontSize: { xs: 9, sm: 12 }, fontWeight: 1000, lineHeight: 1.15, textAlign: 'left', overflowWrap: 'anywhere' }}
+                                >
+                                  {label}
+                                </Box>
+                                {['AAY', 'PHH', 'NPS', 'NPNS', 'NPI'].map((scheme) => (
+                                  <Box
+                                    component="td"
+                                    key={`${label}-${scheme}`}
+                                    sx={{ p: { xs: 0.3, sm: 0.9 }, border: '2px solid #111111', color: '#111827', fontSize: { xs: 9, sm: 13 }, fontWeight: 900, lineHeight: 1.15, textAlign: 'center', whiteSpace: 'normal' }}
+                                  >
+                                    {commodityKey
+                                      ? formatStatValue(
+                                        serviceResult.summary?.scheme_commodity_totals?.[scheme]?.[commodityKey] || 0,
+                                        commodityKey === 'koil' ? 'ltr' : 'kg'
+                                      )
+                                      : serviceResult.summary?.scheme_transaction_counts?.[scheme] || 0}
+                                    </Box>
+                                ))}
+                                <Box
+                                  component="td"
+                                  sx={{ p: { xs: 0.3, sm: 0.9 }, border: '2px solid #111111', background: '#f3f4f6', color: '#111827', fontSize: { xs: 9, sm: 13 }, fontWeight: 1000, lineHeight: 1.15, textAlign: 'center', whiteSpace: 'normal' }}
+                                >
+                                  {commodityKey
+                                    ? formatStatValue(
+                                      serviceResult.summary?.commodity_totals?.[commodityKey] || 0,
+                                      commodityKey === 'koil' ? 'ltr' : 'kg'
+                                    )
+                                    : serviceResult.summary?.transaction_count || 0}
+                                </Box>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      </Box>
                     </>
                   )}
                 </Paper>

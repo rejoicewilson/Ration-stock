@@ -819,10 +819,12 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
     }
 
     scheme_commodity_totals = {}
+    scheme_transaction_counts = {}
     for transaction in filtered:
         scheme = str(transaction.get("scheme", "")).strip().upper()
         if not scheme:
             continue
+        scheme_transaction_counts[scheme] = scheme_transaction_counts.get(scheme, 0) + 1
         scheme_totals = scheme_commodity_totals.setdefault(
             scheme, {key: 0.0 for key in commodity_keys}
         )
@@ -847,6 +849,7 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
         "to_date": max(filtered_dates).strftime("%d-%m-%Y") if filtered_dates else to_date,
         "commodity_totals": commodity_totals,
         "scheme_commodity_totals": scheme_commodity_totals,
+        "scheme_transaction_counts": scheme_transaction_counts,
     }
 
 
