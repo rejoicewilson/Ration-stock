@@ -2764,7 +2764,6 @@ export default function App() {
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#6d7584', fontWeight: 700 }}>
                       {serviceResult.row_count || 0} records
-                      {serviceResult.cache_hit ? ' | cached' : ''}
                     </Typography>
                   </Box>
                   <Typography variant="body2" sx={{ color: '#3b63f4', fontWeight: 700 }}>

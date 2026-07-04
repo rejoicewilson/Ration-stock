@@ -27,10 +27,6 @@ EPOS_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 }
 EPOS_TIMEOUT = (5, 15)
-TRANSACTIONS_CACHE_TTL_SECONDS = 300
-TRANSACTIONS_CACHE = {}
-FPS_DEALER_CACHE_TTL_SECONDS = 3600
-FPS_DEALER_CACHE = {}
 EPOS_SESSION = requests.Session()
 EPOS_SESSION.headers.update(EPOS_HEADERS)
 EPOS_DETAILS_SESSION = requests.Session()
@@ -399,10 +395,6 @@ def parse_fps_dealer_names(html: str):
 
 
 def get_fps_dealer_name(dist_code: int, fps_id: int):
-    cached = FPS_DEALER_CACHE.get(dist_code)
-    if cached and time.time() - cached["stored_at"] <= FPS_DEALER_CACHE_TTL_SECONDS:
-        return cached["dealer_names"].get(str(fps_id), "")
-
     response = EPOS_SESSION.post(
         "https://epos.kerala.gov.in/fps_device.action",
         data={"dist_code": dist_code},
@@ -410,10 +402,6 @@ def get_fps_dealer_name(dist_code: int, fps_id: int):
     )
     response.raise_for_status()
     dealer_names = parse_fps_dealer_names(response.text)
-    FPS_DEALER_CACHE[dist_code] = {
-        "stored_at": time.time(),
-        "dealer_names": dealer_names,
-    }
     return dealer_names.get(str(fps_id), "")
 
 
@@ -983,19 +971,6 @@ def fetch_transactions(request: TransactionsRequest):
     url = "https://epos.kerala.gov.in/day_wise_trans.action"
     details_url = "https://epos.kerala.gov.in/FPS_Trans_Details.jsp"
     payload = request.model_dump()
-    cache_key = tuple(sorted(payload.items()))
-    cached = TRANSACTIONS_CACHE.get(cache_key)
-    if cached:
-        age_seconds = time.time() - cached["stored_at"]
-        if age_seconds <= TRANSACTIONS_CACHE_TTL_SECONDS:
-            logger.info("transactions_cache_hit payload=%s age_seconds=%.2f", payload, age_seconds)
-            return {
-                **cached["data"],
-                "cache_hit": True,
-                "cache_age_seconds": round(age_seconds, 2),
-            }
-
-        TRANSACTIONS_CACHE.pop(cache_key, None)
 
     logger.info("transactions_start payload=%s", payload)
 
@@ -1053,7 +1028,6 @@ def fetch_transactions(request: TransactionsRequest):
             )
             result = {
                 "remote_status_code": response.status_code,
-                "cache_hit": False,
                 "upstream_duration_ms": upstream_duration_ms,
                 "details_duration_ms": details_duration_ms,
                 "parse_duration_ms": parse_duration_ms,
@@ -1063,7 +1037,6 @@ def fetch_transactions(request: TransactionsRequest):
                 "transactions": [],
                 "content_preview": response.text[:1000],
             }
-            TRANSACTIONS_CACHE[cache_key] = {"stored_at": time.time(), "data": result}
             return result
 
         row_count = details_summary["transaction_count"]
@@ -1076,7 +1049,6 @@ def fetch_transactions(request: TransactionsRequest):
         )
         result = {
             "remote_status_code": response.status_code,
-            "cache_hit": False,
             "upstream_duration_ms": upstream_duration_ms,
             "details_duration_ms": details_duration_ms,
             "parse_duration_ms": parse_duration_ms,
@@ -1088,7 +1060,6 @@ def fetch_transactions(request: TransactionsRequest):
             "headers": transaction_report["headers"],
             "transactions": transactions,
         }
-        TRANSACTIONS_CACHE[cache_key] = {"stored_at": time.time(), "data": result}
         return result
     except requests.RequestException as e:
         logger.exception("transactions_upstream_error payload=%s", payload)
