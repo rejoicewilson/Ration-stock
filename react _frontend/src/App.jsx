@@ -3293,6 +3293,30 @@ export default function App() {
           <Typography variant="body2" sx={{ mt: 0.25, fontWeight: 700 }}>
             ഇത് ഒരു സ്വകാര്യ സംരംഭമാണ്. ഇത് ഔദ്യോഗിക സർക്കാർ ആപ്പ് അല്ല.
           </Typography>
+          <Divider sx={{ my: 1.25, borderColor: '#e8c16a' }} />
+          <Typography sx={{ fontWeight: 900 }}>Source Acknowledgement</Typography>
+          <Typography variant="body2" sx={{ mt: 0.25 }}>
+            Data displayed in this app is sourced from the Kerala Civil Supplies Department&apos;s{' '}
+            <a
+              href="https://epos.kerala.gov.in/"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: '#2f64f8', fontWeight: 700 }}
+            >
+              ePoS portal
+            </a>{' '}
+            and{' '}
+            <a
+              href="https://scm.kerala.gov.in/"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: '#2f64f8', fontWeight: 700 }}
+            >
+              Supply Chain Management portal
+            </a>
+            . The source websites and their contents belong to their respective government authorities.
+            This private app is not affiliated with or endorsed by the Government of Kerala or NIC.
+          </Typography>
         </Alert>
       </Container>
     </Box>
