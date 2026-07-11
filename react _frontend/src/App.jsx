@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import {
   Alert,
   Box,
@@ -2184,6 +2185,7 @@ export default function App() {
       }}
     >
       <Analytics />
+      <SpeedInsights />
       {renderPickerModal()}
       <Container maxWidth="sm" sx={{ pt: 3, pb: 4 }}>
         {activeView !== 'home' && (
