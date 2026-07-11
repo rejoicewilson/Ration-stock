@@ -1101,6 +1101,116 @@ export default function App() {
     );
   };
 
+  const renderRoCommodityTable = (table) => {
+    const headers = table?.headers || [];
+    const headerIndex = (label) => headers.findIndex((header) => header === label);
+    const value = (row, label) => {
+      const index = headerIndex(label);
+      return index >= 0 ? row[index] || '-' : '-';
+    };
+
+    const columns = [
+      ['Scheme', (row) => value(row, 'Scheme')],
+      ['Commodity', (row) => value(row, 'Commodity')],
+      ['Unit', (row) => value(row, 'Unit')],
+      ['Allotment', (row) => formatQty(value(row, 'Allotment Qty'))],
+      ['Earlier', (row) => formatQty(value(row, 'Earlier Dispatched Qty'))],
+      ['Current', (row) => formatQty(value(row, 'Dispatched Qty'))],
+      [
+        'Total',
+        (row) => formatQty(
+          parseQuantity(value(row, 'Earlier Dispatched Qty'))
+          + parseQuantity(value(row, 'Dispatched Qty'))
+        ),
+      ],
+      ['Balance', (row) => formatQty(value(row, 'Balance Qty'))],
+      ['Cost', (row) => formatCurrency(value(row, 'Cost'))],
+    ];
+
+    return (
+      <Box sx={{ overflowX: 'hidden' }}>
+        <Box
+          component="table"
+          sx={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            tableLayout: 'fixed',
+            background: '#ffffff',
+            border: '1px solid #1f2937',
+            '& th, & td': {
+              border: '1px solid #1f2937',
+              px: 0.45,
+              py: 0.65,
+              textAlign: 'center',
+              fontSize: { xs: 8.5, sm: 10 },
+              lineHeight: 1.15,
+              fontWeight: 800,
+              wordBreak: 'break-word',
+            },
+            '& th': {
+              background: '#1f2937',
+              color: '#ffffff',
+              fontSize: { xs: 8, sm: 9.5 },
+              textTransform: 'uppercase',
+            },
+            '& th:nth-of-type(6), & td:nth-of-type(6)': {
+              background: '#dcfce7',
+              color: '#14532d',
+              fontWeight: 950,
+            },
+            '& th:nth-of-type(6)': {
+              background: '#16a34a',
+              color: '#ffffff',
+            },
+            '& td:nth-of-type(2)': {
+              textAlign: 'left',
+            },
+          }}
+        >
+          <Box component="thead">
+            <Box component="tr">
+              {columns.map(([label]) => (
+                <Box component="th" key={label}>
+                  {label}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+          <Box component="tbody">
+            {(table?.rows || []).map((row, rowIndex) => {
+              const hasCost = parseQuantity(value(row, 'Cost')) > 0;
+              return (
+                <Box
+                  component="tr"
+                  key={rowIndex}
+                  sx={hasCost ? {
+                    '& td': {
+                      background: '#fff7ed',
+                    },
+                    '& td:nth-of-type(6)': {
+                      background: '#bbf7d0',
+                    },
+                    '& td:last-of-type': {
+                      background: '#fed7aa',
+                      color: '#9a3412',
+                      fontWeight: 950,
+                    },
+                  } : undefined}
+                >
+                  {columns.map(([label, getter]) => (
+                    <Box component="td" key={label}>
+                      {getter(row)}
+                    </Box>
+                  ))}
+                </Box>
+              );
+            })}
+          </Box>
+        </Box>
+      </Box>
+    );
+  };
+
   const renderRoQuantityReport = () => {
     const tables = roQuantityResult?.tables || [];
     const dispatchTable = tables[0];
@@ -1119,6 +1229,20 @@ export default function App() {
     const shopOwner = getRoFieldValue(shopTable, 'Shop Owner Name');
     const monthMatch = title.match(/Month of\s+(.+)$/i);
     const orderMonth = monthMatch ? monthMatch[1].replace(',', '').trim() : '';
+    const summaryRows = [
+      ['RO Number', roQuantityResult.request?.ro_no || '-'],
+      ['Month', orderMonth || '-'],
+      ['District', district || '-'],
+      ['Taluk', taluk || '-'],
+      ['Dispatch Date', dispatchedDate || '-'],
+      ['Dispatch Time', dispatchTime || '-'],
+      ['Truck No', truckNo || '-'],
+      ['Truck Chit No', truckChitNo || '-'],
+      ['FPS Shop No', shopNo || '-'],
+      ['Shop Owner', shopOwner || '-'],
+      ['No. of Bags', bags || '-'],
+      ['Amount Paid', formatCurrency(amountPaid)],
+    ];
 
     return (
       <Paper
@@ -1195,6 +1319,57 @@ export default function App() {
         </Box>
 
         <Stack spacing={1.7} sx={{ p: 2, background: '#f6f8fc' }}>
+          <Box
+            component="table"
+            sx={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              tableLayout: 'fixed',
+              background: '#ffffff',
+              border: '1px solid #d7e0ef',
+              '& th, & td': {
+                border: '1px solid #d7e0ef',
+                px: 0.8,
+                py: 0.7,
+                fontSize: 11,
+                lineHeight: 1.2,
+                wordBreak: 'break-word',
+              },
+              '& th': {
+                width: '34%',
+                textAlign: 'left',
+                color: '#667085',
+                background: '#f8fafc',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+              },
+              '& td': {
+                color: '#10213f',
+                fontWeight: 800,
+              },
+            }}
+          >
+            <Box component="tbody">
+              {summaryRows.map(([label, value]) => (
+                <Box component="tr" key={label}>
+                  <Box component="th">{label}</Box>
+                  <Box component="td">{value}</Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {commodityTable?.rows?.length > 0 && (
+            <Box>
+              <Typography sx={{ color: '#10213f', fontSize: 13, fontWeight: 900, mb: 0.8 }}>
+                Commodity Details
+              </Typography>
+              {renderRoCommodityTable(commodityTable)}
+            </Box>
+          )}
+
+          {false && (
+            <>
           {dispatchTable?.rows?.length > 0 && (
             renderInfoCard({
               title: 'Dispatch Details',
@@ -1273,6 +1448,8 @@ export default function App() {
                 </>
               ),
             })
+          )}
+            </>
           )}
         </Stack>
 
@@ -3131,6 +3308,9 @@ export default function App() {
                     {Math.round(settingsResult.duration_ms || 0)} ms
                   </Typography>
                 </Box>
+                <Typography variant="body2" sx={{ color: '#6d7584', fontWeight: 700, mt: -1 }}>
+                  Select an RO order below to view quantity details.
+                </Typography>
 
                 {(settingsResult.tables || []).map((table, tableIndex) => (
                   <Paper
