@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import {
@@ -500,6 +500,25 @@ export default function App() {
     { title: 'Commission Calculator', category: 'റേഷൻ കമ്മിഷൻ നോക്കാൻ', view: 'commission', mark: 'CC', color: '#7c3aed', background: '#f5f3ff' },
   ];
   const activeViewTitle = featurePages.find((page) => page.view === activeView)?.title || 'Ration Stock';
+  const gaPagePaths = {
+    home: '/home',
+    stock: '/stock-summary',
+    stockBoard: '/stock-board',
+    transactions: '/transactions',
+    settings: '/ro-orders',
+    commission: '/commission',
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.gtag !== 'function') return;
+
+    const pagePath = gaPagePaths[activeView] || '/';
+    window.gtag('event', 'page_view', {
+      page_title: `Ration Stock - ${activeViewTitle}`,
+      page_path: pagePath,
+      page_location: `${window.location.origin}${pagePath}`,
+    });
+  }, [activeView, activeViewTitle]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
