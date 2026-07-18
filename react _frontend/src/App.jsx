@@ -3187,20 +3187,20 @@ export default function App() {
                       >
                         Download Payslip PDF
                       </Button>
-                      <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
-                        <Grid item xs={12} sm={4}>
+                      <Grid container spacing={1} sx={{ mt: 0.5 }}>
+                        <Grid item xs={4}>
                           {renderStat(
                             'TDS @ 2%',
                             `Rs. ${formatNumber(commissionCalculation.commission * 0.02)}`
                           )}
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid item xs={4}>
                           {renderStat(
                             'COLLECTED FROM RC HOLDERS',
                             `Rs. ${formatNumber(commissionCalculation.alreadyCollectedAmount)}`
                           )}
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid item xs={4}>
                           {renderStat(
                             'COST OF FOOD GRAINS',
                             `Rs. ${formatNumber(serviceResult.foodGrainCost?.amount || 0)}`
