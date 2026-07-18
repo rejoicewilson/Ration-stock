@@ -3187,39 +3187,7 @@ export default function App() {
                       >
                         Download Payslip PDF
                       </Button>
-                      <Grid container spacing={1} sx={{ mt: 0.5 }}>
-                        <Grid item xs={4}>
-                          {renderStat(
-                            'TDS @ 2%',
-                            `Rs. ${formatNumber(commissionCalculation.commission * 0.02)}`
-                          )}
-                        </Grid>
-                        <Grid item xs={4}>
-                          {renderStat(
-                            'COLLECTED FROM RC HOLDERS',
-                            `Rs. ${formatNumber(commissionCalculation.alreadyCollectedAmount)}`
-                          )}
-                        </Grid>
-                        <Grid item xs={4}>
-                          {renderStat(
-                            'COST OF FOOD GRAINS',
-                            `Rs. ${formatNumber(serviceResult.foodGrainCost?.amount || 0)}`
-                          )}
-                        </Grid>
-                      </Grid>
-                      <Divider sx={{ my: 2 }} />
-                      <Grid container spacing={1.5}>
-                        <Grid item xs={12} sm={4}>
-                          {renderStat('ELIGIBLE SALES', `${formatNumber(commissionCalculation.eligibleKg)} kg`)}
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          {renderStat('QUINTALS', formatNumber(commissionCalculation.eligibleKg / 100))}
-                        </Grid>
-                        <Grid item xs={6} sm={4}>
-                          {renderStat('TRANSACTIONS', serviceResult.summary?.transaction_count || 0)}
-                        </Grid>
-                      </Grid>
-                      <Box sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: '#f7f5ff', textAlign: 'left' }}>
+                      <Box sx={{ mt: 1.5, p: 2, borderRadius: 2, bgcolor: '#f7f5ff', textAlign: 'left' }}>
                         <Typography sx={{ color: '#5b21b6', fontWeight: 900 }}>
                           {commissionCalculation.tier}
                         </Typography>
@@ -3227,23 +3195,154 @@ export default function App() {
                           {commissionCalculation.formula}
                         </Typography>
                       </Box>
+                      <Box
+                        component="table"
+                        sx={{
+                          width: '100%',
+                          mt: 1.5,
+                          borderCollapse: 'collapse',
+                          tableLayout: 'fixed',
+                          border: '1px solid #dfe5f0',
+                          '& th, & td': {
+                            border: '1px solid #dfe5f0',
+                            textAlign: 'center',
+                            px: { xs: 0.4, sm: 1 },
+                            py: 1,
+                          },
+                          '& th': {
+                            bgcolor: '#f7f8fb',
+                            color: '#7b8395',
+                            fontSize: { xs: 9, sm: 11 },
+                            fontWeight: 900,
+                            lineHeight: 1.2,
+                            textTransform: 'uppercase',
+                          },
+                          '& td': {
+                            bgcolor: '#ffffff',
+                            color: '#111827',
+                            fontSize: { xs: 15, sm: 18 },
+                            fontWeight: 900,
+                            lineHeight: 1.25,
+                          },
+                        }}
+                      >
+                        <Box component="thead">
+                          <Box component="tr">
+                            <Box component="th">TDS @ 2%</Box>
+                            <Box component="th">Collected from RC Holders</Box>
+                            <Box component="th">Cost of Food Grains</Box>
+                          </Box>
+                        </Box>
+                        <Box component="tbody">
+                          <Box component="tr">
+                            <Box component="td">
+                              Rs. {formatNumber(commissionCalculation.commission * 0.02)}
+                            </Box>
+                            <Box component="td">
+                              Rs. {formatNumber(commissionCalculation.alreadyCollectedAmount)}
+                            </Box>
+                            <Box component="td">
+                              Rs. {formatNumber(serviceResult.foodGrainCost?.amount || 0)}
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Box>
                       <Divider sx={{ my: 2 }} />
-                      <Grid container spacing={1.5}>
-                        {[
-                          ['WHEAT', 'wheat'],
-                          ['ATTA', 'atta'],
-                          ['RR', 'rr'],
-                          ['BR', 'br'],
-                          ['CMR', 'cmr'],
-                        ].map(([label, key]) => (
-                          <Grid item xs={6} sm={4} key={key}>
-                            {renderStat(
-                              label,
-                              formatStatValue(serviceResult.summary?.commodity_totals?.[key] || 0, 'kg')
-                            )}
-                          </Grid>
-                        ))}
-                      </Grid>
+                      <Box
+                        component="table"
+                        sx={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          tableLayout: 'fixed',
+                          border: '1px solid #dfe5f0',
+                          '& th, & td': {
+                            border: '1px solid #dfe5f0',
+                            textAlign: 'center',
+                            px: { xs: 0.4, sm: 1 },
+                            py: 1,
+                          },
+                          '& th': {
+                            bgcolor: '#f7f8fb',
+                            color: '#7b8395',
+                            fontSize: { xs: 9, sm: 11 },
+                            fontWeight: 900,
+                            lineHeight: 1.2,
+                            textTransform: 'uppercase',
+                          },
+                          '& td': {
+                            bgcolor: '#ffffff',
+                            color: '#111827',
+                            fontSize: { xs: 15, sm: 18 },
+                            fontWeight: 900,
+                            lineHeight: 1.25,
+                          },
+                        }}
+                      >
+                        <Box component="thead">
+                          <Box component="tr">
+                            <Box component="th">Eligible Sales</Box>
+                            <Box component="th">Quintals</Box>
+                            <Box component="th">Transactions</Box>
+                          </Box>
+                        </Box>
+                        <Box component="tbody">
+                          <Box component="tr">
+                            <Box component="td">{formatNumber(commissionCalculation.eligibleKg)} kg</Box>
+                            <Box component="td">{formatNumber(commissionCalculation.eligibleKg / 100)}</Box>
+                            <Box component="td">{serviceResult.summary?.transaction_count || 0}</Box>
+                          </Box>
+                        </Box>
+                      </Box>
+                      <Divider sx={{ my: 2 }} />
+                      <Box
+                        component="table"
+                        sx={{
+                          width: '100%',
+                          borderCollapse: 'collapse',
+                          tableLayout: 'fixed',
+                          border: '1px solid #dfe5f0',
+                          '& th, & td': {
+                            border: '1px solid #dfe5f0',
+                            textAlign: 'center',
+                            px: { xs: 0.3, sm: 1 },
+                            py: 1,
+                          },
+                          '& th': {
+                            bgcolor: '#f7f8fb',
+                            color: '#7b8395',
+                            fontSize: { xs: 9, sm: 11 },
+                            fontWeight: 900,
+                            lineHeight: 1.2,
+                            textTransform: 'uppercase',
+                          },
+                          '& td': {
+                            bgcolor: '#ffffff',
+                            color: '#111827',
+                            fontSize: { xs: 13, sm: 16 },
+                            fontWeight: 900,
+                            lineHeight: 1.25,
+                          },
+                        }}
+                      >
+                        <Box component="thead">
+                          <Box component="tr">
+                            {['Wheat', 'Atta', 'RR', 'BR', 'CMR'].map((label) => (
+                              <Box component="th" key={label}>
+                                {label}
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                        <Box component="tbody">
+                          <Box component="tr">
+                            {['wheat', 'atta', 'rr', 'br', 'cmr'].map((key) => (
+                              <Box component="td" key={key}>
+                                {formatStatValue(serviceResult.summary?.commodity_totals?.[key] || 0, 'kg')}
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      </Box>
                       <Typography variant="caption" sx={{ display: 'block', mt: 2, color: '#7b8395', fontWeight: 700 }}>
                         Sugar and kerosene are excluded from eligible sales.
                       </Typography>
