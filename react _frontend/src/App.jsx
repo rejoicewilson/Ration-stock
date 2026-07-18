@@ -55,12 +55,14 @@ const calculateCommission = (summary) => {
     (sum, scheme) => sum + (Number(schemeTotals[scheme]?.atta) || 0),
     0
   );
-  const alreadyCollectedKg = riceCollectedKg + attaCollectedKg;
+  const wheatCollectedKg = Number(schemeTotals.NPS?.wheat) || 0;
+  const alreadyCollectedKg = riceCollectedKg + attaCollectedKg + wheatCollectedKg;
   const alreadyCollectedAmount = alreadyCollectedKg * 2;
 
   const collectionDetails = {
     riceCollectedKg,
     attaCollectedKg,
+    wheatCollectedKg,
     alreadyCollectedKg,
     alreadyCollectedAmount,
   };
