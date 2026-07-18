@@ -450,6 +450,7 @@ export default function App() {
     fps_id: '',
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
+    depot_id: '0802801',
   });
   const [stockBoardForm, setStockBoardForm] = useState({
     dist_code: '22',
@@ -542,10 +543,12 @@ export default function App() {
   const handleCommissionChange = (e) => {
     if (e.target.name === 'dist_code') {
       const nextAfsoOptions = afsoOptionsByDistrict[e.target.value] || [];
+      const nextDepotOptions = depotOptionsByDistrict[e.target.value] || [];
       setCommissionForm({
         ...commissionForm,
         dist_code: e.target.value,
         afso: nextAfsoOptions[0]?.[0] || '',
+        depot_id: nextDepotOptions[0]?.[0] || '',
       });
       return;
     }
@@ -642,6 +645,10 @@ export default function App() {
       setError('AFSO list is not added for the selected district yet. Please share this district AFSO list.');
       return;
     }
+    if (isCommission && !requestForm.depot_id) {
+      setError('Depot list is not added for the selected district yet. Please select the correct district/depot.');
+      return;
+    }
     setLoading(true);
     setError('');
     setResult(null);
@@ -672,7 +679,12 @@ export default function App() {
         const suffix = requestId ? ` Request ID: ${requestId}` : '';
         throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
       }
-      setResult(data);
+      if (isCommission) {
+        const foodGrainCost = await fetchFoodGrainCostFromRoOrders(requestForm);
+        setResult({ ...data, foodGrainCost });
+      } else {
+        setResult(data);
+      }
     } catch (err) {
       console.error(`${isCommission ? 'Commission' : 'Transactions'} fetch failed:`, err);
       setError(err.message || `Failed to fetch ${isCommission ? 'commission data' : 'transactions'}.`);
@@ -693,6 +705,66 @@ export default function App() {
     setError: setCommissionError,
     setResult: setCommissionResult,
   });
+
+  const fetchFoodGrainCostFromRoOrders = async (requestForm) => {
+    const roRes = await fetch(RO_DETAILS_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        month: Number(requestForm.month),
+        year: Number(requestForm.year),
+        shop_no: Number(requestForm.fps_id),
+        dist_code: Number(requestForm.dist_code),
+        depot_id: requestForm.depot_id.trim(),
+      }),
+    });
+    const roText = await roRes.text();
+    const roData = roText ? JSON.parse(roText) : {};
+    if (!roRes.ok) {
+      throw new Error(roData?.detail || 'Failed to fetch RO orders for food grain cost.');
+    }
+
+    const actions = (roData.tables || [])
+      .flatMap((table) => table.row_actions || [])
+      .filter((action) => action?.release_order_id_aso);
+
+    let totalAmountPaid = 0;
+    for (const actionParams of actions) {
+      const roParts = String(actionParams.ro_no || '').split('/').filter(Boolean);
+      const toNumberOrFallback = (value, fallback) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) && value !== undefined && value !== '' ? parsed : fallback;
+      };
+      const quantityPayload = {
+        release_order_id_aso: actionParams.release_order_id_aso || '',
+        ro_no: actionParams.ro_no || '',
+        month_int: toNumberOrFallback(actionParams.month_int, toNumberOrFallback(roParts[4], Number(requestForm.month))),
+        year_int: toNumberOrFallback(actionParams.year_int, toNumberOrFallback(roParts[5], Number(requestForm.year))),
+        ro_date: actionParams.ro_date || '',
+        shop_number: toNumberOrFallback(actionParams.shop_number, toNumberOrFallback(roParts[3], Number(requestForm.fps_id))),
+        district_code: toNumberOrFallback(actionParams.district_code, toNumberOrFallback(roParts[2], Number(requestForm.dist_code))),
+        truckchit_number: actionParams.truckchit_number || (roParts.length >= 8 ? `TC-${roParts.slice(1).join('-')}` : ''),
+      };
+
+      const quantityRes = await fetch(RO_QUANTITY_DETAILS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(quantityPayload),
+      });
+      const quantityText = await quantityRes.text();
+      const quantityData = quantityText ? JSON.parse(quantityText) : {};
+      if (!quantityRes.ok) {
+        throw new Error(quantityData?.detail || 'Failed to fetch RO quantity details for food grain cost.');
+      }
+
+      totalAmountPaid += parseQuantity(getRoFieldValue(quantityData.tables?.[1], 'Amount Paid'));
+    }
+
+    return {
+      amount: totalAmountPaid,
+      orderCount: actions.length,
+    };
+  };
 
   const handleStockBoardSubmit = async (e) => {
     e.preventDefault();
@@ -2372,6 +2444,87 @@ export default function App() {
   const serviceChangeHandler = isCommissionView ? handleCommissionChange : handleTransactionChange;
   const serviceSubmitHandler = isCommissionView ? handleCommissionSubmit : handleTransactionsSubmit;
   const commissionCalculation = calculateCommission(commissionResult?.summary);
+  const handleDownloadCommissionPayslip = () => {
+    if (!commissionResult?.summary) return;
+
+    const summary = commissionResult.summary;
+    const commodityTotals = summary.commodity_totals || {};
+    const foodGrainCost = commissionResult.foodGrainCost?.amount || 0;
+    const tdsAmount = commissionCalculation.commission * 0.02;
+    const generatedAt = new Date().toLocaleString('en-IN');
+    const periodLabel = `${monthOptions.find(([value]) => value === commissionForm.month)?.[1] || commissionForm.month} ${commissionForm.year}`;
+    const rows = [
+      ['FPS ID', commissionForm.fps_id || '-'],
+      ['Period', periodLabel],
+      ['Date Range', `${summary.from_date || toEposDate(commissionForm.from_date)} to ${summary.to_date || toEposDate(commissionForm.to_date)}`],
+      ['Gross Commission', `Rs. ${formatNumber(commissionCalculation.commission)}`],
+      ['TDS @ 2%', `Rs. ${formatNumber(tdsAmount)}`],
+      ['Collected from RC Holders', `Rs. ${formatNumber(commissionCalculation.alreadyCollectedAmount)}`],
+      ['Cost of Food Grains', `Rs. ${formatNumber(foodGrainCost)}`],
+      ['Eligible Sales', `${formatNumber(commissionCalculation.eligibleKg)} kg`],
+      ['Quintals', formatNumber(commissionCalculation.eligibleKg / 100)],
+      ['Transactions', summary.transaction_count || 0],
+      ['Wheat', formatStatValue(commodityTotals.wheat || 0, 'kg')],
+      ['Atta', formatStatValue(commodityTotals.atta || 0, 'kg')],
+      ['RR', formatStatValue(commodityTotals.rr || 0, 'kg')],
+      ['BR', formatStatValue(commodityTotals.br || 0, 'kg')],
+      ['CMR', formatStatValue(commodityTotals.cmr || 0, 'kg')],
+    ];
+
+    const payslipWindow = window.open('', '_blank');
+    if (!payslipWindow) {
+      window.alert('Please allow popups for this site to download the payslip PDF.');
+      return;
+    }
+
+    payslipWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Commission Payslip - FPS ${commissionForm.fps_id || ''}</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #111827; margin: 24px; }
+            .payslip { max-width: 760px; margin: 0 auto; border: 1px solid #d1d5db; padding: 24px; }
+            h1 { margin: 0; font-size: 24px; text-align: center; }
+            .subtitle { margin: 8px 0 20px; text-align: center; color: #4b5563; font-size: 13px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+            th, td { border: 1px solid #d1d5db; padding: 10px 12px; font-size: 14px; }
+            th { width: 45%; text-align: left; background: #f3f4f6; text-transform: uppercase; font-size: 12px; }
+            td { font-weight: 700; }
+            .gross { color: #6d28d9; font-size: 18px; }
+            .note { margin-top: 18px; color: #6b7280; font-size: 12px; line-height: 1.5; }
+            @media print { body { margin: 0; } .payslip { border: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="payslip">
+            <h1>Commission Payslip</h1>
+            <div class="subtitle">Generated on ${generatedAt}</div>
+            <table>
+              <tbody>
+                ${rows.map(([label, value]) => `
+                  <tr>
+                    <th>${label}</th>
+                    <td class="${label === 'Gross Commission' ? 'gross' : ''}">${value}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+            <div class="note">
+              Sugar and kerosene are excluded from eligible sales. Data is calculated from live transaction and RO order responses.
+              This is not an official government payslip.
+            </div>
+          </div>
+          <script>
+            window.onload = function () {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    payslipWindow.document.close();
+  };
 
   return (
     <Box
@@ -2854,11 +3007,12 @@ export default function App() {
                   {[
                     ['dist_code', 'DISTRICT'],
                     ['afso', 'AFSO'],
+                    ...(isCommissionView ? [['depot_id', 'DEPOT']] : []),
                     ['fps_id', 'FPS ID'],
                     ['month', 'MONTH'],
                     ['year', 'YEAR'],
                   ].map(([name, label]) => (
-                    <Grid item xs={name === 'fps_id' ? 12 : 6} key={name}>
+                    <Grid item xs={name === 'fps_id' || name === 'depot_id' ? 12 : 6} key={name}>
                       <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
                         {label} *
                       </Typography>
@@ -2884,6 +3038,19 @@ export default function App() {
                           options: afsoOptionsByDistrict[serviceForm.dist_code] || [],
                           pickerType: 'district',
                           disabled: !(afsoOptionsByDistrict[serviceForm.dist_code]?.length),
+                        })
+                      ) : name === 'depot_id' ? (
+                        renderSelectControl({
+                          selectKey: 'commission-depot',
+                          name,
+                          value: serviceForm[name],
+                          onChange: serviceChangeHandler,
+                          placeholder: depotOptionsByDistrict[serviceForm.dist_code]?.length
+                            ? 'Select depot'
+                            : 'Depot list pending',
+                          options: depotOptionsByDistrict[serviceForm.dist_code] || [],
+                          pickerType: 'district',
+                          disabled: !(depotOptionsByDistrict[serviceForm.dist_code]?.length),
                         })
                       ) : name === 'month' || name === 'year' ? (
                         renderSelectControl({
@@ -3007,17 +3174,36 @@ export default function App() {
                       <Typography variant="body2" sx={{ mt: 0.75, color: '#6d7584', fontWeight: 700 }}>
                         Exact amount: Rs. {formatNumber(commissionCalculation.commission)}
                       </Typography>
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        onClick={handleDownloadCommissionPayslip}
+                        sx={{
+                          mt: 1.5,
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          fontWeight: 800,
+                        }}
+                      >
+                        Download Payslip PDF
+                      </Button>
                       <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
-                        <Grid item xs={6}>
+                        <Grid item xs={12} sm={4}>
                           {renderStat(
                             'TDS @ 2%',
                             `Rs. ${formatNumber(commissionCalculation.commission * 0.02)}`
                           )}
                         </Grid>
-                        <Grid item xs={6}>
+                        <Grid item xs={12} sm={4}>
                           {renderStat(
                             'COLLECTED FROM RC HOLDERS',
                             `Rs. ${formatNumber(commissionCalculation.alreadyCollectedAmount)}`
+                          )}
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                          {renderStat(
+                            'COST OF FOOD GRAINS',
+                            `Rs. ${formatNumber(serviceResult.foodGrainCost?.amount || 0)}`
                           )}
                         </Grid>
                       </Grid>
@@ -3478,6 +3664,80 @@ export default function App() {
           </>
         )}
 
+        <Paper
+          elevation={0}
+          sx={{
+            mt: 4,
+            p: 2,
+            borderRadius: 3,
+            background: 'linear-gradient(180deg, #ffffff 0%, #fffaf0 100%)',
+            border: '1px solid #f1d79a',
+            boxShadow: '0 12px 28px rgba(119, 80, 0, 0.08)',
+          }}
+        >
+          <Stack spacing={1.5}>
+            <Box sx={{ display: 'flex', gap: 1.2, alignItems: 'flex-start' }}>
+              <Box
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '50%',
+                  bgcolor: '#fff3cd',
+                  color: '#b45309',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontWeight: 900,
+                  flex: '0 0 auto',
+                }}
+              >
+                !
+              </Box>
+              <Box>
+                <Typography sx={{ color: '#3f2a04', fontSize: 14, fontWeight: 900 }}>
+                  Disclaimer
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.35, color: '#5f470c', fontWeight: 700, lineHeight: 1.5 }}>
+                  This is a private initiative and is not an official government app.
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.35, color: '#5f470c', fontWeight: 700, lineHeight: 1.5 }}>
+                  ഇത് ഒരു സ്വകാര്യ സംരംഭമാണ്. ഇത് ഔദ്യോഗിക സർക്കാർ ആപ്പ് അല്ല.
+                </Typography>
+              </Box>
+            </Box>
+
+            <Divider sx={{ borderColor: '#f0dfb7' }} />
+
+            <Box>
+              <Typography sx={{ color: '#3f2a04', fontSize: 14, fontWeight: 900 }}>
+                Source Acknowledgement
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 0.45, color: '#6b5b34', lineHeight: 1.55 }}>
+                Data is sourced from the Kerala Civil Supplies Department&apos;s{' '}
+                <a
+                  href="https://epos.kerala.gov.in/"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: '#245ef5', fontWeight: 800, textDecoration: 'none' }}
+                >
+                  ePoS portal
+                </a>{' '}
+                and{' '}
+                <a
+                  href="https://scm.kerala.gov.in/"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: '#245ef5', fontWeight: 800, textDecoration: 'none' }}
+                >
+                  SCM portal
+                </a>
+                . Source websites and contents belong to their respective authorities. This app is not affiliated with
+                or endorsed by the Government of Kerala or NIC.
+              </Typography>
+            </Box>
+          </Stack>
+        </Paper>
+
+        {false && (
         <Alert
           severity="warning"
           sx={{
@@ -3521,6 +3781,7 @@ export default function App() {
             This private app is not affiliated with or endorsed by the Government of Kerala or NIC.
           </Typography>
         </Alert>
+        )}
       </Container>
     </Box>
   );
