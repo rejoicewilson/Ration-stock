@@ -20,6 +20,114 @@ import {
 import attaIcon from './assets/atta-flour.svg';
 import sugarIcon from './assets/sugar-cubes.svg';
 
+const PrivateShieldIcon = ({ size = 42 }) => (
+  <Box
+    component="svg"
+    viewBox="0 0 512 512"
+    sx={{ width: size, height: size, display: 'block' }}
+    aria-hidden="true"
+  >
+    <path
+      fill="#dbe3e7"
+      d="M256 501c-6 0-12-2-17-5C105 420 38 304 38 151c0-18 13-33 31-36 32-5 52-28 59-69 3-17 17-29 34-29h188c17 0 31 12 34 29 7 41 27 64 59 69 18 3 31 18 31 36 0 153-67 269-201 345-5 3-11 5-17 5Z"
+    />
+    <path
+      fill="#bfc7ca"
+      d="M443 115c-32-5-52-28-59-69-3-17-17-29-34-29h-32c7 82 46 154 123 205 2-23 3-47 3-72 0-17-13-32-31-35Z"
+      opacity="0.75"
+    />
+    <path
+      fill="#48d597"
+      d="M256 470C139 399 80 294 80 156c0-10 7-18 16-21 42-11 69-38 80-80 2-8 9-14 18-14h124c9 0 16 6 18 14 11 42 38 69 80 80 9 3 16 11 16 21 0 138-59 243-176 314Z"
+    />
+    <path
+      fill="#20a095"
+      d="M320 41c35 91 71 145 112 162-8 115-66 204-176 267 0 0 119-159 64-429Z"
+      opacity="0.6"
+    />
+    <path
+      fill="none"
+      stroke="#556070"
+      strokeWidth="18"
+      strokeLinecap="round"
+      d="M196 216v-48c0-38 27-70 60-70s60 32 60 70v48"
+    />
+    <rect x="154" y="198" width="204" height="142" rx="16" fill="#66717f" />
+    <path
+      fill="#f4f6f8"
+      d="M274 262a18 18 0 1 0-31 13v33a13 13 0 0 0 26 0v-33c3-3 5-8 5-13Z"
+    />
+  </Box>
+);
+
+const RationShopsPeopleIcon = ({ size = 38 }) => (
+  <Box
+    component="svg"
+    viewBox="0 0 512 512"
+    sx={{ width: size, height: size, display: 'block' }}
+    aria-hidden="true"
+  >
+    <path
+      fill="#2f55a4"
+      d="M12 331c28-75 88-120 154-120s126 45 154 120c11 29-10 60-41 60H53c-31 0-52-31-41-60Z"
+    />
+    <path fill="#1f3569" d="M132 211c70 0 128 57 128 128v52H132V211Z" opacity="0.7" />
+    <circle cx="132" cy="160" r="82" fill="#ffcdb9" />
+    <path fill="#ffad91" d="M132 78a82 82 0 0 1 0 164V78Z" opacity="0.85" />
+    <path
+      fill="#4bb4e8"
+      d="M192 331c28-75 88-120 154-120s126 45 154 120c11 29-10 60-41 60H233c-31 0-52-31-41-60Z"
+    />
+    <path fill="#27c7e5" d="M346 211c-70 0-128 57-128 128v52h128V211Z" opacity="0.85" />
+    <circle cx="380" cy="160" r="82" fill="#ffcdb9" />
+    <path fill="#ffad91" d="M380 78a82 82 0 0 1 0 164V78Z" opacity="0.85" />
+    <path
+      fill="#ff402f"
+      d="M126 382c28-80 78-124 130-124s102 44 130 124c12 34-12 70-48 70H174c-36 0-60-36-48-70Z"
+    />
+    <path fill="#ff6b17" d="M256 258c-52 0-102 44-130 124-12 34 12 70 48 70h82V258Z" />
+    <circle cx="256" cy="224" r="80" fill="#ffb394" />
+    <path fill="#ffcdb9" d="M256 144a80 80 0 0 0 0 160V144Z" opacity="0.8" />
+  </Box>
+);
+
+const SecureReliableIcon = ({ size = 38 }) => (
+  <Box
+    component="svg"
+    viewBox="0 0 512 512"
+    sx={{ width: size, height: size, display: 'block' }}
+    aria-hidden="true"
+  >
+    <path
+      fill="#ffd65c"
+      d="M256 0c67 55 137 84 214 92v160c0 126-84 224-214 260C126 476 42 378 42 252V92c77-8 147-37 214-92Z"
+    />
+    <path
+      fill="#f8b94d"
+      d="M256 67c51 40 105 64 161 73v109c0 94-62 169-161 206-99-37-161-112-161-206V140c56-9 110-33 161-73Z"
+    />
+    <path
+      fill="#ffffff"
+      d="M220 344 167 291l27-27 26 26 98-98 27 27-125 125Z"
+    />
+  </Box>
+);
+
+const OfficialDataIcon = ({ size = 38 }) => (
+  <Box
+    component="svg"
+    viewBox="0 0 512 512"
+    sx={{ width: size, height: size, display: 'block' }}
+    aria-hidden="true"
+  >
+    <circle cx="256" cy="256" r="256" fill="#43b02a" />
+    <path
+      fill="#ffffff"
+      d="M217 364c-12 0-24-5-33-14l-67-67c-18-18-18-47 0-65s47-18 65 0l35 35 112-112c18-18 47-18 65 0s18 47 0 65L250 350c-9 9-21 14-33 14Z"
+    />
+  </Box>
+);
+
 // Same-origin by default in production; override locally with VITE_API_URL if needed.
 const API_URL = import.meta.env.VITE_API_URL || '/count';
 const TRANSACTIONS_API_URL = import.meta.env.VITE_TRANSACTIONS_API_URL || '/transactions';
@@ -450,7 +558,6 @@ export default function App() {
     fps_id: '',
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
-    depot_id: '0802801',
   });
   const [stockBoardForm, setStockBoardForm] = useState({
     dist_code: '22',
@@ -479,6 +586,7 @@ export default function App() {
   const [settingsError, setSettingsError] = useState('');
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
+  const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
   const [commissionResult, setCommissionResult] = useState(null);
@@ -543,12 +651,10 @@ export default function App() {
   const handleCommissionChange = (e) => {
     if (e.target.name === 'dist_code') {
       const nextAfsoOptions = afsoOptionsByDistrict[e.target.value] || [];
-      const nextDepotOptions = depotOptionsByDistrict[e.target.value] || [];
       setCommissionForm({
         ...commissionForm,
         dist_code: e.target.value,
         afso: nextAfsoOptions[0]?.[0] || '',
-        depot_id: nextDepotOptions[0]?.[0] || '',
       });
       return;
     }
@@ -645,10 +751,6 @@ export default function App() {
       setError('AFSO list is not added for the selected district yet. Please share this district AFSO list.');
       return;
     }
-    if (isCommission && !requestForm.depot_id) {
-      setError('Depot list is not added for the selected district yet. Please select the correct district/depot.');
-      return;
-    }
     setLoading(true);
     setError('');
     setResult(null);
@@ -679,12 +781,7 @@ export default function App() {
         const suffix = requestId ? ` Request ID: ${requestId}` : '';
         throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
       }
-      if (isCommission) {
-        const foodGrainCost = await fetchFoodGrainCostFromRoOrders(requestForm);
-        setResult({ ...data, foodGrainCost });
-      } else {
-        setResult(data);
-      }
+      setResult(data);
     } catch (err) {
       console.error(`${isCommission ? 'Commission' : 'Transactions'} fetch failed:`, err);
       setError(err.message || `Failed to fetch ${isCommission ? 'commission data' : 'transactions'}.`);
@@ -705,66 +802,6 @@ export default function App() {
     setError: setCommissionError,
     setResult: setCommissionResult,
   });
-
-  const fetchFoodGrainCostFromRoOrders = async (requestForm) => {
-    const roRes = await fetch(RO_DETAILS_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        month: Number(requestForm.month),
-        year: Number(requestForm.year),
-        shop_no: Number(requestForm.fps_id),
-        dist_code: Number(requestForm.dist_code),
-        depot_id: requestForm.depot_id.trim(),
-      }),
-    });
-    const roText = await roRes.text();
-    const roData = roText ? JSON.parse(roText) : {};
-    if (!roRes.ok) {
-      throw new Error(roData?.detail || 'Failed to fetch RO orders for food grain cost.');
-    }
-
-    const actions = (roData.tables || [])
-      .flatMap((table) => table.row_actions || [])
-      .filter((action) => action?.release_order_id_aso);
-
-    let totalAmountPaid = 0;
-    for (const actionParams of actions) {
-      const roParts = String(actionParams.ro_no || '').split('/').filter(Boolean);
-      const toNumberOrFallback = (value, fallback) => {
-        const parsed = Number(value);
-        return Number.isFinite(parsed) && value !== undefined && value !== '' ? parsed : fallback;
-      };
-      const quantityPayload = {
-        release_order_id_aso: actionParams.release_order_id_aso || '',
-        ro_no: actionParams.ro_no || '',
-        month_int: toNumberOrFallback(actionParams.month_int, toNumberOrFallback(roParts[4], Number(requestForm.month))),
-        year_int: toNumberOrFallback(actionParams.year_int, toNumberOrFallback(roParts[5], Number(requestForm.year))),
-        ro_date: actionParams.ro_date || '',
-        shop_number: toNumberOrFallback(actionParams.shop_number, toNumberOrFallback(roParts[3], Number(requestForm.fps_id))),
-        district_code: toNumberOrFallback(actionParams.district_code, toNumberOrFallback(roParts[2], Number(requestForm.dist_code))),
-        truckchit_number: actionParams.truckchit_number || (roParts.length >= 8 ? `TC-${roParts.slice(1).join('-')}` : ''),
-      };
-
-      const quantityRes = await fetch(RO_QUANTITY_DETAILS_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(quantityPayload),
-      });
-      const quantityText = await quantityRes.text();
-      const quantityData = quantityText ? JSON.parse(quantityText) : {};
-      if (!quantityRes.ok) {
-        throw new Error(quantityData?.detail || 'Failed to fetch RO quantity details for food grain cost.');
-      }
-
-      totalAmountPaid += parseQuantity(getRoFieldValue(quantityData.tables?.[1], 'Amount Paid'));
-    }
-
-    return {
-      amount: totalAmountPaid,
-      orderCount: actions.length,
-    };
-  };
 
   const handleStockBoardSubmit = async (e) => {
     e.preventDefault();
@@ -2449,7 +2486,6 @@ export default function App() {
 
     const summary = commissionResult.summary;
     const commodityTotals = summary.commodity_totals || {};
-    const foodGrainCost = commissionResult.foodGrainCost?.amount || 0;
     const tdsAmount = commissionCalculation.commission * 0.02;
     const generatedAt = new Date().toLocaleString('en-IN');
     const periodLabel = `${monthOptions.find(([value]) => value === commissionForm.month)?.[1] || commissionForm.month} ${commissionForm.year}`;
@@ -2460,7 +2496,6 @@ export default function App() {
       ['Gross Commission', `Rs. ${formatNumber(commissionCalculation.commission)}`],
       ['TDS @ 2%', `Rs. ${formatNumber(tdsAmount)}`],
       ['Collected from RC Holders', `Rs. ${formatNumber(commissionCalculation.alreadyCollectedAmount)}`],
-      ['Cost of Food Grains', `Rs. ${formatNumber(foodGrainCost)}`],
       ['Eligible Sales', `${formatNumber(commissionCalculation.eligibleKg)} kg`],
       ['Quintals', formatNumber(commissionCalculation.eligibleKg / 100)],
       ['Transactions', summary.transaction_count || 0],
@@ -3007,12 +3042,11 @@ export default function App() {
                   {[
                     ['dist_code', 'DISTRICT'],
                     ['afso', 'AFSO'],
-                    ...(isCommissionView ? [['depot_id', 'DEPOT']] : []),
                     ['fps_id', 'FPS ID'],
                     ['month', 'MONTH'],
                     ['year', 'YEAR'],
                   ].map(([name, label]) => (
-                    <Grid item xs={name === 'fps_id' || name === 'depot_id' ? 12 : 6} key={name}>
+                    <Grid item xs={name === 'fps_id' ? 12 : 6} key={name}>
                       <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
                         {label} *
                       </Typography>
@@ -3038,19 +3072,6 @@ export default function App() {
                           options: afsoOptionsByDistrict[serviceForm.dist_code] || [],
                           pickerType: 'district',
                           disabled: !(afsoOptionsByDistrict[serviceForm.dist_code]?.length),
-                        })
-                      ) : name === 'depot_id' ? (
-                        renderSelectControl({
-                          selectKey: 'commission-depot',
-                          name,
-                          value: serviceForm[name],
-                          onChange: serviceChangeHandler,
-                          placeholder: depotOptionsByDistrict[serviceForm.dist_code]?.length
-                            ? 'Select depot'
-                            : 'Depot list pending',
-                          options: depotOptionsByDistrict[serviceForm.dist_code] || [],
-                          pickerType: 'district',
-                          disabled: !(depotOptionsByDistrict[serviceForm.dist_code]?.length),
                         })
                       ) : name === 'month' || name === 'year' ? (
                         renderSelectControl({
@@ -3230,7 +3251,6 @@ export default function App() {
                           <Box component="tr">
                             <Box component="th">TDS @ 2%</Box>
                             <Box component="th">Collected from RC Holders</Box>
-                            <Box component="th">Cost of Food Grains</Box>
                           </Box>
                         </Box>
                         <Box component="tbody">
@@ -3240,9 +3260,6 @@ export default function App() {
                             </Box>
                             <Box component="td">
                               Rs. {formatNumber(commissionCalculation.alreadyCollectedAmount)}
-                            </Box>
-                            <Box component="td">
-                              Rs. {formatNumber(serviceResult.foodGrainCost?.amount || 0)}
                             </Box>
                           </Box>
                         </Box>
@@ -3767,15 +3784,61 @@ export default function App() {
           elevation={0}
           sx={{
             mt: 4,
-            p: 2,
             borderRadius: 3,
-            background: 'linear-gradient(180deg, #ffffff 0%, #fffaf0 100%)',
+            background: '#ffffff',
             border: '1px solid #f1d79a',
             boxShadow: '0 12px 28px rgba(119, 80, 0, 0.08)',
+            overflow: 'hidden',
           }}
         >
-          <Stack spacing={1.5}>
-            <Box sx={{ display: 'flex', gap: 1.2, alignItems: 'flex-start' }}>
+          <Box
+            component="button"
+            type="button"
+            onClick={() => setDisclaimerOpen((open) => !open)}
+            sx={{
+              width: '100%',
+              p: 1.5,
+              border: 0,
+              background: '#fffaf0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.2,
+              textAlign: 'left',
+              cursor: 'pointer',
+            }}
+          >
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                bgcolor: '#fff3cd',
+                color: '#d08700',
+                display: 'grid',
+                placeItems: 'center',
+                fontWeight: 900,
+                fontSize: 18,
+                flex: '0 0 auto',
+              }}
+            >
+              i
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography sx={{ color: '#2f2412', fontSize: 13, fontWeight: 900 }}>
+                Disclaimer &amp; Information
+              </Typography>
+              <Typography sx={{ mt: 0.25, color: '#7a6641', fontSize: 11, fontWeight: 700 }}>
+                App disclaimer and source information
+              </Typography>
+            </Box>
+            <Typography sx={{ color: '#1f2937', fontSize: 22, fontWeight: 600, lineHeight: 1 }}>
+              {disclaimerOpen ? '⌃' : '›'}
+            </Typography>
+          </Box>
+
+          {disclaimerOpen && (
+            <Stack spacing={1.5} sx={{ p: 2, borderTop: '1px solid #f0dfb7' }}>
+              <Box sx={{ display: 'flex', gap: 1.2, alignItems: 'flex-start' }}>
               <Box
                 sx={{
                   width: 28,
@@ -3834,6 +3897,94 @@ export default function App() {
               </Typography>
             </Box>
           </Stack>
+          )}
+        </Paper>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, my: 2 }}>
+          <Divider sx={{ flex: 1, borderColor: '#e5eaf3' }} />
+          <Box
+            sx={{
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              border: '1px solid #d7e3ff',
+              color: '#2563eb',
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: 13,
+              fontWeight: 900,
+            }}
+          >
+            ✓
+          </Box>
+          <Divider sx={{ flex: 1, borderColor: '#e5eaf3' }} />
+        </Box>
+
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            background: '#ffffff',
+            border: '1px solid #e4e7ec',
+            boxShadow: '0 8px 20px rgba(15, 23, 42, 0.06)',
+            overflow: 'hidden',
+          }}
+        >
+          <Grid container spacing={0}>
+            {[
+              {
+                icon: <PrivateShieldIcon size={34} />,
+                line1: 'Private',
+                line2: 'Initiative',
+              },
+              {
+                icon: <OfficialDataIcon size={34} />,
+                line1: 'Data from Official',
+                line2: 'Government Portals',
+              },
+              {
+                icon: <SecureReliableIcon size={34} />,
+                line1: 'Secure &',
+                line2: 'Reliable',
+              },
+              {
+                icon: <RationShopsPeopleIcon size={34} />,
+                line1: 'Made for',
+                line2: 'Ration Shops',
+              },
+            ].map((item, index) => (
+              <Grid
+                item
+                xs={3}
+                key={item.line1}
+                sx={{
+                  minHeight: 82,
+                  py: 1.25,
+                  px: { xs: 0.5, sm: 1 },
+                  textAlign: 'center',
+                  borderLeft: index === 0 ? 0 : '1px solid #e5e7eb',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {React.isValidElement(item.icon) ? (
+                  item.icon
+                ) : (
+                  <Typography sx={{ color: item.color, fontSize: 25, fontWeight: 900, lineHeight: 1 }}>
+                    {item.icon}
+                  </Typography>
+                )}
+                <Typography sx={{ mt: 0.55, color: '#111827', fontSize: { xs: 9.5, sm: 11 }, fontWeight: 900, lineHeight: 1.15 }}>
+                  {item.line1}
+                </Typography>
+                <Typography sx={{ color: '#111827', fontSize: { xs: 9.5, sm: 11 }, fontWeight: 900, lineHeight: 1.15 }}>
+                  {item.line2}
+                </Typography>
+              </Grid>
+            ))}
+          </Grid>
         </Paper>
 
         {false && (
