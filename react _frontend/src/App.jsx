@@ -609,6 +609,7 @@ export default function App() {
     { title: 'Transactions', category: 'ദിവസ ചിലവ് / വരവ് അറിയാൻ', view: 'transactions', mark: 'TX', color: '#087f5b', background: '#ecfdf3' },
     { title: 'RO Orders', category: 'സ്വീകരിച്ച സാധനകളുടെ റിപ്പോർട്ട്', view: 'settings', mark: 'RO', color: '#9f1239', background: '#fff1f2' },
     { title: 'Commission Calculator', category: 'റേഷൻ കമ്മിഷൻ നോക്കാൻ', view: 'commission', mark: 'CC', color: '#7c3aed', background: '#f5f3ff' },
+    { title: 'Ration Card Details', category: 'റേഷൻ കാർഡ് വിവരങ്ങൾ', view: 'rationCard', mark: 'RC', color: '#0f766e', background: '#ecfeff' },
   ];
   const activeViewTitle = featurePages.find((page) => page.view === activeView)?.title || 'Ration Stock';
   const gaPagePaths = {
@@ -618,6 +619,7 @@ export default function App() {
     transactions: '/transactions',
     settings: '/ro-orders',
     commission: '/commission',
+    rationCard: '/ration-card-details',
   };
 
   useEffect(() => {
@@ -2975,6 +2977,26 @@ export default function App() {
           </>
         ) : activeView === 'stockBoard' ? (
           renderStockBoard()
+        ) : activeView === 'rationCard' ? (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              background: '#ffffff',
+              boxShadow: '0 20px 40px rgba(104, 141, 255, 0.12)',
+              border: '1px solid #e8edf7',
+            }}
+          >
+            <Stack spacing={1.5}>
+              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 900 }}>
+                Ration Card Details
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#657089', fontWeight: 700, lineHeight: 1.6 }}>
+                This page is ready for the ration card details feature.
+              </Typography>
+            </Stack>
+          </Paper>
         ) : activeView === 'transactions' || activeView === 'commission' ? (
           <>
             <Paper
