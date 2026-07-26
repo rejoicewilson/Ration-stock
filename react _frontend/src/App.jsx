@@ -618,7 +618,7 @@ export default function App() {
     { title: 'Transactions', category: 'ദിവസ ചിലവ് / വരവ് അറിയാൻ', view: 'transactions', mark: 'TX', color: '#087f5b', background: '#ecfdf3' },
     { title: 'RO Orders', category: 'സ്വീകരിച്ച സാധനകളുടെ റിപ്പോർട്ട്', view: 'settings', mark: 'RO', color: '#9f1239', background: '#fff1f2' },
     { title: 'Commission Calculator', category: 'റേഷൻ കമ്മിഷൻ നോക്കാൻ', view: 'commission', mark: 'CC', color: '#7c3aed', background: '#f5f3ff' },
-    { title: 'Ration Card Details', category: 'റേഷൻ കാർഡ് വിവരങ്ങൾ', view: 'rationCard', mark: 'RC', color: '#0f766e', background: '#ecfeff' },
+    { title: 'Ration Card Details', category: 'റേഷൻ വിഹിതം നോക്കാൻ', view: 'rationCard', mark: 'RC', color: '#0f766e', background: '#ecfeff' },
   ];
   const activeViewTitle = featurePages.find((page) => page.view === activeView)?.title || 'Ration Stock';
   const gaPagePaths = {
