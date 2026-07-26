@@ -134,6 +134,7 @@ const TRANSACTIONS_API_URL = import.meta.env.VITE_TRANSACTIONS_API_URL || '/tran
 const STOCK_REGISTER_API_URL = import.meta.env.VITE_STOCK_REGISTER_API_URL || '/stock-register';
 const RO_DETAILS_API_URL = import.meta.env.VITE_RO_DETAILS_API_URL || '/ro-details';
 const RO_QUANTITY_DETAILS_API_URL = import.meta.env.VITE_RO_QUANTITY_DETAILS_API_URL || '/ro-quantity-details';
+const RATION_CARD_DETAILS_API_URL = import.meta.env.VITE_RATION_CARD_DETAILS_API_URL || '/ration-card-details';
 
 const todayForDateInput = () => new Date().toISOString().slice(0, 10);
 
@@ -573,17 +574,24 @@ export default function App() {
     dist_code: '18',
     depot_id: '0802801',
   });
+  const [rationCardForm, setRationCardForm] = useState({
+    src_no: '',
+    month: String(new Date().getMonth() + 1).padStart(2, '0'),
+    year: String(new Date().getFullYear()),
+  });
   const [loading, setLoading] = useState(false);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [commissionLoading, setCommissionLoading] = useState(false);
   const [stockBoardLoading, setStockBoardLoading] = useState(false);
   const [stockTableOpen, setStockTableOpen] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(false);
+  const [rationCardLoading, setRationCardLoading] = useState(false);
   const [error, setError] = useState('');
   const [transactionsError, setTransactionsError] = useState('');
   const [commissionError, setCommissionError] = useState('');
   const [stockBoardError, setStockBoardError] = useState('');
   const [settingsError, setSettingsError] = useState('');
+  const [rationCardError, setRationCardError] = useState('');
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
@@ -593,6 +601,7 @@ export default function App() {
   const [stockBoardResult, setStockBoardResult] = useState(null);
   const [settingsResult, setSettingsResult] = useState(null);
   const [roQuantityResult, setRoQuantityResult] = useState(null);
+  const [rationCardResult, setRationCardResult] = useState(null);
 
   const summarySections = [
     { key: 'RAW_RICE', label: 'RAW RICE', icon: '🍚', color: '#e9d7d7ff' },
@@ -687,6 +696,14 @@ export default function App() {
       return;
     }
     setSettingsForm({ ...settingsForm, [e.target.name]: e.target.value });
+  };
+
+  const handleRationCardChange = (e) => {
+    const { name, value } = e.target;
+    setRationCardForm({
+      ...rationCardForm,
+      [name]: name === 'src_no' ? value.replace(/\D/g, '') : value,
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -901,6 +918,55 @@ export default function App() {
       setSettingsError(err.message || 'Failed to fetch RO details.');
     } finally {
       setSettingsLoading(false);
+    }
+  };
+
+  const handleRationCardSubmit = async (e) => {
+    e.preventDefault();
+    if (!rationCardForm.src_no.trim()) {
+      setRationCardError('Ration card number is required.');
+      return;
+    }
+    const formatRationCardError = (status, detail) => {
+      const message = String(detail || '').toLowerCase();
+      if (status === 404 || message.includes('no ration card summary')) {
+        return 'Please enter a correct ration card number.';
+      }
+      if (message.includes('taking too long') || status === 504) {
+        return 'Ration card details server is taking too long. Please try again.';
+      }
+      return 'Unable to get ration card details. Please try again.';
+    };
+    setRationCardLoading(true);
+    setRationCardError('');
+    setRationCardResult(null);
+    try {
+      const res = await fetch(RATION_CARD_DETAILS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          src_no: rationCardForm.src_no.trim(),
+          month: Number(rationCardForm.month),
+          year: Number(rationCardForm.year),
+        }),
+      });
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { detail: responseText || 'Server returned an empty response' };
+      }
+      if (!res.ok) {
+        const detail = data?.detail || data?.message || 'Server error';
+        throw new Error(formatRationCardError(res.status, detail));
+      }
+      setRationCardResult(data);
+    } catch (err) {
+      console.error('Ration card details fetch failed:', err);
+      setRationCardError(err.message || 'Failed to fetch ration card details.');
+    } finally {
+      setRationCardLoading(false);
     }
   };
 
@@ -1612,6 +1678,329 @@ export default function App() {
     ];
     const idx = Math.min(Math.max(Number(month) - 1, 0), 11);
     return `${monthNames[idx]} ${year}`;
+  };
+
+  const renderRationCardTables = () => {
+    const summary = rationCardResult?.summary || {};
+
+    if (!summary.fps && !summary.scheme && !summary.total_members) {
+      return (
+        <Alert severity="warning" sx={{ alignItems: 'flex-start' }}>
+          No ration card summary found for this selection.
+        </Alert>
+      );
+    }
+
+    const entitlementRows = rationCardResult?.commodity_rows || [];
+    const transactionTable = rationCardResult?.transaction_table || {};
+    const transactionHeaders = transactionTable.headers || [];
+    const transactionRows = transactionTable.rows || [];
+    const parseEntitlementQuantity = (value) => {
+      const match = String(value || '').match(/-?\d+(?:\.\d+)?/);
+      return match ? Number(match[0]) : 0;
+    };
+    const entitlementUnit = (commodity) => {
+      const normalized = String(commodity || '').toLowerCase();
+      if (/\batta\b/.test(normalized)) return 'pkt';
+      if (normalized.includes('koil') || normalized.includes('k-oil')) return 'ltr';
+      return 'kg';
+    };
+    const formatEntitlementQuantity = (value, commodity) => {
+      const quantity = parseEntitlementQuantity(value);
+      const formatted = Number.isInteger(quantity) ? String(quantity) : quantity.toFixed(3).replace(/\.?0+$/, '');
+      return `${formatted} ${entitlementUnit(commodity)}`;
+    };
+    const normalizedEntitlementRows = Object.values(
+      entitlementRows.reduce((acc, row) => {
+        const commodity = row.commodity || '-';
+        const quantity = parseEntitlementQuantity(row.entitlement);
+        const key = commodity.toLowerCase();
+        if (!acc[key]) {
+          acc[key] = { commodity, entitlement: row.entitlement, quantity };
+        } else {
+          acc[key].quantity += quantity;
+          acc[key].entitlement = String(acc[key].quantity);
+        }
+        return acc;
+      }, {})
+    );
+    const riceEntitlementRows = normalizedEntitlementRows.filter((row) =>
+      String(row.commodity || '').toLowerCase().includes('rice')
+    );
+    const otherEntitlementRows = normalizedEntitlementRows.filter(
+      (row) => !String(row.commodity || '').toLowerCase().includes('rice')
+    );
+    const visibleEntitlementRows = [...riceEntitlementRows, ...otherEntitlementRows].filter(
+      (row) => row.quantity > 0
+    );
+    const schemeColorMap = {
+      AAY: '#ffea00',
+      PHH: '#f26aaa',
+      NPS: '#22a7c8',
+      NPNS: '#f8fafc',
+      NPI: '#dcfce7',
+    };
+    const schemeTextColorMap = {
+      AAY: '#92400e',
+      PHH: '#9d174d',
+      NPS: '#155e75',
+      NPNS: '#334155',
+      NPI: '#166534',
+    };
+    const summaryScheme = String(summary.scheme || '').toUpperCase();
+    const summarySchemeBackground = schemeColorMap[summaryScheme] || '#ffffff';
+    const summarySchemeColor = schemeTextColorMap[summaryScheme] || '#0f172a';
+
+    return (
+      <Stack spacing={2.25}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, alignItems: 'flex-start' }}>
+          <Box>
+            <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 900, lineHeight: 1.2 }}>
+              Ration Card Details
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.4, color: '#64748b', fontWeight: 700 }}>
+              Card {rationCardForm.src_no} in {monthOptions.find(([value]) => value === rationCardForm.month)?.[1] || rationCardForm.month}&apos;{rationCardForm.year}
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              px: 1.2,
+              py: 0.55,
+              borderRadius: 999,
+              bgcolor: '#eef4ff',
+              color: '#2f64f8',
+              fontSize: 11,
+              fontWeight: 900,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {Math.round(rationCardResult.duration_ms || 0)} ms
+          </Box>
+        </Box>
+
+        <Box
+          component="table"
+          sx={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            border: '1px solid #dbe4f0',
+            borderRadius: 2,
+            overflow: 'hidden',
+            display: 'table',
+            '& th': {
+              bgcolor: '#f1f5f9',
+              color: '#364b73',
+              fontSize: 11,
+              fontWeight: 900,
+              textTransform: 'uppercase',
+              borderBottom: '1px solid #dbe4f0',
+              borderRight: '1px solid #dbe4f0',
+              px: 1,
+              py: 0.9,
+              textAlign: 'left',
+              '&:last-of-type': {
+                borderRight: 0,
+              },
+            },
+            '& td': {
+              color: '#0f172a',
+              fontSize: { xs: 13, sm: 16 },
+              fontWeight: 900,
+              borderRight: '1px solid #e5edf7',
+              px: 1,
+              py: 1.1,
+              '&:last-of-type': {
+                borderRight: 0,
+              },
+            },
+          }}
+        >
+          <Box component="thead">
+            <Box component="tr">
+              <Box component="th">FPS</Box>
+              <Box component="th">Scheme</Box>
+              <Box component="th">Total Members</Box>
+            </Box>
+          </Box>
+          <Box component="tbody">
+            <Box component="tr">
+              <Box component="td">{summary.fps || '-'}</Box>
+              <Box
+                component="td"
+                sx={{
+                  bgcolor: summarySchemeBackground,
+                  color: summarySchemeColor,
+                  textAlign: 'center',
+                  fontSize: { xs: 13, sm: 16 },
+                  fontWeight: 1000,
+                }}
+              >
+                {summary.scheme || '-'}
+              </Box>
+              <Box component="td">{summary.total_members || '-'}</Box>
+            </Box>
+          </Box>
+        </Box>
+
+        {entitlementRows.length > 0 && (
+          <Box
+            sx={{
+              border: '1px solid #dbe4f0',
+              borderRadius: 2,
+              overflow: 'hidden',
+              background: '#ffffff',
+            }}
+          >
+            <Box sx={{ px: 1.5, py: 1.1, bgcolor: '#f8fafc', borderBottom: '1px solid #dbe4f0' }}>
+              <Typography sx={{ color: '#17335f', fontSize: 13, fontWeight: 900 }}>
+                Entitlement for RC
+              </Typography>
+            </Box>
+            <Box sx={{ p: 1.25 }}>
+              {visibleEntitlementRows.length > 0 ? (
+                <Box
+                  component="table"
+                  sx={{
+                    width: '100%',
+                    tableLayout: 'fixed',
+                    borderCollapse: 'collapse',
+                    display: 'table',
+                    '& th': {
+                      color: '#000000',
+                      fontSize: { xs: 9, sm: 12 },
+                      fontWeight: 1000,
+                      textTransform: 'uppercase',
+                      border: '2px solid #111111',
+                      px: { xs: 0.45, sm: 0.9 },
+                      py: { xs: 0.55, sm: 0.85 },
+                      textAlign: 'center',
+                      lineHeight: 1.15,
+                      overflowWrap: 'anywhere',
+                    },
+                    '& td': {
+                      color: '#0f172a',
+                      fontSize: { xs: 11, sm: 13 },
+                      fontWeight: 900,
+                      border: '2px solid #111111',
+                      px: { xs: 0.45, sm: 0.9 },
+                      py: { xs: 0.65, sm: 0.9 },
+                      lineHeight: 1.15,
+                      overflowWrap: 'anywhere',
+                    },
+                    '& td:last-of-type': {
+                      textAlign: 'right',
+                    },
+                  }}
+                >
+                  <Box component="thead">
+                    <Box component="tr">
+                      <Box component="th" sx={{ width: '62%', background: '#ffffff' }}>ITEM</Box>
+                      <Box component="th" sx={{ width: '38%', background: '#e5e7eb' }}>ENTITLEMENT</Box>
+                    </Box>
+                  </Box>
+                  <Box component="tbody">
+                    {visibleEntitlementRows.map((row) => (
+                      <Box component="tr" key={row.commodity}>
+                        <Box component="td" sx={{ color: '#2f3192', textAlign: 'left', fontWeight: 1000 }}>
+                          {row.commodity}
+                        </Box>
+                        <Box component="td" sx={{ background: '#f9fafb', fontWeight: 1000 }}>
+                          {formatEntitlementQuantity(row.entitlement, row.commodity)}
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              ) : (
+                <Typography sx={{ color: '#64748b', fontSize: 13, fontWeight: 700 }}>
+                  No entitlement quantity found.
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        )}
+
+        {transactionHeaders.length > 0 && transactionRows.length > 0 && (
+          <Box
+            sx={{
+              border: '1px solid #dbe4f0',
+              borderRadius: 2,
+              overflow: 'hidden',
+              background: '#ffffff',
+            }}
+          >
+            <Box sx={{ px: 1.5, py: 1.1, bgcolor: '#f8fafc', borderBottom: '1px solid #dbe4f0' }}>
+              <Typography sx={{ color: '#17335f', fontSize: 13, fontWeight: 900 }}>
+                Transaction Details for RC
+              </Typography>
+            </Box>
+            <Box sx={{ overflowX: 'auto' }}>
+              <Box
+                component="table"
+                sx={{
+                  minWidth: 760,
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  '& th': {
+                    bgcolor: '#f1f5f9',
+                    color: '#364b73',
+                    fontSize: { xs: 9, sm: 11 },
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    borderBottom: '1px solid #dbe4f0',
+                    borderRight: '1px solid #dbe4f0',
+                    px: { xs: 0.45, sm: 1 },
+                    py: { xs: 0.8, sm: 1 },
+                    textAlign: 'left',
+                    '&:last-of-type': {
+                      borderRight: 0,
+                    },
+                  },
+                  '& td': {
+                    color: '#0f172a',
+                    fontSize: { xs: 10.5, sm: 13 },
+                    fontWeight: 800,
+                    borderBottom: '1px solid #e5edf7',
+                    borderRight: '1px solid #e5edf7',
+                    px: { xs: 0.45, sm: 1 },
+                    py: { xs: 0.85, sm: 1 },
+                    wordBreak: 'break-word',
+                    '&:last-of-type': {
+                      borderRight: 0,
+                    },
+                  },
+                  '& tbody tr:last-of-type td': {
+                    borderBottom: 0,
+                  },
+                }}
+              >
+                <Box component="thead">
+                  <Box component="tr">
+                    {transactionHeaders.map((header, index) => (
+                      <Box component="th" key={`ration-card-transaction-header-${index}`}>
+                        {header}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {transactionRows.map((row, rowIndex) => (
+                    <Box component="tr" key={`ration-card-transaction-${rowIndex}`}>
+                      {transactionHeaders.map((_, columnIndex) => (
+                        <Box component="td" key={`ration-card-transaction-cell-${rowIndex}-${columnIndex}`}>
+                          {row[columnIndex] || '-'}
+                        </Box>
+                      ))}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        )}
+
+      </Stack>
+    );
   };
 
   const renderStockBoard = () => {
@@ -2978,25 +3367,121 @@ export default function App() {
         ) : activeView === 'stockBoard' ? (
           renderStockBoard()
         ) : activeView === 'rationCard' ? (
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              background: '#ffffff',
-              boxShadow: '0 20px 40px rgba(104, 141, 255, 0.12)',
-              border: '1px solid #e8edf7',
-            }}
-          >
-            <Stack spacing={1.5}>
-              <Typography variant="h6" sx={{ color: '#0f172a', fontWeight: 900 }}>
-                Ration Card Details
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#657089', fontWeight: 700, lineHeight: 1.6 }}>
-                This page is ready for the ration card details feature.
-              </Typography>
+          <>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                background: '#ffffff',
+                boxShadow: '0 20px 40px rgba(104, 141, 255, 0.12)',
+                border: '1px solid #e8edf7',
+                mb: 3,
+              }}
+            >
+              <Stack spacing={2} component="form" onSubmit={handleRationCardSubmit}>
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      RATION CARD NUMBER *
+                    </Typography>
+                    <Box
+                      component="input"
+                      name="src_no"
+                      value={rationCardForm.src_no}
+                      onChange={handleRationCardChange}
+                      inputMode="numeric"
+                      placeholder="Enter ration card number"
+                      sx={{
+                        width: '100%',
+                        height: 54,
+                        borderRadius: 2,
+                        border: '1px solid #d7dfef',
+                        px: 1.5,
+                        mt: 0.75,
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: '#0f172a',
+                        outline: 'none',
+                        background: '#fbfdff',
+                        '&:focus': {
+                          borderColor: '#2f64f8',
+                          boxShadow: '0 0 0 3px rgba(47, 100, 248, 0.12)',
+                        },
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      MONTH *
+                    </Typography>
+                    {renderSelectControl({
+                      selectKey: 'ration-card-month',
+                      name: 'month',
+                      value: rationCardForm.month,
+                      onChange: handleRationCardChange,
+                      placeholder: 'Select month',
+                      options: monthOptions,
+                      pickerType: 'month',
+                    })}
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      YEAR *
+                    </Typography>
+                    {renderSelectControl({
+                      selectKey: 'ration-card-year',
+                      name: 'year',
+                      value: rationCardForm.year,
+                      onChange: handleRationCardChange,
+                      placeholder: 'Select year',
+                      options: yearOptions,
+                      pickerType: 'year',
+                    })}
+                  </Grid>
+                </Grid>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={rationCardLoading}
+                  sx={{
+                    height: 56,
+                    borderRadius: 999,
+                    fontWeight: 800,
+                    textTransform: 'none',
+                    background: 'linear-gradient(135deg, #14b8a6, #0f766e)',
+                    boxShadow: '0 12px 24px rgba(15, 118, 110, 0.25)',
+                  }}
+                >
+                  {rationCardLoading ? <CircularProgress size={22} color="inherit" /> : 'Get Ration Card Details'}
+                </Button>
+              </Stack>
+            </Paper>
+
+            <Stack spacing={2}>
+              {rationCardError && (
+                <Alert severity="error">
+                  {rationCardError}
+                </Alert>
+              )}
+
+              {rationCardResult && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    background: '#ffffff',
+                    border: '1px solid #dbe4f0',
+                    boxShadow: '0 10px 26px rgba(15, 23, 42, 0.06)',
+                  }}
+                >
+                  {renderRationCardTables()}
+                </Paper>
+              )}
             </Stack>
-          </Paper>
+          </>
         ) : activeView === 'transactions' || activeView === 'commission' ? (
           <>
             <Paper

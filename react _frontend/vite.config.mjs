@@ -14,6 +14,7 @@ export default defineConfig({
       '/stock-register': 'http://127.0.0.1:8000',
       '/ro-details': 'http://127.0.0.1:8000',
       '/ro-quantity-details': 'http://127.0.0.1:8000',
+      '/ration-card-details': 'http://127.0.0.1:8000',
     },
   },
 });

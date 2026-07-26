@@ -125,6 +125,20 @@ class RoQuantityDetailsRequest(BaseModel):
     truckchit_number: Optional[str] = ""
 
 
+class RationCardDetailsRequest(BaseModel):
+    src_no: str
+    month: int
+    year: int
+
+    @field_validator("src_no", mode="before")
+    @classmethod
+    def normalize_src_no(cls, value):
+        normalized = str(value or "").strip()
+        if not normalized.isdigit():
+            raise ValueError("Ration card number must contain only digits")
+        return normalized
+
+
 SCM_RO_DETAIL_KEYS = {
     "release_order_id_aso",
     "ro_no",
@@ -449,6 +463,116 @@ def strip_html_text(value: str):
     for nested in soup.find_all(["script", "style"]):
         nested.decompose()
     return soup.get_text(" ", strip=True)
+
+
+def parse_ration_card_summary(html: str):
+    text = strip_html_text(html)
+    text = re.sub(r"\s+", " ", text).strip()
+
+    def read_value(label: str):
+        pattern = rf"{re.escape(label)}\s*:\s*(.*?)(?=\s+(?:District|TSO|FPS|Scheme|Total Members)\s*:|$)"
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        return match.group(1).strip() if match else ""
+
+    total_members_match = re.search(r"Total\s+Members\s*:\s*(\d+)", text, flags=re.IGNORECASE)
+
+    return {
+        "fps": read_value("FPS"),
+        "scheme": read_value("Scheme"),
+        "total_members": total_members_match.group(1) if total_members_match else read_value("Total Members"),
+    }
+
+
+def parse_ration_card_entitlement_transactions(html: str, summary=None):
+    soup = BeautifulSoup(html, "html.parser")
+
+    def direct_rows(table):
+        rows = []
+        for tr in table.find_all("tr"):
+            if tr.find_parent("table") is not table:
+                continue
+            cells = [cell_text_without_nested(cell) for cell in tr.find_all(["th", "td"], recursive=False)]
+            cells = [cell for cell in cells if cell]
+            if cells:
+                rows.append(cells)
+        return rows
+
+    entitlement_rows = []
+    transaction_rows = []
+    for table in soup.find_all("table"):
+        rows = direct_rows(table)
+        title = " ".join(rows[0]) if rows else ""
+        if "Entitlement for RC" in title:
+            entitlement_rows = rows
+        elif "Transaction Details for RC" in title:
+            transaction_rows = rows
+
+    def commodity_label(header: str):
+        lower = header.lower()
+        if "raw rice fortified" in lower:
+            return "Raw Rice Fortified"
+        if "raw rice" in lower:
+            return "Raw Rice"
+        if "boiled rice fortified" in lower:
+            return "Boiled Rice Fortified"
+        if "boiled rice" in lower:
+            return "Boiled Rice"
+        if "matta rice" in lower and "fortified" in lower:
+            return "Matta Rice Fortified"
+        if "matta rice" in lower:
+            return "Matta Rice"
+        if "atta" in lower:
+            return "Atta"
+        if "wheat" in lower:
+            return "Wheat"
+        if "sugar" in lower:
+            return "Sugar"
+        if "koil" in lower or "kerosene" in lower:
+            return "Koil"
+        return re.sub(r"\s+", " ", header).strip()
+
+    def number_at(values, index):
+        if index >= len(values):
+            return 0.0
+        try:
+            return float(str(values[index]).replace(",", ""))
+        except (TypeError, ValueError):
+            return 0.0
+
+    def make_row(commodity, entitlement_number):
+        return {
+            "commodity": commodity,
+            "entitlement": f"{entitlement_number:.3f}",
+        }
+
+    combined_rows = []
+    if len(entitlement_rows) >= 3:
+        entitlement_headers = entitlement_rows[1]
+        entitlement_values = entitlement_rows[2]
+        for index, header in enumerate(entitlement_headers):
+            entitlement_number = number_at(entitlement_values, index)
+            combined_rows.append(make_row(commodity_label(header), entitlement_number))
+
+    transaction_table = {
+        "headers": [],
+        "rows": [],
+    }
+    if len(transaction_rows) >= 4:
+        base_headers = transaction_rows[1]
+        commodity_headers = [commodity_label(header) for header in transaction_rows[2]]
+        transaction_table = {
+            "headers": base_headers[:-1] + commodity_headers,
+            "rows": [
+                row[:7] + row[-len(commodity_headers):]
+                for row in transaction_rows[3:]
+                if len(row) >= 7 + len(commodity_headers)
+            ],
+        }
+
+    return {
+        "entitlement_rows": combined_rows,
+        "transaction_table": transaction_table,
+    }
 
 
 def extract_cells_from_row_markup(row_html: str):
@@ -1238,6 +1362,49 @@ def get_ro_quantity_details(request: RoQuantityDetailsRequest):
         logger.exception("ro_quantity_details_parse_error payload=%s", params)
         raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
 
+
+@app.post("/ration-card-details")
+def get_ration_card_details(request: RationCardDetailsRequest):
+    url = "https://epos.kerala.gov.in/SRC_Trans_Details.jsp"
+    payload = {
+        "src_no": request.src_no,
+        "month": request.month,
+        "year": request.year,
+    }
+    start_time = time.perf_counter()
+    logger.info("ration_card_details_start payload=%s", payload)
+    try:
+        response = EPOS_DETAILS_SESSION.post(url, data=payload, timeout=(15, 30))
+        duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        logger.info(
+            "ration_card_details_upstream_response status_code=%s content_length=%s duration_ms=%s",
+            response.status_code,
+            len(response.text),
+            duration_ms,
+        )
+        response.raise_for_status()
+        summary = parse_ration_card_summary(response.text)
+        ration_card_tables = parse_ration_card_entitlement_transactions(response.text, summary)
+        entitlement_rows = ration_card_tables.get("entitlement_rows", [])
+        if not any(summary.values()):
+            raise HTTPException(status_code=404, detail="No ration card summary found for this selection")
+        return {
+            "remote_status_code": response.status_code,
+            "duration_ms": duration_ms,
+            "summary": summary,
+            "commodity_rows": entitlement_rows,
+            "entitlement_rows": entitlement_rows,
+            "transaction_table": ration_card_tables.get("transaction_table", {"headers": [], "rows": []}),
+        }
+    except requests.Timeout:
+        logger.exception("ration_card_details_timeout payload=%s", payload)
+        raise HTTPException(
+            status_code=504,
+            detail="ePoS ration card details server is taking too long to respond. Please try again.",
+        )
+    except requests.RequestException as e:
+        logger.exception("ration_card_details_upstream_error payload=%s", payload)
+        raise HTTPException(status_code=500, detail=f"Upstream ePoS ration card details request failed: {e}")
 
 
 # Updated /count endpoint to sum CB Qty for RAW RICE group
