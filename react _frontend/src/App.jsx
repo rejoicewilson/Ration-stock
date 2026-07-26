@@ -1695,6 +1695,13 @@ export default function App() {
     const transactionTable = rationCardResult?.transaction_table || {};
     const transactionHeaders = transactionTable.headers || [];
     const transactionRows = transactionTable.rows || [];
+    const transactionMetaColumns = [
+      { label: 'SL', index: 0 },
+      { label: 'Member', index: 1 },
+      { label: 'ARD', index: 2 },
+      { label: 'Type', index: 3 },
+      { label: 'Date', index: 6 },
+    ];
     const parseEntitlementQuantity = (value) => {
       const match = String(value || '').match(/-?\d+(?:\.\d+)?/);
       return match ? Number(match[0]) : 0;
@@ -1750,6 +1757,19 @@ export default function App() {
     const summaryScheme = String(summary.scheme || '').toUpperCase();
     const summarySchemeBackground = schemeColorMap[summaryScheme] || '#ffffff';
     const summarySchemeColor = schemeTextColorMap[summaryScheme] || '#0f172a';
+    const selectedRationCardMonthName =
+      monthOptions.find(([value]) => value === rationCardForm.month)?.[1] || rationCardForm.month;
+    const transactionCommodityColumns = transactionHeaders
+      .map((header, index) => ({ label: header, index }))
+      .filter((column) => column.index >= 7);
+    const nonZeroTransactionItems = (row) =>
+      transactionCommodityColumns
+        .map((column) => ({
+          commodity: column.label,
+          quantity: row[column.index],
+          numericQuantity: parseEntitlementQuantity(row[column.index]),
+        }))
+        .filter((item) => item.numericQuantity > 0);
 
     return (
       <Stack spacing={2.25}>
@@ -1759,7 +1779,7 @@ export default function App() {
               Ration Card Details
             </Typography>
             <Typography variant="body2" sx={{ mt: 0.4, color: '#64748b', fontWeight: 700 }}>
-              Card {rationCardForm.src_no} in {monthOptions.find(([value]) => value === rationCardForm.month)?.[1] || rationCardForm.month}&apos;{rationCardForm.year}
+              Card {rationCardForm.src_no} in {selectedRationCardMonthName}&apos;{rationCardForm.year}
             </Typography>
           </Box>
           <Box
@@ -1920,7 +1940,7 @@ export default function App() {
           </Box>
         )}
 
-        {transactionHeaders.length > 0 && transactionRows.length > 0 && (
+        {transactionRows.length > 0 ? (
           <Box
             sx={{
               border: '1px solid #dbe4f0',
@@ -1934,67 +1954,156 @@ export default function App() {
                 Transaction Details for RC
               </Typography>
             </Box>
-            <Box sx={{ overflowX: 'auto' }}>
-              <Box
-                component="table"
-                sx={{
-                  minWidth: 760,
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  '& th': {
-                    bgcolor: '#f1f5f9',
-                    color: '#364b73',
-                    fontSize: { xs: 9, sm: 11 },
-                    fontWeight: 900,
-                    textTransform: 'uppercase',
-                    borderBottom: '1px solid #dbe4f0',
-                    borderRight: '1px solid #dbe4f0',
-                    px: { xs: 0.45, sm: 1 },
-                    py: { xs: 0.8, sm: 1 },
-                    textAlign: 'left',
-                    '&:last-of-type': {
-                      borderRight: 0,
-                    },
-                  },
-                  '& td': {
-                    color: '#0f172a',
-                    fontSize: { xs: 10.5, sm: 13 },
-                    fontWeight: 800,
-                    borderBottom: '1px solid #e5edf7',
-                    borderRight: '1px solid #e5edf7',
-                    px: { xs: 0.45, sm: 1 },
-                    py: { xs: 0.85, sm: 1 },
-                    wordBreak: 'break-word',
-                    '&:last-of-type': {
-                      borderRight: 0,
-                    },
-                  },
-                  '& tbody tr:last-of-type td': {
-                    borderBottom: 0,
-                  },
-                }}
-              >
-                <Box component="thead">
-                  <Box component="tr">
-                    {transactionHeaders.map((header, index) => (
-                      <Box component="th" key={`ration-card-transaction-header-${index}`}>
-                        {header}
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-                <Box component="tbody">
-                  {transactionRows.map((row, rowIndex) => (
-                    <Box component="tr" key={`ration-card-transaction-${rowIndex}`}>
-                      {transactionHeaders.map((_, columnIndex) => (
-                        <Box component="td" key={`ration-card-transaction-cell-${rowIndex}-${columnIndex}`}>
-                          {row[columnIndex] || '-'}
+            <Box sx={{ p: 1.25 }}>
+              <Stack spacing={1.5}>
+                {transactionRows.map((row, rowIndex) => {
+                  const items = nonZeroTransactionItems(row);
+                  return (
+                    <Box
+                      key={`ration-card-transaction-${rowIndex}`}
+                      sx={{
+                        border: '1px solid #dbe4f0',
+                        borderRadius: 1.5,
+                        overflow: 'hidden',
+                        bgcolor: '#ffffff',
+                      }}
+                    >
+                      <Box
+                        component="table"
+                        sx={{
+                          width: '100%',
+                          tableLayout: 'fixed',
+                          borderCollapse: 'collapse',
+                          '& th': {
+                            bgcolor: '#f1f5f9',
+                            color: '#364b73',
+                            fontSize: { xs: 8.5, sm: 11 },
+                            fontWeight: 900,
+                            textTransform: 'uppercase',
+                            border: '1px solid #dbe4f0',
+                            px: { xs: 0.35, sm: 0.8 },
+                            py: 0.75,
+                            textAlign: 'left',
+                            lineHeight: 1.15,
+                            overflowWrap: 'anywhere',
+                          },
+                          '& td': {
+                            color: '#0f172a',
+                            fontSize: { xs: 10.5, sm: 13 },
+                            fontWeight: 900,
+                            border: '1px solid #e5edf7',
+                            px: { xs: 0.35, sm: 0.8 },
+                            py: 0.85,
+                            lineHeight: 1.2,
+                            overflowWrap: 'anywhere',
+                          },
+                        }}
+                      >
+                        <Box component="thead">
+                          <Box component="tr">
+                            {transactionMetaColumns.map((column) => (
+                              <Box component="th" key={`transaction-meta-header-${rowIndex}-${column.label}`}>
+                                {column.label}
+                              </Box>
+                            ))}
+                          </Box>
                         </Box>
-                      ))}
+                        <Box component="tbody">
+                          <Box component="tr">
+                            {transactionMetaColumns.map((column) => (
+                              <Box component="td" key={`transaction-meta-cell-${rowIndex}-${column.label}`}>
+                                {row[column.index] || '-'}
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      </Box>
+
+                      <Box
+                        component="table"
+                        sx={{
+                          width: '100%',
+                          tableLayout: 'fixed',
+                          borderCollapse: 'collapse',
+                          mt: '-1px',
+                          '& th': {
+                            color: '#000000',
+                            fontSize: { xs: 9, sm: 12 },
+                            fontWeight: 1000,
+                            textTransform: 'uppercase',
+                            border: '2px solid #111111',
+                            px: { xs: 0.45, sm: 0.9 },
+                            py: { xs: 0.55, sm: 0.85 },
+                            textAlign: 'center',
+                            lineHeight: 1.15,
+                            overflowWrap: 'anywhere',
+                          },
+                          '& td': {
+                            color: '#0f172a',
+                            fontSize: { xs: 11, sm: 13 },
+                            fontWeight: 900,
+                            border: '2px solid #111111',
+                            px: { xs: 0.45, sm: 0.9 },
+                            py: { xs: 0.65, sm: 0.9 },
+                            lineHeight: 1.15,
+                            overflowWrap: 'anywhere',
+                          },
+                          '& td:last-of-type': {
+                            textAlign: 'right',
+                          },
+                        }}
+                      >
+                        <Box component="thead">
+                          <Box component="tr">
+                            <Box component="th" sx={{ width: '62%', background: '#ffffff' }}>ITEM</Box>
+                            <Box component="th" sx={{ width: '38%', background: '#e5e7eb' }}>QUANTITY</Box>
+                          </Box>
+                        </Box>
+                        <Box component="tbody">
+                          {items.length > 0 ? (
+                            items.map((item) => (
+                              <Box component="tr" key={`transaction-item-${rowIndex}-${item.commodity}`}>
+                                <Box component="td" sx={{ color: '#2f3192', textAlign: 'left', fontWeight: 1000 }}>
+                                  {item.commodity}
+                                </Box>
+                                <Box component="td" sx={{ background: '#f9fafb', fontWeight: 1000 }}>
+                                  {formatEntitlementQuantity(item.quantity, item.commodity)}
+                                </Box>
+                              </Box>
+                            ))
+                          ) : (
+                            <Box component="tr">
+                              <Box component="td" colSpan={2} sx={{ textAlign: 'center', color: '#64748b' }}>
+                                No commodity quantity found.
+                              </Box>
+                            </Box>
+                          )}
+                        </Box>
+                      </Box>
                     </Box>
-                  ))}
-                </Box>
-              </Box>
+                  );
+                })}
+              </Stack>
+            </Box>
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              border: '1px solid #dbe4f0',
+              borderRadius: 2,
+              overflow: 'hidden',
+              background: '#ffffff',
+            }}
+          >
+            <Box sx={{ px: 1.5, py: 1.1, bgcolor: '#f8fafc', borderBottom: '1px solid #dbe4f0' }}>
+              <Typography sx={{ color: '#17335f', fontSize: 13, fontWeight: 900 }}>
+                Transaction Details for RC
+              </Typography>
+            </Box>
+            <Box sx={{ p: 2, bgcolor: '#fff7ed' }}>
+              <Typography sx={{ color: '#9a3412', fontSize: { xs: 14, sm: 15 }, fontWeight: 900, lineHeight: 1.5 }}>
+                {selectedRationCardMonthName} മാസത്തെ റേഷൻ വിഹിതം ഇതുവരെ വാങ്ങിയിട്ടില്ല
+              </Typography>
             </Box>
           </Box>
         )}
