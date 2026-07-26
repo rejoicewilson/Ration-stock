@@ -1770,6 +1770,43 @@ export default function App() {
           numericQuantity: parseEntitlementQuantity(row[column.index]),
         }))
         .filter((item) => item.numericQuantity > 0);
+    const remainingCommodityName = (commodity) => {
+      const normalized = String(commodity || '').toLowerCase();
+      if (normalized.includes('rice')) return 'Rice';
+      if (/\batta\b/.test(normalized)) return 'Atta';
+      if (normalized.includes('wheat')) return 'Wheat';
+      if (normalized.includes('sugar')) return 'Sugar';
+      if (normalized.includes('koil') || normalized.includes('k-oil') || normalized.includes('kerosene')) return 'Koil';
+      return commodity || '-';
+    };
+    const addToCommodityTotal = (totals, commodity, quantity) => {
+      const name = remainingCommodityName(commodity);
+      totals[name] = (totals[name] || 0) + quantity;
+      return totals;
+    };
+    const entitlementTotals = visibleEntitlementRows.reduce(
+      (totals, row) => addToCommodityTotal(totals, row.commodity, row.quantity),
+      {}
+    );
+    const transactionTotals = transactionRows.reduce((totals, row) => {
+      transactionCommodityColumns.forEach((column) => {
+        addToCommodityTotal(totals, column.label, parseEntitlementQuantity(row[column.index]));
+      });
+      return totals;
+    }, {});
+    const remainingRows = ['Rice', 'Atta', 'Wheat', 'Sugar', 'Koil']
+      .filter((commodity) => entitlementTotals[commodity] > 0 || transactionTotals[commodity] > 0)
+      .map((commodity) => {
+        const entitlementQuantity = entitlementTotals[commodity] || 0;
+        const purchasedQuantity = transactionTotals[commodity] || 0;
+        const remainingQuantity = Math.max(entitlementQuantity - purchasedQuantity, 0);
+        return {
+          commodity,
+          entitlement: String(entitlementQuantity),
+          purchased: String(purchasedQuantity),
+          remaining: String(remainingQuantity),
+        };
+      });
 
     return (
       <Stack spacing={2.25}>
@@ -1936,6 +1973,80 @@ export default function App() {
                   No entitlement quantity found.
                 </Typography>
               )}
+            </Box>
+          </Box>
+        )}
+
+        {transactionRows.length > 0 && remainingRows.length > 0 && (
+          <Box
+            sx={{
+              border: '1px solid #dbe4f0',
+              borderRadius: 2,
+              overflow: 'hidden',
+              background: '#ffffff',
+            }}
+          >
+            <Box sx={{ px: 1.5, py: 1.1, bgcolor: '#f8fafc', borderBottom: '1px solid #dbe4f0' }}>
+              <Typography sx={{ color: '#17335f', fontSize: 13, fontWeight: 900 }}>
+                Remaining Ration
+              </Typography>
+            </Box>
+            <Box sx={{ p: 1.25 }}>
+              <Box
+                component="table"
+                sx={{
+                  width: '100%',
+                  tableLayout: 'fixed',
+                  borderCollapse: 'collapse',
+                  display: 'table',
+                  '& th': {
+                    color: '#000000',
+                    fontSize: { xs: 9, sm: 12 },
+                    fontWeight: 1000,
+                    textTransform: 'uppercase',
+                    border: '2px solid #111111',
+                    px: { xs: 0.35, sm: 0.75 },
+                    py: { xs: 0.55, sm: 0.85 },
+                    textAlign: 'center',
+                    lineHeight: 1.15,
+                    overflowWrap: 'anywhere',
+                  },
+                  '& td': {
+                    color: '#0f172a',
+                    fontSize: { xs: 10.5, sm: 13 },
+                    fontWeight: 900,
+                    border: '2px solid #111111',
+                    px: { xs: 0.35, sm: 0.75 },
+                    py: { xs: 0.65, sm: 0.9 },
+                    lineHeight: 1.15,
+                    textAlign: 'center',
+                    overflowWrap: 'anywhere',
+                  },
+                }}
+              >
+                <Box component="thead">
+                  <Box component="tr">
+                    <Box component="th" sx={{ width: '28%', background: '#ffffff' }}>ITEM</Box>
+                    <Box component="th" sx={{ width: '24%', background: '#e0f2fe' }}>TOTAL</Box>
+                    <Box component="th" sx={{ width: '24%', background: '#dcfce7' }}>BOUGHT</Box>
+                    <Box component="th" sx={{ width: '24%', background: '#fef3c7' }}>REMAINING</Box>
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {remainingRows.map((row) => (
+                    <Box component="tr" key={`remaining-${row.commodity}`}>
+                      <Box component="td" sx={{ color: '#2f3192', textAlign: 'left', fontWeight: 1000 }}>
+                        {row.commodity}
+                      </Box>
+                      <Box component="td">{formatEntitlementQuantity(row.entitlement, row.commodity)}</Box>
+                      <Box component="td">{formatEntitlementQuantity(row.purchased, row.commodity)}</Box>
+                      <Box component="td" sx={{ background: '#fffbeb', fontWeight: 1000 }}>
+                        {formatEntitlementQuantity(row.remaining, row.commodity)}
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
             </Box>
           </Box>
         )}
