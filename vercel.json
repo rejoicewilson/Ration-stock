@@ -39,6 +39,10 @@
       "dest": "api/index.py"
     },
     {
+      "src": "/ration-card-details",
+      "dest": "api/index.py"
+    },
+    {
       "src": "/docs",
       "dest": "api/index.py"
     },
