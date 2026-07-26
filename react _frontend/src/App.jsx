@@ -927,6 +927,17 @@ export default function App() {
       setRationCardError('Ration card number is required.');
       return;
     }
+    const selectedMonth = Number(rationCardForm.month);
+    const selectedYear = Number(rationCardForm.year);
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+    if (selectedYear > currentYear || (selectedYear === currentYear && selectedMonth > currentMonth)) {
+      const selectedMonthName = monthOptions.find(([value]) => value === rationCardForm.month)?.[1] || rationCardForm.month;
+      setRationCardError(`${selectedMonthName} ${selectedYear} is a future month. Please select current or previous month.`);
+      setRationCardResult(null);
+      return;
+    }
     const formatRationCardError = (status, detail) => {
       const message = String(detail || '').toLowerCase();
       if (status === 404 || message.includes('no ration card summary')) {
