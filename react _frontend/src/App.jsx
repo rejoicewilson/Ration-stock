@@ -3251,7 +3251,6 @@ export default function App() {
               type="submit"
               variant="contained"
               disabled={loading}
-              startIcon={!loading ? '🔎' : null}
               sx={{
                 py: 1.4,
                 fontSize: 15,
@@ -3446,12 +3445,13 @@ export default function App() {
                   variant="contained"
                   disabled={rationCardLoading}
                   sx={{
-                    height: 56,
-                    borderRadius: 999,
-                    fontWeight: 800,
+                    py: 1.4,
+                    fontSize: 15,
+                    fontWeight: 700,
                     textTransform: 'none',
-                    background: 'linear-gradient(135deg, #14b8a6, #0f766e)',
-                    boxShadow: '0 12px 24px rgba(15, 118, 110, 0.25)',
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #2767f7 0%, #2255e6 100%)',
+                    boxShadow: '0 12px 24px rgba(36, 94, 255, 0.35)',
                   }}
                 >
                   {rationCardLoading ? <CircularProgress size={22} color="inherit" /> : 'Get Ration Card Details'}
@@ -3619,7 +3619,6 @@ export default function App() {
                   type="submit"
                   variant="contained"
                   disabled={serviceLoading}
-                  startIcon={!serviceLoading ? '🕑' : null}
                   sx={{
                     py: 1.4,
                     fontSize: 15,
