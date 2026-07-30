@@ -858,6 +858,28 @@ def parse_fps_transaction_details(html: str):
     return {"title": title, "transactions": transactions}
 
 
+def commodity_has_token(commodity: str, token: str):
+    return re.search(rf"(?<![A-Z0-9]){re.escape(token.upper())}(?![A-Z0-9])", commodity.upper()) is not None
+
+
+def stock_commodity_group(commodity: str):
+    if commodity_has_token(commodity, "CMR") or commodity_has_token(commodity, "CMRF") or commodity_has_token(commodity, "MATTA"):
+        return "matta_cmr"
+    if commodity_has_token(commodity, "BR") or commodity_has_token(commodity, "BRF") or commodity_has_token(commodity, "BOILED"):
+        return "boiled_rice"
+    if commodity_has_token(commodity, "RR") or commodity_has_token(commodity, "RAW"):
+        return "raw_rice"
+    if commodity_has_token(commodity, "WHEAT"):
+        return "wheat"
+    if commodity_has_token(commodity, "SUGAR"):
+        return "sugar"
+    if commodity_has_token(commodity, "ATTA"):
+        return "atta"
+    if commodity_has_token(commodity, "KOIL"):
+        return "koil"
+    return None
+
+
 def to_float(value):
     try:
         return float(value)
@@ -1446,49 +1468,26 @@ def get_raw_rice_cb_sum(request: StockRequest):
             cols = row.find_all('td')
             if len(cols) == 11:
                 commodity = cols[1].text.strip()
-                comm_lower = commodity.lower()
-                # RAW RICE group
-                if ("raw" in comm_lower) or ("rr" in comm_lower):
-                    try:
-                        raw_cb_sum += float(cols[10].text.strip())
-                    except ValueError:
-                        pass
-                # BOILED RICE group
-                if ("boiled" in comm_lower) or ("br" in comm_lower):
-                    try:
-                        br_cb_sum += float(cols[10].text.strip())
-                    except ValueError:
-                        pass
-                # Matta or CMR group (combined)
-                if ("cmr" in comm_lower) or ("matta" in comm_lower):
-                    try:
-                        matta_cmr_cb_sum += float(cols[10].text.strip())
-                    except ValueError:
-                        pass
-                # Wheat group
-                if "wheat" in comm_lower:
-                    try:
-                        wheat_cb_sum += float(cols[10].text.strip())
-                    except ValueError:
-                        pass
-                # Sugar group
-                if "sugar" in comm_lower:
-                    try:
-                        sugar_cb_sum += float(cols[10].text.strip())
-                    except ValueError:
-                        pass
-                # Atta group
-                if re.search(r"\batta\b", comm_lower):
-                    try:
-                        atta_cb_sum += float(cols[10].text.strip())
-                    except ValueError:
-                        pass
-                # Koil group (liters, no bag count)
-                if "koil" in comm_lower:
-                    try:
-                        koil_cb_sum += float(cols[10].text.strip())
-                    except ValueError:
-                        pass
+                group = stock_commodity_group(commodity)
+                try:
+                    cb_qty = float(cols[10].text.strip())
+                except ValueError:
+                    continue
+
+                if group == "raw_rice":
+                    raw_cb_sum += cb_qty
+                elif group == "boiled_rice":
+                    br_cb_sum += cb_qty
+                elif group == "matta_cmr":
+                    matta_cmr_cb_sum += cb_qty
+                elif group == "wheat":
+                    wheat_cb_sum += cb_qty
+                elif group == "sugar":
+                    sugar_cb_sum += cb_qty
+                elif group == "atta":
+                    atta_cb_sum += cb_qty
+                elif group == "koil":
+                    koil_cb_sum += cb_qty
         raw_rice_bag_weight = request.raw_rice_bag_weight or request.rice_bag_weight
         boiled_rice_bag_weight = request.boiled_rice_bag_weight or request.rice_bag_weight
         matta_cmr_bag_weight = request.matta_cmr_bag_weight or request.rice_bag_weight
