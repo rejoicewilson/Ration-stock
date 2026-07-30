@@ -43,6 +43,10 @@
       "dest": "api/index.py"
     },
     {
+      "src": "/unbought-ration-holders",
+      "dest": "api/index.py"
+    },
+    {
       "src": "/docs",
       "dest": "api/index.py"
     },

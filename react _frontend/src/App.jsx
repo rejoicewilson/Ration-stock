@@ -135,6 +135,7 @@ const STOCK_REGISTER_API_URL = import.meta.env.VITE_STOCK_REGISTER_API_URL || '/
 const RO_DETAILS_API_URL = import.meta.env.VITE_RO_DETAILS_API_URL || '/ro-details';
 const RO_QUANTITY_DETAILS_API_URL = import.meta.env.VITE_RO_QUANTITY_DETAILS_API_URL || '/ro-quantity-details';
 const RATION_CARD_DETAILS_API_URL = import.meta.env.VITE_RATION_CARD_DETAILS_API_URL || '/ration-card-details';
+const UNBOUGHT_RATION_API_URL = import.meta.env.VITE_UNBOUGHT_RATION_API_URL || '/unbought-ration-holders';
 
 const todayForDateInput = () => new Date().toISOString().slice(0, 10);
 
@@ -579,6 +580,12 @@ export default function App() {
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
   });
+  const [unboughtRationForm, setUnboughtRationForm] = useState({
+    dist_code: '18',
+    fps_id: '',
+    month: String(new Date().getMonth() + 1).padStart(2, '0'),
+    year: String(new Date().getFullYear()),
+  });
   const [loading, setLoading] = useState(false);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [commissionLoading, setCommissionLoading] = useState(false);
@@ -586,12 +593,14 @@ export default function App() {
   const [stockTableOpen, setStockTableOpen] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [rationCardLoading, setRationCardLoading] = useState(false);
+  const [unboughtRationLoading, setUnboughtRationLoading] = useState(false);
   const [error, setError] = useState('');
   const [transactionsError, setTransactionsError] = useState('');
   const [commissionError, setCommissionError] = useState('');
   const [stockBoardError, setStockBoardError] = useState('');
   const [settingsError, setSettingsError] = useState('');
   const [rationCardError, setRationCardError] = useState('');
+  const [unboughtRationError, setUnboughtRationError] = useState('');
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
@@ -602,6 +611,7 @@ export default function App() {
   const [settingsResult, setSettingsResult] = useState(null);
   const [roQuantityResult, setRoQuantityResult] = useState(null);
   const [rationCardResult, setRationCardResult] = useState(null);
+  const [unboughtRationResult, setUnboughtRationResult] = useState(null);
 
   const summarySections = [
     { key: 'RAW_RICE', label: 'RAW RICE', icon: '🍚', color: '#e9d7d7ff' },
@@ -619,6 +629,7 @@ export default function App() {
     { title: 'RO Orders', category: 'സ്വീകരിച്ച സാധനകളുടെ റിപ്പോർട്ട്', view: 'settings', mark: 'RO', color: '#9f1239', background: '#fff1f2' },
     { title: 'Commission Calculator', category: 'റേഷൻ കമ്മിഷൻ നോക്കാൻ', view: 'commission', mark: 'CC', color: '#7c3aed', background: '#f5f3ff' },
     { title: 'Ration Card Details', category: 'റേഷൻ വിഹിതം നോക്കാൻ', view: 'rationCard', mark: 'RC', color: '#0f766e', background: '#ecfeff' },
+    { title: 'Unbought Ration Holders', category: 'റേഷൻ വാങ്ങാത്ത കാർഡുകൾ', view: 'unboughtRation', mark: 'UR', color: '#b45309', background: '#fffbeb' },
   ];
   const activeViewTitle = featurePages.find((page) => page.view === activeView)?.title || 'Ration Stock';
   const gaPagePaths = {
@@ -629,6 +640,7 @@ export default function App() {
     settings: '/ro-orders',
     commission: '/commission',
     rationCard: '/ration-card-details',
+    unboughtRation: '/unbought-ration-holders',
   };
 
   useEffect(() => {
@@ -703,6 +715,14 @@ export default function App() {
     setRationCardForm({
       ...rationCardForm,
       [name]: name === 'src_no' ? value.replace(/\D/g, '') : value,
+    });
+  };
+
+  const handleUnboughtRationChange = (e) => {
+    const { name, value } = e.target;
+    setUnboughtRationForm({
+      ...unboughtRationForm,
+      [name]: name === 'fps_id' ? value.replace(/\D/g, '') : value,
     });
   };
 
@@ -978,6 +998,65 @@ export default function App() {
       setRationCardError(err.message || 'Failed to fetch ration card details.');
     } finally {
       setRationCardLoading(false);
+    }
+  };
+
+  const handleUnboughtRationSubmit = async (e) => {
+    e.preventDefault();
+    if (!unboughtRationForm.fps_id.trim()) {
+      setUnboughtRationError('FPS ID is required.');
+      return;
+    }
+    const selectedMonth = Number(unboughtRationForm.month);
+    const selectedYear = Number(unboughtRationForm.year);
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+    if (selectedYear > currentYear || (selectedYear === currentYear && selectedMonth > currentMonth)) {
+      const selectedMonthName = monthOptions.find(([value]) => value === unboughtRationForm.month)?.[1] || unboughtRationForm.month;
+      setUnboughtRationError(`${selectedMonthName} ${selectedYear} is a future month. Please select current or previous month.`);
+      setUnboughtRationResult(null);
+      return;
+    }
+
+    setUnboughtRationLoading(true);
+    setUnboughtRationError('');
+    setUnboughtRationResult(null);
+    try {
+      const res = await fetch(UNBOUGHT_RATION_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dist_code: Number(unboughtRationForm.dist_code),
+          fps_id: Number(unboughtRationForm.fps_id),
+          month: Number(unboughtRationForm.month),
+          year: Number(unboughtRationForm.year),
+        }),
+      });
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { detail: responseText || 'Server returned an empty response' };
+      }
+      if (!res.ok) {
+        const detail = data?.detail || data?.message || 'Server error';
+        const message = String(detail).toLowerCase();
+        if (res.status === 404 || message.includes('no key register')) {
+          throw new Error('No ration card list found for this FPS and month.');
+        }
+        if (res.status === 504 || message.includes('taking too long')) {
+          throw new Error('ePoS server is taking too long. Please try again.');
+        }
+        throw new Error('Unable to get unbought ration holders. Please try again.');
+      }
+      setUnboughtRationResult(data);
+    } catch (err) {
+      console.error('Unbought ration holders fetch failed:', err);
+      setUnboughtRationError(err.message || 'Failed to fetch unbought ration holders.');
+    } finally {
+      setUnboughtRationLoading(false);
     }
   };
 
@@ -1689,6 +1768,189 @@ export default function App() {
     ];
     const idx = Math.min(Math.max(Number(month) - 1, 0), 11);
     return `${monthNames[idx]} ${year}`;
+  };
+
+  const renderUnboughtRationTables = () => {
+    const summary = unboughtRationResult?.summary || {};
+    const pendingCards = unboughtRationResult?.pending_cards || [];
+    const selectedMonthName =
+      monthOptions.find(([value]) => value === unboughtRationForm.month)?.[1] || unboughtRationForm.month;
+    const columns = [
+      ['RC No', 'rc_no'],
+      ['Scheme', 'scheme'],
+      ['Units', 'units'],
+    ];
+    const schemeCounts = summary.scheme_counts || {};
+    const pendingSchemeCounts = summary.pending_scheme_counts || {};
+    const schemeColorMap = {
+      AAY: '#ffea00',
+      PHH: '#f26aaa',
+      NPS: '#22a7c8',
+      NPNS: '#f8fafc',
+      NPI: '#dcfce7',
+    };
+    const schemes = ['AAY', 'PHH', 'NPS', 'NPNS', 'NPI'];
+
+    return (
+      <Stack spacing={2}>
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 900 }}>
+            Unbought Ration Holders
+          </Typography>
+          <Typography sx={{ color: '#64748b', fontSize: 13, fontWeight: 700 }}>
+            FPS {unboughtRationForm.fps_id} in {selectedMonthName}&apos;{unboughtRationForm.year}
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' },
+            border: '1px solid #d8e2f0',
+            borderRadius: 2,
+            overflow: 'hidden',
+            background: '#ffffff',
+          }}
+        >
+          {[
+            ['Total Cards', summary.total_cards || 0],
+            ['Bought Cards', summary.purchased_cards || 0],
+            ['Not Bought From This Shop', summary.pending_cards || 0],
+            ['Other-Shop / Portability', summary.portability_cards || 0],
+          ].map(([label, value]) => (
+            <Box key={label} sx={{ p: 1.5, borderRight: { sm: '1px solid #e5edf7' }, borderBottom: { xs: '1px solid #e5edf7', sm: 0 } }}>
+              <Typography sx={{ color: '#64748b', fontSize: 11, fontWeight: 900, textTransform: 'uppercase' }}>
+                {label}
+              </Typography>
+              <Typography sx={{ color: '#0f172a', fontSize: 20, fontWeight: 900 }}>
+                {formatNumber(value, 0)}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+
+        <Stack spacing={0.75}>
+          <Box>
+            <Typography sx={{ color: '#17233c', fontSize: 15, fontWeight: 900 }}>
+              Scheme-wise card count
+            </Typography>
+            <Typography sx={{ color: '#64748b', fontSize: 12, fontWeight: 700 }}>
+              Total cards and cards that have not bought from this FPS in the selected month.
+            </Typography>
+          </Box>
+          <Box sx={{ border: '1px solid #d8e2f0', borderRadius: 2, overflow: 'hidden', background: '#ffffff' }}>
+            <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <Box component="thead" sx={{ background: '#f1f5f9' }}>
+                <Box component="tr">
+                  {['Scheme', 'Total Cards', 'Not Bought Here'].map((label) => (
+                    <Box
+                      component="th"
+                      key={label}
+                      sx={{
+                        p: 1,
+                        border: '1px solid #d8e2f0',
+                        color: '#274060',
+                        fontSize: 11,
+                        fontWeight: 900,
+                        textAlign: 'center',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {label}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+              <Box component="tbody">
+                {schemes.map((scheme) => (
+                  <Box component="tr" key={scheme}>
+                    <Box
+                      component="td"
+                      sx={{
+                        p: 1,
+                        border: '1px solid #d8e2f0',
+                        background: schemeColorMap[scheme],
+                        color: '#0f172a',
+                        fontSize: 13,
+                        fontWeight: 1000,
+                        textAlign: 'center',
+                      }}
+                    >
+                      {scheme}
+                    </Box>
+                    <Box component="td" sx={{ p: 1, border: '1px solid #d8e2f0', textAlign: 'center', fontSize: 16, fontWeight: 900 }}>
+                      {formatNumber(schemeCounts[scheme] || 0, 0)}
+                    </Box>
+                    <Box component="td" sx={{ p: 1, border: '1px solid #d8e2f0', textAlign: 'center', fontSize: 16, fontWeight: 900, color: '#b42318' }}>
+                      {formatNumber(pendingSchemeCounts[scheme] || 0, 0)}
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          </Box>
+        </Stack>
+
+        {pendingCards.length === 0 ? (
+          <Alert severity="success">
+            ഈ മാസത്തെ എല്ലാ കാർഡുകളും റേഷൻ വാങ്ങിയിട്ടുണ്ട്.
+          </Alert>
+        ) : (
+          <Stack spacing={1}>
+            <Alert severity="info">
+              These cards have not purchased from this FPS in the selected month. Some may have purchased from another FPS through portability.
+            </Alert>
+            <Box sx={{ overflowX: 'auto', border: '1px solid #d8e2f0', borderRadius: 2 }}>
+              <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', minWidth: 360, background: '#ffffff' }}>
+                <Box component="thead" sx={{ background: '#f1f5f9' }}>
+                  <Box component="tr">
+                    {columns.map(([label]) => (
+                      <Box
+                        component="th"
+                        key={label}
+                        sx={{
+                          p: 1.1,
+                          border: '1px solid #d8e2f0',
+                          color: '#274060',
+                          fontSize: 11,
+                          fontWeight: 900,
+                          textAlign: 'left',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {label}
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {pendingCards.map((card) => (
+                    <Box component="tr" key={card.rc_no}>
+                      {columns.map(([label, key]) => (
+                        <Box
+                          component="td"
+                          key={`${card.rc_no}-${key}`}
+                          sx={{
+                            p: 1.1,
+                            border: '1px solid #d8e2f0',
+                            color: '#0f172a',
+                            fontSize: 13,
+                            fontWeight: label === 'RC No' || label === 'Scheme' ? 900 : 700,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {card[key] || '0'}
+                        </Box>
+                      ))}
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Box>
+          </Stack>
+        )}
+      </Stack>
+    );
   };
 
   const renderRationCardTables = () => {
@@ -3596,6 +3858,138 @@ export default function App() {
           </>
         ) : activeView === 'stockBoard' ? (
           renderStockBoard()
+        ) : activeView === 'unboughtRation' ? (
+          <>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                background: '#ffffff',
+                boxShadow: '0 20px 40px rgba(104, 141, 255, 0.12)',
+                border: '1px solid #e8edf7',
+                mb: 3,
+              }}
+            >
+              <Stack spacing={2} component="form" onSubmit={handleUnboughtRationSubmit}>
+                <Grid container spacing={1.5}>
+                  <Grid item xs={12}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      FPS ID *
+                    </Typography>
+                    <Box
+                      component="input"
+                      name="fps_id"
+                      value={unboughtRationForm.fps_id}
+                      onChange={handleUnboughtRationChange}
+                      inputMode="numeric"
+                      placeholder="Enter FPS ID"
+                      required
+                      sx={{
+                        width: '100%',
+                        height: 54,
+                        borderRadius: 2,
+                        border: '1px solid #d7dfef',
+                        px: 1.5,
+                        mt: 0.75,
+                        fontSize: 16,
+                        fontWeight: 800,
+                        color: '#0f172a',
+                        outline: 'none',
+                        background: '#fbfdff',
+                        '&:focus': {
+                          borderColor: '#2f64f8',
+                          boxShadow: '0 0 0 3px rgba(47, 100, 248, 0.12)',
+                        },
+                      }}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      DISTRICT *
+                    </Typography>
+                    {renderSelectControl({
+                      selectKey: 'unbought-ration-district',
+                      name: 'dist_code',
+                      value: unboughtRationForm.dist_code,
+                      onChange: handleUnboughtRationChange,
+                      placeholder: 'Select district',
+                      options: districtOptions,
+                      pickerType: 'district',
+                    })}
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      MONTH *
+                    </Typography>
+                    {renderSelectControl({
+                      selectKey: 'unbought-ration-month',
+                      name: 'month',
+                      value: unboughtRationForm.month,
+                      onChange: handleUnboughtRationChange,
+                      placeholder: 'Select month',
+                      options: monthOptions,
+                      pickerType: 'month',
+                    })}
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                      YEAR *
+                    </Typography>
+                    {renderSelectControl({
+                      selectKey: 'unbought-ration-year',
+                      name: 'year',
+                      value: unboughtRationForm.year,
+                      onChange: handleUnboughtRationChange,
+                      placeholder: 'Select year',
+                      options: yearOptions,
+                      pickerType: 'year',
+                    })}
+                  </Grid>
+                </Grid>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={unboughtRationLoading}
+                  sx={{
+                    py: 1.4,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    borderRadius: 12,
+                    background: 'linear-gradient(135deg, #2767f7 0%, #2255e6 100%)',
+                    boxShadow: '0 12px 24px rgba(36, 94, 255, 0.35)',
+                  }}
+                >
+                  {unboughtRationLoading ? <CircularProgress size={22} color="inherit" /> : 'Get Unbought Ration Holders'}
+                </Button>
+              </Stack>
+            </Paper>
+
+            <Stack spacing={2}>
+              {unboughtRationError && (
+                <Alert severity="error">
+                  {unboughtRationError}
+                </Alert>
+              )}
+
+              {unboughtRationResult && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: 3,
+                    background: '#ffffff',
+                    border: '1px solid #dbe4f0',
+                    boxShadow: '0 10px 26px rgba(15, 23, 42, 0.06)',
+                  }}
+                >
+                  {renderUnboughtRationTables()}
+                </Paper>
+              )}
+            </Stack>
+          </>
         ) : activeView === 'rationCard' ? (
           <>
             <Paper

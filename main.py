@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
@@ -137,6 +138,13 @@ class RationCardDetailsRequest(BaseModel):
         if not normalized.isdigit():
             raise ValueError("Ration card number must contain only digits")
         return normalized
+
+
+class UnboughtRationRequest(BaseModel):
+    dist_code: int
+    fps_id: int
+    month: int
+    year: int
 
 
 SCM_RO_DETAIL_KEYS = {
@@ -858,6 +866,50 @@ def parse_fps_transaction_details(html: str):
     return {"title": title, "transactions": transactions}
 
 
+KEY_REGISTER_HEADERS = [
+    "sl_no",
+    "rc_no",
+    "scheme",
+    "units",
+    "electrified",
+    "boiled_rice",
+    "raw_rice",
+    "cmr",
+    "wheat",
+    "sugar",
+    "koil",
+    "atta",
+    "free_rice",
+]
+
+
+def parse_key_register_cards(html: str):
+    soup = BeautifulSoup(html, "html.parser")
+    cards = []
+    title = ""
+
+    for table in soup.find_all("table"):
+        table_text = table.get_text(" ", strip=True)
+        if not title and "Key Register" in table_text:
+            title = table_text[:200]
+
+        for row in table.find_all("tr"):
+            if row.find_parent("table") is not table:
+                continue
+            cells = [cell.get_text(" ", strip=True) for cell in row.find_all(["th", "td"], recursive=False)]
+            cells = [cell for cell in cells if cell != ""]
+            if len(cells) < len(KEY_REGISTER_HEADERS):
+                continue
+            if not str(cells[0]).strip().isdigit() or not str(cells[1]).strip().isdigit():
+                continue
+
+            normalized_cells = cells[: len(KEY_REGISTER_HEADERS)]
+            card = dict(zip(KEY_REGISTER_HEADERS, normalized_cells))
+            cards.append(card)
+
+    return {"title": title, "cards": cards}
+
+
 def to_float(value):
     try:
         return float(value)
@@ -1199,6 +1251,126 @@ def fetch_transactions(request: TransactionsRequest):
 @app.post("/transactions")
 def get_transactions(request: TransactionsRequest):
     return fetch_transactions(request)
+
+
+@app.post("/unbought-ration-holders")
+def get_unbought_ration_holders(request: UnboughtRationRequest):
+    fps_id = str(request.fps_id)
+    if len(fps_id) != 7 or not fps_id.isdigit():
+        raise HTTPException(status_code=400, detail="FPS ID must contain exactly 7 digits")
+
+    fps_district_code = int(fps_id[:2])
+    if request.dist_code != fps_district_code:
+        raise HTTPException(
+            status_code=400,
+            detail=f"FPS ID {fps_id} belongs to district code {fps_district_code}, not district code {request.dist_code}",
+        )
+
+    key_register_url = "https://epos.kerala.gov.in/keyreg_cards.action"
+    transactions_url = "https://epos.kerala.gov.in/FPS_Trans_Details.jsp"
+    key_payload = {
+        "dist_code": request.dist_code,
+        "fps_id": request.fps_id,
+        "month": request.month,
+        "year": request.year,
+    }
+    transactions_payload = {
+        "dist_code": request.dist_code,
+        "fps_id": request.fps_id,
+        "month": request.month,
+        "year": request.year,
+    }
+    start_time = time.perf_counter()
+    logger.info("unbought_ration_start payload=%s", key_payload)
+    try:
+        def fetch_upstream(label, url, payload):
+            request_start = time.perf_counter()
+            session = requests.Session()
+            session.headers.update(EPOS_HEADERS)
+            upstream_response = session.post(url, data=payload, timeout=(15, 45))
+            request_duration_ms = round((time.perf_counter() - request_start) * 1000, 2)
+            logger.info(
+                "unbought_%s_upstream_response status_code=%s content_length=%s duration_ms=%s",
+                label,
+                upstream_response.status_code,
+                len(upstream_response.text),
+                request_duration_ms,
+            )
+            upstream_response.raise_for_status()
+            return upstream_response, request_duration_ms
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            key_future = executor.submit(fetch_upstream, "key_register", key_register_url, key_payload)
+            transactions_future = executor.submit(fetch_upstream, "transactions", transactions_url, transactions_payload)
+            key_response, key_duration_ms = key_future.result()
+            transactions_response, transactions_duration_ms = transactions_future.result()
+
+        key_register = parse_key_register_cards(key_response.text)
+        all_cards = key_register["cards"]
+        if not all_cards:
+            raise HTTPException(status_code=404, detail="No key register cards found for this selection")
+
+        transaction_report = parse_fps_transaction_details(transactions_response.text)
+        purchased_rc_numbers = {
+            re.sub(r"\D+", "", str(transaction.get("rc_no", "")))
+            for transaction in transaction_report["transactions"]
+        }
+        purchased_rc_numbers.discard("")
+
+        pending_cards = [
+            card
+            for card in all_cards
+            if re.sub(r"\D+", "", str(card.get("rc_no", ""))) not in purchased_rc_numbers
+        ]
+        key_register_rc_numbers = {
+            re.sub(r"\D+", "", str(card.get("rc_no", "")))
+            for card in all_cards
+        }
+        key_register_rc_numbers.discard("")
+        purchased_key_register_cards = key_register_rc_numbers.intersection(purchased_rc_numbers)
+        portability_card_count = len(purchased_rc_numbers - key_register_rc_numbers)
+        pending_scheme_counts = {}
+        for card in pending_cards:
+            scheme = str(card.get("scheme", "")).strip().upper() or "UNKNOWN"
+            pending_scheme_counts[scheme] = pending_scheme_counts.get(scheme, 0) + 1
+        total_scheme_counts = {}
+        for card in all_cards:
+            scheme = str(card.get("scheme", "")).strip().upper() or "UNKNOWN"
+            total_scheme_counts[scheme] = total_scheme_counts.get(scheme, 0) + 1
+
+        total_duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        return {
+            "remote_status_code": key_response.status_code,
+            "duration_ms": total_duration_ms,
+            "key_register_duration_ms": key_duration_ms,
+            "transactions_duration_ms": transactions_duration_ms,
+            "title": key_register["title"] or transaction_report["title"],
+            "summary": {
+                "total_cards": len(all_cards),
+                "purchased_cards": len(purchased_key_register_cards),
+                "pending_cards": len(pending_cards),
+                "transaction_cards": len(purchased_rc_numbers),
+                "portability_cards": portability_card_count,
+                "scheme_counts": total_scheme_counts,
+                "pending_scheme_counts": pending_scheme_counts,
+            },
+            "headers": KEY_REGISTER_HEADERS,
+            "pending_cards": pending_cards,
+        }
+    except HTTPException:
+        raise
+    except requests.Timeout:
+        logger.exception("unbought_ration_timeout payload=%s", key_payload)
+        raise HTTPException(
+            status_code=504,
+            detail="ePoS server is taking too long to respond. Please try again.",
+        )
+    except requests.RequestException as e:
+        logger.exception("unbought_ration_upstream_error payload=%s", key_payload)
+        raise HTTPException(status_code=500, detail=f"Upstream ePoS unbought ration request failed: {e}")
+    except Exception as e:
+        logger.exception("unbought_ration_parse_error payload=%s", key_payload)
+        raise HTTPException(status_code=500, detail=f"Backend unbought ration parse error: {e}")
 
 
 @app.post("/stock-register")
