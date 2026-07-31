@@ -2263,163 +2263,171 @@ export default function App() {
       'സ്പെഷ്യൽ വിതരണം',
     ];
     const normalizeStockText = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const stockCommodityHasToken = (value, token) => {
+      const pattern = new RegExp(`(^|[^a-z0-9])${token}([^a-z0-9]|$)`, 'i');
+      return pattern.test(String(value || ''));
+    };
+    const stockCommodityGroup = (value) => {
+      if (stockCommodityHasToken(value, 'cmr') || stockCommodityHasToken(value, 'cmrf') || stockCommodityHasToken(value, 'matta')) {
+        return 'matta_cmr';
+      }
+      if (stockCommodityHasToken(value, 'br') || stockCommodityHasToken(value, 'brf') || stockCommodityHasToken(value, 'boiled')) {
+        return 'boiled_rice';
+      }
+      if (stockCommodityHasToken(value, 'rr') || stockCommodityHasToken(value, 'raw')) {
+        return 'raw_rice';
+      }
+      if (stockCommodityHasToken(value, 'wheat')) {
+        return 'wheat';
+      }
+      if (stockCommodityHasToken(value, 'sugar')) {
+        return 'sugar';
+      }
+      if (stockCommodityHasToken(value, 'atta')) {
+        return 'atta';
+      }
+      if (stockCommodityHasToken(value, 'koil')) {
+        return 'koil';
+      }
+      return null;
+    };
     const boiledRiceAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isAay = scheme.includes('aay');
-      const isBoiledRice = commodity.includes('br') || commodity.includes('boiled');
+      const isBoiledRice = stockCommodityGroup(record.Commodity) === 'boiled_rice';
 
       return isAay && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const boiledRicePhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isPhh = scheme.includes('phh');
-      const isBoiledRice = commodity.includes('br') || commodity.includes('boiled');
+      const isBoiledRice = stockCommodityGroup(record.Commodity) === 'boiled_rice';
 
       return isPhh && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const boiledRiceNpsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNps = scheme.includes('nps');
-      const isBoiledRice = commodity.includes('br') || commodity.includes('boiled');
+      const isBoiledRice = stockCommodityGroup(record.Commodity) === 'boiled_rice';
 
       return isNps && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const boiledRiceNpnsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNpns = scheme.includes('npns');
-      const isBoiledRice = commodity.includes('br') || commodity.includes('boiled');
+      const isBoiledRice = stockCommodityGroup(record.Commodity) === 'boiled_rice';
 
       return isNpns && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const boiledRiceNpiCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNpi = scheme.includes('npi');
-      const isBoiledRice = commodity.includes('br') || commodity.includes('boiled');
+      const isBoiledRice = stockCommodityGroup(record.Commodity) === 'boiled_rice';
 
       return isNpi && isBoiledRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const rawRiceAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isAay = scheme.includes('aay');
-      const isRawRice = commodity.includes('raw') || commodity.includes('rr');
+      const isRawRice = stockCommodityGroup(record.Commodity) === 'raw_rice';
 
       return isAay && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const rawRicePhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isPhh = scheme.includes('phh');
-      const isRawRice = commodity.includes('raw') || commodity.includes('rr');
+      const isRawRice = stockCommodityGroup(record.Commodity) === 'raw_rice';
 
       return isPhh && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const rawRiceNpsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNps = scheme.includes('nps');
-      const isRawRice = commodity.includes('raw') || commodity.includes('rr');
+      const isRawRice = stockCommodityGroup(record.Commodity) === 'raw_rice';
 
       return isNps && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const rawRiceNpnsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNpns = scheme.includes('npns');
-      const isRawRice = commodity.includes('raw') || commodity.includes('rr');
+      const isRawRice = stockCommodityGroup(record.Commodity) === 'raw_rice';
 
       return isNpns && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const rawRiceNpiCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNpi = scheme.includes('npi');
-      const isRawRice = commodity.includes('raw') || commodity.includes('rr');
+      const isRawRice = stockCommodityGroup(record.Commodity) === 'raw_rice';
 
       return isNpi && isRawRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const mattaRiceAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isAay = scheme.includes('aay');
-      const isMattaRice = commodity.includes('matta') || commodity.includes('cmr');
+      const isMattaRice = stockCommodityGroup(record.Commodity) === 'matta_cmr';
 
       return isAay && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const mattaRicePhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isPhh = scheme.includes('phh');
-      const isMattaRice = commodity.includes('matta') || commodity.includes('cmr');
+      const isMattaRice = stockCommodityGroup(record.Commodity) === 'matta_cmr';
 
       return isPhh && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const mattaRiceNpsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNps = scheme.includes('nps');
-      const isMattaRice = commodity.includes('matta') || commodity.includes('cmr');
+      const isMattaRice = stockCommodityGroup(record.Commodity) === 'matta_cmr';
 
       return isNps && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const mattaRiceNpnsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNpns = scheme.includes('npns');
-      const isMattaRice = commodity.includes('matta') || commodity.includes('cmr');
+      const isMattaRice = stockCommodityGroup(record.Commodity) === 'matta_cmr';
 
       return isNpns && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const mattaRiceNpiCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNpi = scheme.includes('npi');
-      const isMattaRice = commodity.includes('matta') || commodity.includes('cmr');
+      const isMattaRice = stockCommodityGroup(record.Commodity) === 'matta_cmr';
 
       return isNpi && isMattaRice ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const wheatAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isAay = scheme.includes('aay');
-      const isWheat = commodity.includes('wheat');
+      const isWheat = stockCommodityGroup(record.Commodity) === 'wheat';
 
       return isAay && isWheat ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const wheatPhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isPhh = scheme.includes('phh');
-      const isWheat = commodity.includes('wheat');
+      const isWheat = stockCommodityGroup(record.Commodity) === 'wheat';
 
       return isPhh && isWheat ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const wheatNpsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNps = scheme.includes('nps');
-      const isWheat = commodity.includes('wheat');
+      const isWheat = stockCommodityGroup(record.Commodity) === 'wheat';
 
       return isNps && isWheat ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const wheatNpnsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNpns = scheme.includes('npns');
-      const isWheat = commodity.includes('wheat');
+      const isWheat = stockCommodityGroup(record.Commodity) === 'wheat';
 
       return isNpns && isWheat ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const wheatNpiCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNpi = scheme.includes('npi');
-      const isWheat = commodity.includes('wheat');
+      const isWheat = stockCommodityGroup(record.Commodity) === 'wheat';
 
       return isNpi && isWheat ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
@@ -2444,49 +2452,43 @@ export default function App() {
     }, 0);
     const keroseneAllCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isAll = scheme === 'all';
-      const isKerosene = commodity.includes('koil');
+      const isKerosene = stockCommodityGroup(record.Commodity) === 'koil';
 
       return isAll && isKerosene ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const sugarAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isAay = scheme.includes('aay');
-      const isSugar = commodity.includes('sugar');
+      const isSugar = stockCommodityGroup(record.Commodity) === 'sugar';
 
       return isAay && isSugar ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const sugarPhhCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isPhh = scheme.includes('phh');
-      const isSugar = commodity.includes('sugar');
+      const isSugar = stockCommodityGroup(record.Commodity) === 'sugar';
 
       return isPhh && isSugar ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const sugarNpsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNps = scheme.includes('nps');
-      const isSugar = commodity.includes('sugar');
+      const isSugar = stockCommodityGroup(record.Commodity) === 'sugar';
 
       return isNps && isSugar ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const sugarNpnsCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNpns = scheme.includes('npns');
-      const isSugar = commodity.includes('sugar');
+      const isSugar = stockCommodityGroup(record.Commodity) === 'sugar';
 
       return isNpns && isSugar ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
     const sugarNpiCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
-      const commodity = normalizeStockText(record.Commodity);
       const isNpi = scheme.includes('npi');
-      const isSugar = commodity.includes('sugar');
+      const isSugar = stockCommodityGroup(record.Commodity) === 'sugar';
 
       return isNpi && isSugar ? total + parseQuantity(record['CB Qty']) : total;
     }, 0);
@@ -4773,3 +4775,6 @@ export default function App() {
     </Box>
   );
 }
+
+
+
