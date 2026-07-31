@@ -4577,6 +4577,18 @@ export default function App() {
 
           {disclaimerOpen && (
             <Stack spacing={1.5} sx={{ p: 2, borderTop: '1px solid #f0dfb7' }}>
+              <Box>
+                <Typography component="h1" sx={{ color: '#3f2a04', fontSize: 16, fontWeight: 1000, lineHeight: 1.25 }}>
+                  Ration Stock App for Ration Shops
+                </Typography>
+                <Typography sx={{ mt: 0.65, color: '#6b5b34', fontSize: 12, fontWeight: 700, lineHeight: 1.6 }}>
+                  Ration Stock App helps ration shop owners quickly check stock summary, ration stock board,
+                  transactions, commission calculator, RO orders and ration card details in a simple mobile-friendly format.
+                </Typography>
+              </Box>
+
+              <Divider sx={{ borderColor: '#f0dfb7' }} />
+
               <Box sx={{ display: 'flex', gap: 1.2, alignItems: 'flex-start' }}>
               <Box
                 sx={{
@@ -4634,6 +4646,33 @@ export default function App() {
                 . Source websites and contents belong to their respective authorities. This app is not affiliated with
                 or endorsed by the Government of Kerala or NIC.
               </Typography>
+            </Box>
+
+            <Divider sx={{ borderColor: '#f0dfb7' }} />
+
+            <Box>
+              <Typography sx={{ color: '#3f2a04', fontSize: 14, fontWeight: 900 }}>
+                Frequently Asked Questions
+              </Typography>
+              <Box sx={{ mt: 1, display: 'grid', gap: 1 }}>
+                <Box>
+                  <Typography sx={{ color: '#3f2a04', fontSize: 13, fontWeight: 900 }}>
+                    What is Ration Stock App?
+                  </Typography>
+                  <Typography sx={{ mt: 0.35, color: '#6b5b34', fontSize: 12, fontWeight: 700, lineHeight: 1.55 }}>
+                    It is a private ration app made to simplify daily ration shop operations like stock checking,
+                    transaction review and commission calculation.
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ color: '#3f2a04', fontSize: 13, fontWeight: 900 }}>
+                    Is this an official government app?
+                  </Typography>
+                  <Typography sx={{ mt: 0.35, color: '#6b5b34', fontSize: 12, fontWeight: 700, lineHeight: 1.55 }}>
+                    No. This is not an official government app. Data is sourced from official government portals.
+                  </Typography>
+                </Box>
+              </Box>
             </Box>
           </Stack>
           )}
