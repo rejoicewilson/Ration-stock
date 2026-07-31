@@ -75,6 +75,10 @@
       "dest": "/icon-192.png"
     },
     {
+      "src": "/google6feb6cea2e1c26a3.html",
+      "dest": "/google6feb6cea2e1c26a3.html"
+    },
+    {
       "src": "/assets/(.*)",
       "dest": "/assets/$1"
     },
