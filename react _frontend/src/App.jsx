@@ -2267,7 +2267,21 @@ export default function App() {
       const pattern = new RegExp(`(^|[^a-z0-9])${token}([^a-z0-9]|$)`, 'i');
       return pattern.test(String(value || ''));
     };
+    const isSpecialStockCommodity = (value) =>
+      stockCommodityHasToken(value, 'spl') || stockCommodityHasToken(value, 'special');
+    const isRiceStockCommodity = (value) =>
+      stockCommodityHasToken(value, 'cmr') ||
+      stockCommodityHasToken(value, 'cmrf') ||
+      stockCommodityHasToken(value, 'matta') ||
+      stockCommodityHasToken(value, 'br') ||
+      stockCommodityHasToken(value, 'brf') ||
+      stockCommodityHasToken(value, 'boiled') ||
+      stockCommodityHasToken(value, 'rr') ||
+      stockCommodityHasToken(value, 'raw');
     const stockCommodityGroup = (value) => {
+      if (isSpecialStockCommodity(value) && isRiceStockCommodity(value)) {
+        return 'special_distribution';
+      }
       if (stockCommodityHasToken(value, 'cmr') || stockCommodityHasToken(value, 'cmrf') || stockCommodityHasToken(value, 'matta')) {
         return 'matta_cmr';
       }
@@ -2290,6 +2304,36 @@ export default function App() {
         return 'koil';
       }
       return null;
+    };
+    const specialRiceLabel = (value) => {
+      if (stockCommodityHasToken(value, 'cmr') || stockCommodityHasToken(value, 'cmrf') || stockCommodityHasToken(value, 'matta')) {
+        return 'CMR';
+      }
+      if (stockCommodityHasToken(value, 'br') || stockCommodityHasToken(value, 'brf') || stockCommodityHasToken(value, 'boiled')) {
+        return 'BR';
+      }
+      if (stockCommodityHasToken(value, 'rr') || stockCommodityHasToken(value, 'raw')) {
+        return 'RR';
+      }
+      return 'Rice';
+    };
+    const specialDistributionValue = (schemeKey) => {
+      const totals = (stockRegisterTable?.records || []).reduce((acc, record) => {
+        const scheme = normalizeStockText(record.Scheme);
+        if (!scheme.includes(schemeKey)) {
+          return acc;
+        }
+        if (stockCommodityGroup(record.Commodity) !== 'special_distribution') {
+          return acc;
+        }
+        const label = specialRiceLabel(record.Commodity);
+        acc[label] = (acc[label] || 0) + parseQuantity(record['CB Qty']);
+        return acc;
+      }, {});
+      const parts = ['RR', 'BR', 'CMR']
+        .filter((label) => Number(totals[label]) !== 0)
+        .map((label) => `${label} ${formatStatValue(totals[label], 'kg')}`);
+      return parts.length ? parts.join(', ') : '0 kg';
     };
     const boiledRiceAayCbQty = (stockRegisterTable?.records || []).reduce((total, record) => {
       const scheme = normalizeStockText(record.Scheme);
@@ -2573,6 +2617,21 @@ export default function App() {
       }
       if (rowIndex === 6 && columnIndex === 4) {
         return formatStatValue(sugarNpiCbQty, 'kg');
+      }
+      if (rowIndex === 7 && columnIndex === 0) {
+        return specialDistributionValue('aay');
+      }
+      if (rowIndex === 7 && columnIndex === 1) {
+        return specialDistributionValue('phh');
+      }
+      if (rowIndex === 7 && columnIndex === 2) {
+        return specialDistributionValue('nps');
+      }
+      if (rowIndex === 7 && columnIndex === 3) {
+        return specialDistributionValue('npns');
+      }
+      if (rowIndex === 7 && columnIndex === 4) {
+        return specialDistributionValue('npi');
       }
       return '';
     };
