@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd \"react _frontend\" && npm install && npm run build && npm run build -- --outDir ../public --emptyOutDir && cd .. && copy google6feb6cea2e1c26a3.html public\\google6feb6cea2e1c26a3.html"
+    "build": "cd \"react _frontend\" && npm install && npm run build && npm run build -- --outDir ../public --emptyOutDir && cd .. && node -e \"require('fs').copyFileSync('google6feb6cea2e1c26a3.html','public/google6feb6cea2e1c26a3.html')\""
   }
 }
