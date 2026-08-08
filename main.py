@@ -931,16 +931,18 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
             filtered.append(transaction)
 
     def commodity_group(header):
+        tokens = re.findall(r"[A-Z0-9]+", header.upper())
+        token_set = set(tokens)
         normalized = re.sub(r"[^A-Z0-9]+", "", header.upper())
-        if "CMR" in normalized:
+        if {"MATTA", "CMR", "CMRF"} & token_set or normalized.startswith("MATTA"):
             return "cmr"
-        if "RR" in normalized:
+        if {"RR", "RRF", "RAW"} & token_set or normalized.startswith("RR") or "RAWRICE" in normalized:
             return "rr"
-        if "BR" in normalized:
+        if {"BR", "BRF", "BOILED"} & token_set or normalized.startswith("BR") or "BOILEDRICE" in normalized:
             return "br"
-        if "RICE" in normalized:
+        if "RICE" in token_set:
             return "rr"
-        if "ATTA" in normalized:
+        if "ATTA" in token_set or normalized == "ATTA" or normalized.startswith("ATTA"):
             return "atta"
         if "WHEAT" in normalized:
             return "wheat"
