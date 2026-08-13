@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import attaIcon from './assets/atta-flour.svg';
 import sugarIcon from './assets/sugar-cubes.svg';
+import upiButtonImage from './assets/upi-button.png';
 
 const PrivateShieldIcon = ({ size = 42 }) => (
   <Box
@@ -127,6 +128,7 @@ const OfficialDataIcon = ({ size = 38 }) => (
     />
   </Box>
 );
+
 
 // Same-origin by default in production; override locally with VITE_API_URL if needed.
 const API_URL = import.meta.env.VITE_API_URL || '/count';
@@ -3319,72 +3321,37 @@ export default function App() {
             onClick={handleSupportPayment}
             sx={{
               order: 2,
-              minHeight: { xs: 64, sm: 68 },
-              borderRadius: 3,
-              p: { xs: 1.2, sm: 1.4 },
-              justifyContent: "space-between",
-              background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 52%, #1742c6 100%)",
-              boxShadow: "0 16px 32px rgba(37, 99, 235, 0.34)",
-              fontWeight: 950,
-              textTransform: "none",
-              overflow: "hidden",
-              position: "relative",
-              "&::before": {
-                content: "\"\"",
-                position: "absolute",
-                inset: 0,
-                background: "radial-gradient(circle at 18% 10%, rgba(255,255,255,0.24), transparent 34%)",
+              width: '100%',
+              p: 0,
+              borderRadius: { xs: 3.2, sm: 4 },
+              background: 'transparent',
+              boxShadow: '0 16px 34px rgba(37, 99, 235, 0.34)',
+              textTransform: 'none',
+              overflow: 'hidden',
+              display: 'block',
+              lineHeight: 0,
+              '&:hover': {
+                background: 'transparent',
+                boxShadow: '0 20px 42px rgba(37, 99, 235, 0.44)',
+                transform: 'translateY(-1px)',
               },
-              "&:hover": {
-                background: "linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)",
-                boxShadow: "0 18px 36px rgba(37, 99, 235, 0.4)",
+              '&:active': {
+                transform: 'translateY(0)',
               },
             }}
           >
-            <Stack direction="row" spacing={1.2} alignItems="center" sx={{ position: "relative", zIndex: 1 }}>
-              <Box
-                sx={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 2,
-                  bgcolor: "rgba(255,255,255,0.16)",
-                  border: "1px solid rgba(255,255,255,0.26)",
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 13,
-                  fontWeight: 950,
-                  letterSpacing: 0.2,
-                }}
-              >
-                UPI
-              </Box>
-              <Box sx={{ textAlign: "left" }}>
-                <Typography component="span" sx={{ display: "block", color: "#ffffff", fontSize: { xs: 16.5, sm: 18 }, fontWeight: 950, lineHeight: 1.15 }}>
-            GPay വഴി സഹായിക്കുക
-                </Typography>
-                <Typography component="span" sx={{ display: "block", color: "rgba(255,255,255,0.82)", fontSize: { xs: 11.5, sm: 12.5 }, fontWeight: 800, mt: 0.4, lineHeight: 1.2 }}>
-                  Open any UPI payment app
-                </Typography>
-              </Box>
-            </Stack>
             <Box
+              component="img"
+              src={upiButtonImage}
+              alt="UPI വഴി സഹായിക്കുക"
               sx={{
-                position: "relative",
-                zIndex: 1,
-                width: 34,
-                height: 34,
-                borderRadius: "50%",
-                bgcolor: "#ffffff",
-                color: "#1d4ed8",
-                display: "grid",
-                placeItems: "center",
-                fontSize: 24,
-                fontWeight: 950,
-                flexShrink: 0,
+                display: 'block',
+                width: '100%',
+                height: 'auto',
+                maxHeight: { xs: 78, sm: 92 },
+                objectFit: 'contain',
               }}
-            >
-              �
-            </Box>
+            />
           </Button>
 
 
