@@ -598,6 +598,7 @@ export default function App() {
   const [roQuantityError, setRoQuantityError] = useState('');
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [supportModalOpen, setSupportModalOpen] = useState(true);
+  const [supportUpiCopied, setSupportUpiCopied] = useState(false);
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
   const [commissionResult, setCommissionResult] = useState(null);
@@ -3254,10 +3255,36 @@ export default function App() {
     window.location.href = supportUpiLink;
   };
 
+  const handleCopySupportUpiId = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(supportUpiId);
+      } else {
+        const input = document.createElement('input');
+        input.value = supportUpiId;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      setSupportUpiCopied(true);
+      window.setTimeout(() => setSupportUpiCopied(false), 1800);
+    } catch {
+      setSupportUpiCopied(false);
+    }
+  };
+
   const renderSupportModal = () => (
     <Dialog
       open={supportModalOpen}
-      onClose={() => setSupportModalOpen(false)}
+      onClose={(_, reason) => {
+        if (reason === 'backdropClick' || reason === 'escapeKeyDown') return;
+        setSupportModalOpen(false);
+      }}
+      disableEscapeKeyDown
       fullWidth
       maxWidth="sm"
       scroll="paper"
@@ -3287,13 +3314,13 @@ export default function App() {
           zIndex: 2,
           width: { xs: 34, sm: 38 },
           height: { xs: 34, sm: 38 },
-          bgcolor: '#f8fafc',
-          color: '#475569',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 6px 14px rgba(15, 23, 42, 0.08)',
+          bgcolor: '#fee2e2',
+          color: '#dc2626',
+          border: '1px solid #fecaca',
+          boxShadow: '0 6px 14px rgba(220, 38, 38, 0.16)',
           '&:hover': {
-            bgcolor: '#eef2ff',
-            color: '#1d4ed8',
+            bgcolor: '#dc2626',
+            color: '#ffffff',
           },
         }}
       >
@@ -3339,6 +3366,67 @@ export default function App() {
           </Box>
 
 
+          <Box
+            sx={{
+              order: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              p: 1,
+              borderRadius: 2.5,
+              bgcolor: '#f8fafc',
+              border: '1px solid #dbeafe',
+            }}
+          >
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography sx={{ fontSize: 11, fontWeight: 900, color: '#64748b', mb: 0.4 }}>
+                UPI ID
+              </Typography>
+              <Typography
+                sx={{
+                  px: 1.2,
+                  py: 0.9,
+                  borderRadius: 1.5,
+                  bgcolor: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  color: '#0f172a',
+                  fontSize: { xs: 14.5, sm: 15.5 },
+                  fontWeight: 950,
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {supportUpiId}
+              </Typography>
+            </Box>
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={handleCopySupportUpiId}
+              sx={{
+                flexShrink: 0,
+                minWidth: { xs: 78, sm: 92 },
+                height: 42,
+                borderRadius: 2,
+                borderColor: supportUpiCopied ? '#22c55e' : '#2563eb',
+                color: supportUpiCopied ? '#15803d' : '#2563eb',
+                bgcolor: supportUpiCopied ? '#dcfce7' : '#ffffff',
+                fontSize: { xs: 12.5, sm: 13.5 },
+                fontWeight: 950,
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: supportUpiCopied ? '#22c55e' : '#1d4ed8',
+                  bgcolor: supportUpiCopied ? '#dcfce7' : '#eff6ff',
+                },
+              }}
+            >
+              {supportUpiCopied ? 'Copied' : 'Copy'}
+            </Button>
+          </Box>
+
+
           <Button
             type="button"
             variant="text"
@@ -3346,7 +3434,7 @@ export default function App() {
             disableRipple
             onClick={handleSupportPayment}
             sx={{
-              order: 2,
+              order: 3,
               width: '100%',
               minWidth: 0,
               p: 0,
