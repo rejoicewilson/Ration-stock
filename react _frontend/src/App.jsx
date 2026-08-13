@@ -3273,12 +3273,36 @@ export default function App() {
           borderRadius: 4,
           overflow: 'hidden',
           boxShadow: '0 24px 70px rgba(15, 23, 42, 0.28)',
+          position: 'relative',
         },
       }}
     >
+      <IconButton
+        aria-label="Close support popup"
+        onClick={() => setSupportModalOpen(false)}
+        sx={{
+          position: 'absolute',
+          top: { xs: 8, sm: 12 },
+          right: { xs: 8, sm: 12 },
+          zIndex: 2,
+          width: { xs: 34, sm: 38 },
+          height: { xs: 34, sm: 38 },
+          bgcolor: '#f8fafc',
+          color: '#475569',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 6px 14px rgba(15, 23, 42, 0.08)',
+          '&:hover': {
+            bgcolor: '#eef2ff',
+            color: '#1d4ed8',
+          },
+        }}
+      >
+        ×
+      </IconButton>
       <DialogTitle
         sx={{
-          px: { xs: 2, sm: 3.5 },
+          pl: { xs: 2, sm: 3.5 },
+          pr: { xs: 6.5, sm: 7 },
           pt: { xs: 2, sm: 3 },
           pb: { xs: 0.6, sm: 1 },
           color: '#4c1d95',
