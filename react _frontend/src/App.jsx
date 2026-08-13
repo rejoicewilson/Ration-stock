@@ -3299,7 +3299,7 @@ export default function App() {
         <Stack spacing={{ xs: 1.3, sm: 2.1 }}>
           <Box
             sx={{
-              order: 4,
+              order: 1,
               p: { xs: 2, sm: 2.5 },
               borderRadius: 3,
               background: 'linear-gradient(135deg, #faf5ff 0%, #eef2ff 100%)',
@@ -3337,10 +3337,10 @@ export default function App() {
               '&:hover': {
                 background: 'transparent',
                 boxShadow: 'none',
-                transform: 'translateY(-1px)',
+                transform: 'translateY(-1px) scale(1.01)',
               },
               '&:active': {
-                transform: 'translateY(0)',
+                transform: 'translateY(1px) scale(0.985)',
               },
               '& .MuiTouchRipple-root': {
                 display: 'none',
@@ -3357,6 +3357,18 @@ export default function App() {
                 height: 'auto',
                 maxHeight: { xs: 78, sm: 92 },
                 objectFit: 'contain',
+                animation: 'supportUpiPulse 1.9s ease-in-out infinite',
+                transformOrigin: 'center',
+                '@keyframes supportUpiPulse': {
+                  '0%, 100%': {
+                    transform: 'scale(1)',
+                    filter: 'drop-shadow(0 8px 14px rgba(37, 99, 235, 0.24))',
+                  },
+                  '50%': {
+                    transform: 'scale(1.025)',
+                    filter: 'drop-shadow(0 12px 20px rgba(37, 99, 235, 0.34))',
+                  },
+                },
               }}
             />
           </Button>
