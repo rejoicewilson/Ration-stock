@@ -595,6 +595,8 @@ export default function App() {
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
+  const [supportModalOpen, setSupportModalOpen] = useState(true);
+  const [upiCopied, setUpiCopied] = useState(false);
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
   const [commissionResult, setCommissionResult] = useState(null);
@@ -3244,15 +3246,210 @@ export default function App() {
     payslipWindow.document.close();
   };
 
-  return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        bgcolor: '#f4f6fb',
-        background: 'linear-gradient(180deg, #e8f0ff 0%, #f5f7fb 40%, #f6f8fc 100%)',
-        pb: 4,
+  const supportUpiId = '9447966498@okbizaxis';
+  const supportUpiLink = `upi://pay?pa=${encodeURIComponent(supportUpiId)}&pn=${encodeURIComponent('Ration Stock App')}&cu=INR`;
+
+  const handleCopyUpiId = async () => {
+    try {
+      await navigator.clipboard.writeText(supportUpiId);
+      setUpiCopied(true);
+      window.setTimeout(() => setUpiCopied(false), 2200);
+    } catch {
+      setUpiCopied(false);
+    }
+  };
+
+  const handleSupportPayment = () => {
+    window.location.href = supportUpiLink;
+  };
+
+  const renderSupportModal = () => (
+    <Dialog
+      open={supportModalOpen}
+      onClose={() => setSupportModalOpen(false)}
+      fullWidth
+      maxWidth="sm"
+      scroll="paper"
+      BackdropProps={{
+        sx: {
+          backgroundColor: 'rgba(15, 23, 42, 0.46)',
+          backdropFilter: 'blur(7px)',
+        },
+      }}
+      PaperProps={{
+        sx: {
+          m: { xs: 2, sm: 3 },
+          borderRadius: 4,
+          overflow: 'hidden',
+          boxShadow: '0 24px 70px rgba(15, 23, 42, 0.28)',
+        },
       }}
     >
+      <DialogTitle
+        sx={{
+          px: { xs: 2.5, sm: 3.5 },
+          pt: { xs: 2.5, sm: 3 },
+          pb: 1,
+          color: '#4c1d95',
+          fontSize: { xs: 22, sm: 26 },
+          fontWeight: 950,
+          lineHeight: 1.2,
+        }}
+      >
+        റേഷൻ സ്റ്റോക്ക് ആപ്പിന് ചെറിയൊരു സഹായം
+      </DialogTitle>
+      <DialogContent
+        sx={{
+          px: { xs: 2.5, sm: 3.5 },
+          pb: { xs: 2.5, sm: 3.5 },
+          maxHeight: { xs: 'calc(100dvh - 96px)', sm: '82vh' },
+        }}
+      >
+        <Stack spacing={2.1}>
+          <Box
+            sx={{
+              p: { xs: 2, sm: 2.5 },
+              borderRadius: 3,
+              background: 'linear-gradient(135deg, #faf5ff 0%, #eef2ff 100%)',
+              border: '1px solid #e9d5ff',
+            }}
+          >
+            <Typography sx={{ fontSize: { xs: 17, sm: 18 }, fontWeight: 900, mb: 1.2, color: '#111827' }}>
+              പ്രിയ റേഷൻ വ്യാപാരി സുഹൃത്തുക്കളേ,
+            </Typography>
+            <Typography sx={{ fontSize: { xs: 15.5, sm: 16.5 }, lineHeight: 1.75, color: '#334155', mb: 1.4 }}>
+              നമ്മുടെ <Box component="span" sx={{ fontWeight: 900, color: '#4c1d95' }}>റേഷൻ സ്റ്റോക്ക് ആപ്പ്</Box> റേഷൻ കടയുടെ ദൈനംദിന പ്രവർത്തനങ്ങൾ കൂടുതൽ എളുപ്പത്തിലും വേഗത്തിലും കൃത്യമായും നടത്താൻ സഹായിക്കുന്നു എന്നറിഞ്ഞതിൽ ഏറെ സന്തോഷം.
+            </Typography>
+            <Typography sx={{ fontSize: { xs: 15.5, sm: 16.5 }, lineHeight: 1.75, color: '#334155', mb: 1.4 }}>
+              ഒരു ചെറിയ അപേക്ഷയാണ് നിങ്ങളോട് പങ്കുവയ്ക്കാനുള്ളത്. ആപ്പിന്റെ പ്രവർത്തനവും പരിപാലനവും തുടർന്നുകൊണ്ടുപോകുന്നതിനായി ഓരോ മാസവും ചിലവ് വരുന്നുണ്ട്.
+            </Typography>
+            <Typography sx={{ fontSize: { xs: 15.8, sm: 17 }, lineHeight: 1.75, color: '#1e293b', fontWeight: 800 }}>
+              റേഷൻ സ്റ്റോക്ക് ആപ്പ് നിങ്ങൾക്ക് ഉപകാരപ്രദമായിട്ടുണ്ടെങ്കിൽ, ഈ മാസവും ആപ്പിന്റെ പ്രവർത്തനം തടസ്സമില്ലാതെ തുടരാൻ നിങ്ങളാൽ കഴിയുന്ന ചെറിയൊരു സഹായം നൽകണമെന്ന് സ്നേഹപൂർവ്വം അഭ്യർത്ഥിക്കുന്നു.
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              p: { xs: 1.5, sm: 2 },
+              borderRadius: 3,
+              border: '1px solid #ddd6fe',
+              bgcolor: '#ffffff',
+            }}
+          >
+            <Typography sx={{ fontSize: 12, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', mb: 1 }}>
+              UPI ID
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2}>
+              <Box
+                component="input"
+                value={supportUpiId}
+                readOnly
+                aria-label="UPI ID"
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  height: 48,
+                  px: 1.6,
+                  borderRadius: 2,
+                  border: '1px solid #c7d2fe',
+                  bgcolor: '#f8fafc',
+                  color: '#0f172a',
+                  fontSize: { xs: 16, sm: 17 },
+                  fontWeight: 900,
+                  outline: 'none',
+                }}
+              />
+              <Button
+                type="button"
+                variant="outlined"
+                onClick={handleCopyUpiId}
+                sx={{
+                  height: 48,
+                  px: 2,
+                  borderRadius: 2,
+                  borderColor: '#7c3aed',
+                  color: '#6d28d9',
+                  fontWeight: 900,
+                  textTransform: 'none',
+                  gap: 0.8,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <Box
+                  component="svg"
+                  viewBox="0 0 24 24"
+                  sx={{ width: 18, height: 18 }}
+                  aria-hidden="true"
+                >
+                  <path
+                    fill="currentColor"
+                    d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1Zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2Zm0 16H8V7h11v14Z"
+                  />
+                </Box>
+                Copy
+              </Button>
+            </Stack>
+            {upiCopied && (
+              <Typography sx={{ mt: 1, color: '#15803d', fontSize: 13, fontWeight: 900 }}>
+                UPI ID Copied ✓
+              </Typography>
+            )}
+          </Box>
+
+          <Button
+            type="button"
+            variant="contained"
+            onClick={handleSupportPayment}
+            sx={{
+              minHeight: 54,
+              borderRadius: 999,
+              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+              boxShadow: '0 14px 28px rgba(37, 99, 235, 0.28)',
+              fontSize: { xs: 16, sm: 17 },
+              fontWeight: 950,
+              textTransform: 'none',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)',
+              },
+            }}
+          >
+            GPay വഴി സഹായിക്കുക
+          </Button>
+
+          <Typography sx={{ color: '#64748b', fontSize: 12.5, lineHeight: 1.6, textAlign: 'center' }}>
+            പേയ്മെന്റ് ആപ്പിൽ തുക നിങ്ങൾ തന്നെ നൽകി സ്ഥിരീകരിക്കണം. ഈ ആപ്പ് സ്വയം ഒരു പേയ്മെന്റും പൂർത്തിയാക്കുകയില്ല.
+          </Typography>
+
+          <Box
+            sx={{
+              p: 1.7,
+              borderRadius: 3,
+              bgcolor: '#faf5ff',
+              border: '1px solid #ede9fe',
+            }}
+          >
+            <Typography sx={{ color: '#4c1d95', fontSize: { xs: 14.5, sm: 15.5 }, fontWeight: 900, lineHeight: 1.6, textAlign: 'center' }}>
+              നിങ്ങളുടെ ഓരോ ചെറിയ സഹായവും ഈ ആപ്പ് തുടർന്നും മികച്ച രീതിയിൽ പ്രവർത്തിപ്പിക്കാൻ വലിയ പിന്തുണയാണ്. ❤️
+            </Typography>
+          </Box>
+
+        </Stack>
+      </DialogContent>
+    </Dialog>
+  );
+
+  return (
+    <>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          bgcolor: '#f4f6fb',
+          background: 'linear-gradient(180deg, #e8f0ff 0%, #f5f7fb 40%, #f6f8fc 100%)',
+          pb: 4,
+          filter: supportModalOpen ? 'blur(2px)' : 'none',
+          transition: 'filter 180ms ease',
+        }}
+      >
       <Analytics />
       <SpeedInsights />
       {renderPickerModal()}
@@ -4870,7 +5067,9 @@ export default function App() {
         </Alert>
         )}
       </Container>
-    </Box>
+      </Box>
+      {renderSupportModal()}
+    </>
   );
 }
 
