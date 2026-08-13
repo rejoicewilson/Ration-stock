@@ -3317,26 +3317,33 @@ export default function App() {
 
           <Button
             type="button"
-            variant="contained"
+            variant="text"
+            disableElevation
+            disableRipple
             onClick={handleSupportPayment}
             sx={{
               order: 2,
               width: '100%',
+              minWidth: 0,
               p: 0,
-              borderRadius: { xs: 3.2, sm: 4 },
+              m: 0,
+              borderRadius: 0,
               background: 'transparent',
-              boxShadow: '0 16px 34px rgba(37, 99, 235, 0.34)',
+              boxShadow: 'none',
               textTransform: 'none',
-              overflow: 'hidden',
+              overflow: 'visible',
               display: 'block',
               lineHeight: 0,
               '&:hover': {
                 background: 'transparent',
-                boxShadow: '0 20px 42px rgba(37, 99, 235, 0.44)',
+                boxShadow: 'none',
                 transform: 'translateY(-1px)',
               },
               '&:active': {
                 transform: 'translateY(0)',
+              },
+              '& .MuiTouchRipple-root': {
+                display: 'none',
               },
             }}
           >
