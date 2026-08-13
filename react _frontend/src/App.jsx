@@ -3319,19 +3319,72 @@ export default function App() {
             onClick={handleSupportPayment}
             sx={{
               order: 2,
-              minHeight: 54,
-              borderRadius: 999,
-              background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-              boxShadow: '0 14px 28px rgba(37, 99, 235, 0.28)',
-              fontSize: { xs: 16, sm: 17 },
+              minHeight: { xs: 64, sm: 68 },
+              borderRadius: 3,
+              p: { xs: 1.2, sm: 1.4 },
+              justifyContent: "space-between",
+              background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 52%, #1742c6 100%)",
+              boxShadow: "0 16px 32px rgba(37, 99, 235, 0.34)",
               fontWeight: 950,
-              textTransform: 'none',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)',
+              textTransform: "none",
+              overflow: "hidden",
+              position: "relative",
+              "&::before": {
+                content: "\"\"",
+                position: "absolute",
+                inset: 0,
+                background: "radial-gradient(circle at 18% 10%, rgba(255,255,255,0.24), transparent 34%)",
+              },
+              "&:hover": {
+                background: "linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)",
+                boxShadow: "0 18px 36px rgba(37, 99, 235, 0.4)",
               },
             }}
           >
+            <Stack direction="row" spacing={1.2} alignItems="center" sx={{ position: "relative", zIndex: 1 }}>
+              <Box
+                sx={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 2,
+                  bgcolor: "rgba(255,255,255,0.16)",
+                  border: "1px solid rgba(255,255,255,0.26)",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 13,
+                  fontWeight: 950,
+                  letterSpacing: 0.2,
+                }}
+              >
+                UPI
+              </Box>
+              <Box sx={{ textAlign: "left" }}>
+                <Typography component="span" sx={{ display: "block", color: "#ffffff", fontSize: { xs: 16.5, sm: 18 }, fontWeight: 950, lineHeight: 1.15 }}>
             GPay വഴി സഹായിക്കുക
+                </Typography>
+                <Typography component="span" sx={{ display: "block", color: "rgba(255,255,255,0.82)", fontSize: { xs: 11.5, sm: 12.5 }, fontWeight: 800, mt: 0.4, lineHeight: 1.2 }}>
+                  Open any UPI payment app
+                </Typography>
+              </Box>
+            </Stack>
+            <Box
+              sx={{
+                position: "relative",
+                zIndex: 1,
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                bgcolor: "#ffffff",
+                color: "#1d4ed8",
+                display: "grid",
+                placeItems: "center",
+                fontSize: 24,
+                fontWeight: 950,
+                flexShrink: 0,
+              }}
+            >
+              �
+            </Box>
           </Button>
 
 
