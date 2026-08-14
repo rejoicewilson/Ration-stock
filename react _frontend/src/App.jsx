@@ -597,7 +597,7 @@ export default function App() {
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
-  const [supportModalOpen, setSupportModalOpen] = useState(true);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
   const [supportUpiCopied, setSupportUpiCopied] = useState(false);
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
