@@ -597,8 +597,9 @@ export default function App() {
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
-  const [supportModalOpen, setSupportModalOpen] = useState(false);
+  const [supportModalOpen, setSupportModalOpen] = useState(true);
   const [supportUpiCopied, setSupportUpiCopied] = useState(false);
+  const [supportGpayCopied, setSupportGpayCopied] = useState(false);
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
   const [commissionResult, setCommissionResult] = useState(null);
@@ -3249,6 +3250,7 @@ export default function App() {
   };
 
   const supportUpiId = '9447966498@okbizaxis';
+  const supportGpayNumber = '9447645196';
   const supportUpiLink = `upi://pay?pa=${encodeURIComponent(supportUpiId)}&pn=${encodeURIComponent('Ration Stock App')}&cu=INR`;
 
   const handleSupportPayment = () => {
@@ -3274,6 +3276,28 @@ export default function App() {
       window.setTimeout(() => setSupportUpiCopied(false), 1800);
     } catch {
       setSupportUpiCopied(false);
+    }
+  };
+
+  const handleCopySupportGpayNumber = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(supportGpayNumber);
+      } else {
+        const input = document.createElement('input');
+        input.value = supportGpayNumber;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      setSupportGpayCopied(true);
+      window.setTimeout(() => setSupportGpayCopied(false), 1800);
+    } catch {
+      setSupportGpayCopied(false);
     }
   };
 
@@ -3427,6 +3451,67 @@ export default function App() {
           </Box>
 
 
+          <Box
+            sx={{
+              order: 3,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              p: 1,
+              borderRadius: 2.5,
+              bgcolor: '#f8fafc',
+              border: '1px solid #dbeafe',
+            }}
+          >
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography sx={{ fontSize: 11, fontWeight: 900, color: '#64748b', mb: 0.4 }}>
+                GPay Number
+              </Typography>
+              <Typography
+                sx={{
+                  px: 1.2,
+                  py: 0.9,
+                  borderRadius: 1.5,
+                  bgcolor: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  color: '#0f172a',
+                  fontSize: { xs: 14.5, sm: 15.5 },
+                  fontWeight: 950,
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {supportGpayNumber}
+              </Typography>
+            </Box>
+            <Button
+              type="button"
+              variant="outlined"
+              onClick={handleCopySupportGpayNumber}
+              sx={{
+                flexShrink: 0,
+                minWidth: { xs: 78, sm: 92 },
+                height: 42,
+                borderRadius: 2,
+                borderColor: supportGpayCopied ? '#22c55e' : '#2563eb',
+                color: supportGpayCopied ? '#15803d' : '#2563eb',
+                bgcolor: supportGpayCopied ? '#dcfce7' : '#ffffff',
+                fontSize: { xs: 12.5, sm: 13.5 },
+                fontWeight: 950,
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: supportGpayCopied ? '#22c55e' : '#1d4ed8',
+                  bgcolor: supportGpayCopied ? '#dcfce7' : '#eff6ff',
+                },
+              }}
+            >
+              {supportGpayCopied ? 'Copied' : 'Copy'}
+            </Button>
+          </Box>
+
+
           <Button
             type="button"
             variant="text"
@@ -3434,7 +3519,7 @@ export default function App() {
             disableRipple
             onClick={handleSupportPayment}
             sx={{
-              order: 3,
+              order: 4,
               width: '100%',
               minWidth: 0,
               p: 0,
