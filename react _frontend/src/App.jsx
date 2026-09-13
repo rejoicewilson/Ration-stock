@@ -624,6 +624,14 @@ export default function App() {
     { title: 'RO Orders', category: 'സ്വീകരിച്ച സാധനകളുടെ റിപ്പോർട്ട്', view: 'settings', mark: 'RO', color: '#9f1239', background: '#fff1f2' },
     { title: 'Commission Calculator', category: 'റേഷൻ കമ്മിഷൻ നോക്കാൻ', view: 'commission', mark: 'CC', color: '#7c3aed', background: '#f5f3ff' },
     { title: 'Ration Card Details', category: 'റേഷൻ വിഹിതം നോക്കാൻ', view: 'rationCard', mark: 'RC', color: '#0f766e', background: '#ecfeff' },
+    {
+      title: 'E -Treasury',
+      category: 'അരിയുടെ പൈസ അടക്കാൻ.',
+      view: 'eTreasury',
+      mark: 'ET',
+      color: '#ea580c',
+      background: '#fff7ed',
+    },
   ];
   const activeViewTitle = featurePages.find((page) => page.view === activeView)?.title || 'Ration Stock';
   const gaPagePaths = {
@@ -634,6 +642,7 @@ export default function App() {
     settings: '/ro-orders',
     commission: '/commission',
     rationCard: '/ration-card-details',
+    eTreasury: '/e-treasury',
   };
 
   useEffect(() => {
@@ -3691,7 +3700,13 @@ export default function App() {
                     component="button"
                     type="button"
                     elevation={0}
-                    onClick={() => setActiveView(page.view)}
+                    onClick={() => {
+                      if (page.externalUrl) {
+                        window.location.href = page.externalUrl;
+                        return;
+                      }
+                      setActiveView(page.view);
+                    }}
                     sx={{
                       width: '100%',
                       minHeight: 96,
@@ -4040,6 +4055,95 @@ export default function App() {
           </>
         ) : activeView === 'stockBoard' ? (
           renderStockBoard()
+        ) : activeView === 'eTreasury' ? (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              background: '#ffffff',
+              boxShadow: '0 20px 40px rgba(104, 141, 255, 0.12)',
+              border: '1px solid #e8edf7',
+              mb: 3,
+            }}
+          >
+            <Stack spacing={2}>
+              <Box
+                sx={{
+                  width: 54,
+                  height: 54,
+                  borderRadius: 2,
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: '#ea580c',
+                  background: '#fff7ed',
+                  fontSize: 16,
+                  fontWeight: 1000,
+                }}
+              >
+                ET
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 900 }}>
+                E -Treasury
+              </Typography>
+              <Typography sx={{ color: '#475569', fontSize: 16, fontWeight: 800, lineHeight: 1.6 }}>
+                അരിയുടെ പൈസ അടക്കാൻ.
+              </Typography>
+              <Box
+                sx={{
+                  border: '1px solid #fed7aa',
+                  bgcolor: '#fff7ed',
+                  borderRadius: 2.5,
+                  overflow: 'hidden',
+                }}
+              >
+                {[
+                  ['Department', 'Civil Supplies and Consumer Affairs'],
+                  ['Remittance Heads', '2408-01-102-95-00-33-00-N-V 33-00-N-V Cost of Food Grains'],
+                ].map(([label, value]) => (
+                  <Box
+                    key={label}
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: '150px 1fr' },
+                      gap: { xs: 0.4, sm: 1.5 },
+                      px: 1.5,
+                      py: 1.3,
+                      borderBottom: label === 'Remittance Heads' ? 'none' : '1px solid #fed7aa',
+                    }}
+                  >
+                    <Typography sx={{ color: '#9a3412', fontSize: 12, fontWeight: 900, textTransform: 'uppercase' }}>
+                      {label}
+                    </Typography>
+                    <Typography sx={{ color: '#111827', fontSize: 14.5, fontWeight: 900, wordBreak: 'break-word' }}>
+                      {value}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                e-Treasury തുറന്ന ശേഷം മുകളിൽ കാണിച്ച Department, Remittance Head വിവരങ്ങൾ തിരഞ്ഞെടുക്കുക.
+              </Alert>
+              <Button
+                type="button"
+                variant="contained"
+                onClick={() => window.open('https://etreasury.kerala.gov.in/index.php/departmental_receipts', '_blank', 'noopener,noreferrer')}
+                sx={{
+                  py: 1.35,
+                  borderRadius: 2.5,
+                  bgcolor: '#ea580c',
+                  fontWeight: 900,
+                  textTransform: 'none',
+                  boxShadow: '0 12px 24px rgba(234, 88, 12, 0.25)',
+                  '&:hover': {
+                    bgcolor: '#c2410c',
+                  },
+                }}
+              >
+                Open e-Treasury
+              </Button>
+            </Stack>
+          </Paper>
         ) : activeView === 'rationCard' ? (
           <>
             <Paper
