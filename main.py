@@ -1466,6 +1466,7 @@ def get_raw_rice_cb_sum(request: StockRequest):
         sugar_cb_sum = 0
         atta_cb_sum = 0
         koil_cb_sum = 0
+        omss_rice_cb_sum = 0
         for row in rows:
             cols = row.find_all('td')
             if len(cols) == 11:
@@ -1490,6 +1491,8 @@ def get_raw_rice_cb_sum(request: StockRequest):
                     atta_cb_sum += cb_qty
                 elif group == "koil":
                     koil_cb_sum += cb_qty
+                if commodity_has_token(commodity, "OMSS"):
+                    omss_rice_cb_sum += cb_qty
         raw_rice_bag_weight = request.raw_rice_bag_weight or request.rice_bag_weight
         boiled_rice_bag_weight = request.boiled_rice_bag_weight or request.rice_bag_weight
         matta_cmr_bag_weight = request.matta_cmr_bag_weight or request.rice_bag_weight
@@ -1502,6 +1505,10 @@ def get_raw_rice_cb_sum(request: StockRequest):
         # BOILED RICE bags
         br_bag_count = int(br_cb_sum // boiled_rice_bag_weight)
         br_remaining_kg = br_cb_sum % boiled_rice_bag_weight
+        # OMSS rice is shown as a display-only breakdown inside Boiled Rice.
+        # It remains included in BOILED_RICE totals above.
+        omss_rice_bag_count = int(omss_rice_cb_sum // boiled_rice_bag_weight)
+        omss_rice_remaining_kg = omss_rice_cb_sum % boiled_rice_bag_weight
         # Matta/CMR bags (combined)
         matta_cmr_bag_count = int(matta_cmr_cb_sum // matta_cmr_bag_weight)
         matta_cmr_remaining_kg = matta_cmr_cb_sum % matta_cmr_bag_weight
@@ -1530,6 +1537,9 @@ def get_raw_rice_cb_sum(request: StockRequest):
             "BOILED_RICE_cb_sum": f"{br_cb_sum} kg",
             "BOILED_RICE_bag_count": br_bag_count,
             "BOILED_RICE_remaining_kg": f"{br_remaining_kg} kg",
+            "BOILED_RICE_OMSS_cb_sum": f"{omss_rice_cb_sum} kg",
+            "BOILED_RICE_OMSS_bag_count": omss_rice_bag_count,
+            "BOILED_RICE_OMSS_remaining_kg": f"{omss_rice_remaining_kg} kg",
             "MATTA_CMR_cb_sum": f"{matta_cmr_cb_sum} kg",
             "MATTA_CMR_bag_count": matta_cmr_bag_count,
             "MATTA_CMR_remaining_kg": f"{matta_cmr_remaining_kg} kg",

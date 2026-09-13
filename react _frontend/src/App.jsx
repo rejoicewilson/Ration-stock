@@ -3942,6 +3942,14 @@ export default function App() {
                   getStat(section.key, remainingKey, section.key === 'KOIL' ? '0 ltr' : '0 kg'),
                   section.key === 'KOIL' ? 'ltr' : 'kg'
                 );
+                const omssCbValue = formatStatValue(getStat('BOILED_RICE_OMSS', cbKey, '0 kg'), 'kg');
+                const omssBagsValue = formatStatValue(getStat('BOILED_RICE_OMSS', bagKey, '0'), '');
+                const omssRemainingValue = formatStatValue(
+                  getStat('BOILED_RICE_OMSS', remainingKey, '0 kg'),
+                  'kg'
+                );
+                const shouldShowOmssBreakdown =
+                  section.key === 'BOILED_RICE' && parseFloat(String(omssCbValue).replace(/,/g, '')) > 0;
 
                 return (
                   <Paper
@@ -3983,6 +3991,32 @@ export default function App() {
                       {renderStat('BAGS', bagsValue)}
                       {renderStat('REMAINING', remainingValue)}
                     </Stack>
+                    {shouldShowOmssBreakdown && (
+                      <Box
+                        sx={{
+                          mt: 1.6,
+                          pt: 1.5,
+                          borderTop: '1px solid #edf2f7',
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            mb: 1,
+                            color: '#1d4ed8',
+                            fontSize: 12,
+                            fontWeight: 950,
+                            letterSpacing: 0.4,
+                          }}
+                        >
+                          OMSS RICE
+                        </Typography>
+                        <Stack direction="row" spacing={1.5}>
+                          {renderStat('CB SUM', omssCbValue)}
+                          {renderStat('BAGS', omssBagsValue)}
+                          {renderStat('REMAINING', omssRemainingValue)}
+                        </Stack>
+                      </Box>
+                    )}
                   </Paper>
                 );
               })}
