@@ -674,7 +674,7 @@ export default function App() {
     { key: 'KOIL', label: 'KOIL', icon: '🛢️', color: '#8a6bff' },
   ];
   const featurePages = [
-    { title: 'Month Comparison', category: 'മാസ വിൽപ്പന താരതമ്യം ചെയ്യാൻ', view: 'monthComparison', mark: 'MC', color: '#0369a1', background: '#f0f9ff' },
+    { title: 'Monthly Sales Comparison', category: 'മാസ വിൽപ്പന താരതമ്യം ചെയ്യാൻ', view: 'monthComparison', mark: 'MC', color: '#0369a1', background: '#f0f9ff' },
     { title: 'Stock Summary', category: 'കടയിലെ സ്റ്റോക്ക് നോക്കാൻ', view: 'stock', mark: 'ST', color: '#2563eb', background: '#eff6ff' },
     { title: 'Ration Stock Board', category: 'സ്റ്റോക്ക് ബോർഡ് എഴുതാൻ', view: 'stockBoard', mark: 'RB', color: '#b42318', background: '#fff4e5' },
     { title: 'Transactions', category: 'ദിവസ ചിലവ് / വരവ് അറിയാൻ', view: 'transactions', mark: 'TX', color: '#087f5b', background: '#ecfdf3' },
@@ -3498,7 +3498,7 @@ export default function App() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 900, color: '#0f172a' }}>
-              Month Comparison
+              Monthly Sales Comparison
             </Typography>
             <Typography sx={{ mt: 0.25, color: '#475569', fontSize: 13, fontWeight: 800 }}>
               FPS {monthComparisonForm.fps_id}
