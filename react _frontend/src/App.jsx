@@ -167,9 +167,7 @@ const getMonthComparisonPeriods = (yearValue, monthValue) => {
   const previousMonthDays = new Date(previousYear, previousMonth, 0).getDate();
   const isCurrentMonth = year === currentYear && month === currentMonth;
   const selectedEndDay = isCurrentMonth ? today.getDate() : selectedMonthDays;
-  const previousEndDay = isCurrentMonth
-    ? Math.min(selectedEndDay, previousMonthDays)
-    : previousMonthDays;
+  const previousEndDay = previousMonthDays;
 
   return {
     current: {
@@ -3439,7 +3437,7 @@ export default function App() {
               ))}
             </Grid>
             <Alert severity="info" sx={{ textAlign: 'left' }}>
-              For the current month, the app compares the same date range from the previous month. Completed months are compared in full.
+              The selected current month is shown up to today. The previous month is always shown for the complete month.
             </Alert>
             <Button
               type="submit"
