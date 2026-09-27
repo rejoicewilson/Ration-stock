@@ -3346,8 +3346,6 @@ export default function App() {
     const salesRange = (summary) => Number(summary.transaction_count) > 0
       ? `${shortEposDate(summary.from_date)}–${shortEposDate(summary.to_date)}`
       : 'No sales';
-    const currentLabel = periods ? `${monthName(periods.current.month)} ${periods.current.year}` : 'Selected month';
-    const previousLabel = periods ? `${monthName(periods.previous.month)} ${periods.previous.year}` : 'Previous month';
     const currentShortLabel = periods ? `${String(monthName(periods.current.month)).slice(0, 3)} ${periods.current.year}` : 'Current';
     const previousShortLabel = periods ? `${String(monthName(periods.previous.month)).slice(0, 3)} ${periods.previous.year}` : 'Previous';
     const currentCommission = calculateCommission(currentSummary).commission;
@@ -3492,162 +3490,101 @@ export default function App() {
           <Paper
             elevation={0}
             sx={{
+              p: { xs: 1.5, sm: 2.5 },
               borderRadius: 3,
-              border: '1px solid #dbeafe',
+              border: '1px solid #e8edf7',
               background: '#ffffff',
-              overflow: 'hidden',
-              boxShadow: '0 18px 42px rgba(15, 76, 129, 0.1)',
+              boxShadow: '0 12px 28px rgba(26, 58, 109, 0.08)',
             }}
           >
-            <Box
-              sx={{
-                p: { xs: 1.75, sm: 2.5 },
-                background: 'linear-gradient(135deg, #075985 0%, #0284c7 100%)',
-                color: '#ffffff',
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 1.5 }}>
-                <Typography variant="h6" sx={{ fontWeight: 900, color: 'inherit' }}>
-                  Month Comparison
-                </Typography>
-                <Box
-                  sx={{
-                    px: 1.2,
-                    py: 0.55,
-                    borderRadius: 10,
-                    background: 'rgba(255,255,255,0.16)',
-                    border: '1px solid rgba(255,255,255,0.3)',
-                    fontSize: 12,
-                    fontWeight: 900,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  FPS {monthComparisonForm.fps_id}
-                </Box>
-              </Box>
-              <Grid container spacing={1}>
-                {[
-                  [currentLabel, salesRange(currentSummary), 'Selected'],
-                  [previousLabel, salesRange(previousSummary), 'Previous'],
-                ].map(([label, range, caption]) => (
-                  <Grid item xs={6} key={caption}>
-                    <Box
-                      sx={{
-                        height: '100%',
-                        p: { xs: 1.1, sm: 1.4 },
-                        borderRadius: 2,
-                        background: 'rgba(255,255,255,0.12)',
-                        border: '1px solid rgba(255,255,255,0.22)',
-                      }}
-                    >
-                      <Typography sx={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.6 }}>
-                        {caption} month
-                      </Typography>
-                      <Typography sx={{ mt: 0.25, fontSize: { xs: 13, sm: 15 }, fontWeight: 900, lineHeight: 1.2 }}>
-                        {label}
-                      </Typography>
-                      <Typography sx={{ mt: 0.45, fontSize: { xs: 11, sm: 12 }, fontWeight: 700, color: 'rgba(255,255,255,0.86)' }}>
-                        {range}
-                      </Typography>
-                    </Box>
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-            <Box sx={{ m: { xs: 1.25, sm: 2 }, border: '1px solid #dbe5f1', borderRadius: 2.5, overflow: 'hidden' }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, color: '#0f172a' }}>
+              Month Comparison
+            </Typography>
+            <Typography sx={{ mt: 0.25, color: '#475569', fontSize: 13, fontWeight: 800 }}>
+              FPS {monthComparisonForm.fps_id}
+            </Typography>
+            <Typography sx={{ mt: 0.2, mb: 1.5, color: '#64748b', fontSize: { xs: 11, sm: 13 }, fontWeight: 700 }}>
+              {currentShortLabel}: {salesRange(currentSummary)} | {previousShortLabel}: {salesRange(previousSummary)}
+            </Typography>
+            <Box sx={{ overflowX: 'hidden' }}>
               <Box
                 component="table"
                 sx={{
                   width: '100%',
                   borderCollapse: 'collapse',
                   tableLayout: 'fixed',
-                  '& th, & td': { borderBottom: '1px solid #e8eef6', px: { xs: 0.65, sm: 1.3 }, py: { xs: 1, sm: 1.15 } },
-                  '& th': { background: '#f8fafc', color: '#475569', fontSize: { xs: 9, sm: 10.5 }, fontWeight: 900, letterSpacing: 0.25 },
-                  '& td': { fontSize: { xs: 10.5, sm: 13 }, fontWeight: 800, color: '#0f172a' },
-                  '& tr:last-of-type td': { borderBottom: 0 },
                 }}
               >
                 <Box component="thead">
                   <Box component="tr">
-                    <Box component="th" sx={{ width: '30%', textAlign: 'left' }}>DETAIL</Box>
-                    <Box component="th" sx={{ width: '22%', textAlign: 'center' }}>{currentShortLabel}</Box>
-                    <Box component="th" sx={{ width: '22%', textAlign: 'center' }}>{previousShortLabel}</Box>
-                    <Box component="th" sx={{ width: '26%', textAlign: 'center' }}>DIFFERENCE</Box>
+                    {[
+                      ['DETAIL', '30%'],
+                      [currentShortLabel, '22%'],
+                      [previousShortLabel, '22%'],
+                      ['DIFFERENCE', '26%'],
+                    ].map(([label, width], index) => (
+                      <Box
+                        component="th"
+                        key={label}
+                        sx={{
+                          width,
+                          p: { xs: 0.45, sm: 0.8 },
+                          border: '2px solid #111111',
+                          background: '#eef6ff',
+                          color: '#000000',
+                          fontSize: { xs: 9, sm: 12 },
+                          fontWeight: 1000,
+                          lineHeight: 1.15,
+                          textAlign: index === 0 ? 'left' : 'center',
+                          overflowWrap: 'anywhere',
+                        }}
+                      >
+                        {label}
+                      </Box>
+                    ))}
                   </Box>
                 </Box>
                 <Box component="tbody">
-                  {comparisonRows.map((row, index) => {
+                  {comparisonRows.map((row) => {
                     const difference = Number(row.current) - Number(row.previous);
                     const percentage = Number(row.previous) !== 0
                       ? (difference / Number(row.previous)) * 100
                       : null;
-                    const isNewGroup = index === 0 || comparisonRows[index - 1].group !== row.group;
                     const differenceColor = difference > 0 ? '#0369a1' : difference < 0 ? '#b45309' : '#64748b';
-                    const differenceBackground = difference > 0 ? '#e0f2fe' : difference < 0 ? '#fff7ed' : '#f1f5f9';
                     return (
-                      <React.Fragment key={row.label}>
-                        {isNewGroup && (
-                          <Box component="tr">
-                            <Box
-                              component="td"
-                              colSpan={4}
-                              sx={{
-                                py: '7px !important',
-                                background: '#eef6ff',
-                                color: '#075985 !important',
-                                fontSize: '10px !important',
-                                fontWeight: '900 !important',
-                                letterSpacing: 0.65,
-                                textTransform: 'uppercase',
-                              }}
-                            >
-                              {row.group}
-                            </Box>
-                          </Box>
-                        )}
-                        <Box component="tr" sx={{ '&:hover': { background: '#f8fbff' } }}>
-                          <Box component="td" sx={{ textAlign: 'left', lineHeight: 1.25 }}>{row.label}</Box>
-                          <Box component="td" sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>{displayValue(row.current, row.unit)}</Box>
-                          <Box component="td" sx={{ textAlign: 'center', whiteSpace: 'nowrap', color: '#334155 !important' }}>{displayValue(row.previous, row.unit)}</Box>
-                          <Box component="td" sx={{ textAlign: 'center' }}>
-                            <Box
-                              component="span"
-                              sx={{
-                                display: 'inline-flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                minWidth: { xs: 58, sm: 72 },
-                                px: { xs: 0.45, sm: 0.75 },
-                                py: 0.45,
-                                borderRadius: 1.5,
-                                color: differenceColor,
-                                background: differenceBackground,
-                                lineHeight: 1.15,
-                              }}
-                            >
-                              <Box component="span" sx={{ fontWeight: 900, whiteSpace: 'nowrap' }}>
-                                {displayDifference(difference, row.unit)}
-                              </Box>
-                              {percentage !== null && difference !== 0 && (
-                                <Box component="span" sx={{ mt: 0.2, fontSize: { xs: 8.5, sm: 10 }, fontWeight: 800, opacity: 0.88 }}>
-                                  {percentage > 0 ? '+' : ''}{formatNumber(percentage, 1)}%
-                                </Box>
-                              )}
-                            </Box>
-                          </Box>
+                      <Box component="tr" key={row.label}>
+                        <Box
+                          component="td"
+                          sx={{ p: { xs: 0.45, sm: 0.9 }, border: '2px solid #111111', color: '#2f3192', fontSize: { xs: 9, sm: 12 }, fontWeight: 1000, lineHeight: 1.15, textAlign: 'left', overflowWrap: 'anywhere' }}
+                        >
+                          {row.label}
                         </Box>
-                      </React.Fragment>
+                        {[row.current, row.previous].map((value, index) => (
+                          <Box
+                            component="td"
+                            key={`${row.label}-${index}`}
+                            sx={{ p: { xs: 0.4, sm: 0.9 }, border: '2px solid #111111', color: '#111827', fontSize: { xs: 9, sm: 13 }, fontWeight: 900, lineHeight: 1.15, textAlign: 'center', overflowWrap: 'anywhere' }}
+                          >
+                            {displayValue(value, row.unit)}
+                          </Box>
+                        ))}
+                        <Box
+                          component="td"
+                          sx={{ p: { xs: 0.4, sm: 0.9 }, border: '2px solid #111111', color: differenceColor, fontSize: { xs: 9, sm: 13 }, fontWeight: 1000, lineHeight: 1.2, textAlign: 'center', overflowWrap: 'anywhere' }}
+                        >
+                          {displayDifference(difference, row.unit)}
+                          {percentage !== null && difference !== 0 && (
+                            <Box component="span" sx={{ display: 'block', mt: 0.2, fontSize: { xs: 8, sm: 10.5 } }}>
+                              {percentage > 0 ? '+' : ''}{formatNumber(percentage, 1)}%
+                            </Box>
+                          )}
+                        </Box>
+                      </Box>
                     );
                   })}
                 </Box>
               </Box>
             </Box>
-            <Typography
-              variant="caption"
-              sx={{ display: 'block', px: { xs: 1.5, sm: 2.25 }, pb: 2, color: '#64748b', fontWeight: 700 }}
-            >
-              Increases and decreases are shown for comparison only; they do not indicate an error.
-            </Typography>
           </Paper>
         )}
       </>
