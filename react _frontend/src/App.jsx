@@ -3505,7 +3505,7 @@ export default function App() {
                     <Box component="th" sx={{ width: '31%', textAlign: 'left' }}>DETAIL</Box>
                     <Box component="th" sx={{ width: '23%', textAlign: 'center' }}>{currentLabel}</Box>
                     <Box component="th" sx={{ width: '23%', textAlign: 'center' }}>{previousLabel}</Box>
-                    <Box component="th" sx={{ width: '23%', textAlign: 'center' }}>CHANGE</Box>
+                    <Box component="th" sx={{ width: '23%', textAlign: 'center' }}>DIFFERENCE</Box>
                   </Box>
                 </Box>
                 <Box component="tbody">
