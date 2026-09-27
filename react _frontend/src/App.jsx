@@ -163,24 +163,30 @@ const getMonthComparisonPeriods = (yearValue, monthValue) => {
   const previousDate = new Date(year, month - 2, 1);
   const previousYear = previousDate.getFullYear();
   const previousMonth = previousDate.getMonth() + 1;
-  const selectedMonthDays = new Date(year, month, 0).getDate();
-  const previousMonthDays = new Date(previousYear, previousMonth, 0).getDate();
   const isCurrentMonth = year === currentYear && month === currentMonth;
-  const selectedEndDay = isCurrentMonth ? today.getDate() : selectedMonthDays;
-  const previousEndDay = previousMonthDays;
+  const completedSalesEnd = (periodYear, periodMonth) => {
+    const bufferedEnd = new Date(periodYear, periodMonth, 7);
+    return toDateInputValue(
+      bufferedEnd.getFullYear(),
+      bufferedEnd.getMonth() + 1,
+      bufferedEnd.getDate()
+    );
+  };
 
   return {
     current: {
       year,
       month,
       start: toDateInputValue(year, month, 1),
-      end: toDateInputValue(year, month, selectedEndDay),
+      end: isCurrentMonth
+        ? toDateInputValue(year, month, today.getDate())
+        : completedSalesEnd(year, month),
     },
     previous: {
       year: previousYear,
       month: previousMonth,
       start: toDateInputValue(previousYear, previousMonth, 1),
-      end: toDateInputValue(previousYear, previousMonth, previousEndDay),
+      end: completedSalesEnd(previousYear, previousMonth),
     },
     isCurrentMonth,
   };
@@ -3437,7 +3443,7 @@ export default function App() {
               ))}
             </Grid>
             <Alert severity="info" sx={{ textAlign: 'left' }}>
-              The selected current month is shown up to today. The previous month is always shown for the complete month.
+              The app uses the actual first and last sales dates returned by ePoS. Completed allocation months also check the first seven days of the next month for extended sales.
             </Alert>
             <Button
               type="submit"
@@ -3473,7 +3479,14 @@ export default function App() {
               Month Comparison
             </Typography>
             <Typography variant="body2" sx={{ mt: 0.4, mb: 2, color: '#64748b', fontWeight: 700 }}>
-              FPS {monthComparisonForm.fps_id} · {toEposDate(periods.current.start)} to {toEposDate(periods.current.end)} compared with {toEposDate(periods.previous.start)} to {toEposDate(periods.previous.end)}
+              FPS {monthComparisonForm.fps_id} · {currentLabel}:{' '}
+              {Number(currentSummary.transaction_count) > 0
+                ? `${currentSummary.from_date} to ${currentSummary.to_date}`
+                : 'No sales found'}{' '}
+              compared with {previousLabel}:{' '}
+              {Number(previousSummary.transaction_count) > 0
+                ? `${previousSummary.from_date} to ${previousSummary.to_date}`
+                : 'No sales found'}
             </Typography>
             <Box sx={{ border: '1px solid #dbe5f1', borderRadius: 2, overflow: 'hidden' }}>
               <Box
