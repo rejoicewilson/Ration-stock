@@ -3348,24 +3348,27 @@ export default function App() {
       : 'No sales';
     const currentLabel = periods ? `${monthName(periods.current.month)} ${periods.current.year}` : 'Selected month';
     const previousLabel = periods ? `${monthName(periods.previous.month)} ${periods.previous.year}` : 'Previous month';
+    const currentShortLabel = periods ? `${String(monthName(periods.current.month)).slice(0, 3)} ${periods.current.year}` : 'Current';
+    const previousShortLabel = periods ? `${String(monthName(periods.previous.month)).slice(0, 3)} ${periods.previous.year}` : 'Previous';
     const currentCommission = calculateCommission(currentSummary).commission;
     const previousCommission = calculateCommission(previousSummary).commission;
     const comparisonRows = [
-      { label: 'Transactions', current: currentSummary.transaction_count || 0, previous: previousSummary.transaction_count || 0, unit: '' },
-      { label: 'Cards', current: currentSummary.card_count || 0, previous: previousSummary.card_count || 0, unit: '' },
-      { label: 'Portability Transactions', current: currentSummary.portability_transaction_count || 0, previous: previousSummary.portability_transaction_count || 0, unit: '' },
-      { label: 'Portability Cards', current: currentSummary.portability_card_count || 0, previous: previousSummary.portability_card_count || 0, unit: '' },
-      { label: 'Raw Rice', current: currentSummary.commodity_totals?.rr || 0, previous: previousSummary.commodity_totals?.rr || 0, unit: 'kg' },
-      { label: 'Boiled Rice', current: currentSummary.commodity_totals?.br || 0, previous: previousSummary.commodity_totals?.br || 0, unit: 'kg' },
-      { label: 'Matta / CMR', current: currentSummary.commodity_totals?.cmr || 0, previous: previousSummary.commodity_totals?.cmr || 0, unit: 'kg' },
-      { label: 'Wheat', current: currentSummary.commodity_totals?.wheat || 0, previous: previousSummary.commodity_totals?.wheat || 0, unit: 'kg' },
-      { label: 'Atta', current: currentSummary.commodity_totals?.atta || 0, previous: previousSummary.commodity_totals?.atta || 0, unit: 'kg' },
-      { label: 'Sugar', current: currentSummary.commodity_totals?.sugar || 0, previous: previousSummary.commodity_totals?.sugar || 0, unit: 'kg' },
-      { label: 'Kerosene', current: currentSummary.commodity_totals?.koil || 0, previous: previousSummary.commodity_totals?.koil || 0, unit: 'ltr' },
+      { group: 'Activity', label: 'Transactions', current: currentSummary.transaction_count || 0, previous: previousSummary.transaction_count || 0, unit: '' },
+      { group: 'Activity', label: 'Cards', current: currentSummary.card_count || 0, previous: previousSummary.card_count || 0, unit: '' },
+      { group: 'Activity', label: 'Portability Txns', current: currentSummary.portability_transaction_count || 0, previous: previousSummary.portability_transaction_count || 0, unit: '' },
+      { group: 'Activity', label: 'Portability Cards', current: currentSummary.portability_card_count || 0, previous: previousSummary.portability_card_count || 0, unit: '' },
+      { group: 'Commodity Distribution', label: 'Raw Rice', current: currentSummary.commodity_totals?.rr || 0, previous: previousSummary.commodity_totals?.rr || 0, unit: 'kg' },
+      { group: 'Commodity Distribution', label: 'Boiled Rice', current: currentSummary.commodity_totals?.br || 0, previous: previousSummary.commodity_totals?.br || 0, unit: 'kg' },
+      { group: 'Commodity Distribution', label: 'Matta / CMR', current: currentSummary.commodity_totals?.cmr || 0, previous: previousSummary.commodity_totals?.cmr || 0, unit: 'kg' },
+      { group: 'Commodity Distribution', label: 'Wheat', current: currentSummary.commodity_totals?.wheat || 0, previous: previousSummary.commodity_totals?.wheat || 0, unit: 'kg' },
+      { group: 'Commodity Distribution', label: 'Atta', current: currentSummary.commodity_totals?.atta || 0, previous: previousSummary.commodity_totals?.atta || 0, unit: 'kg' },
+      { group: 'Commodity Distribution', label: 'Sugar', current: currentSummary.commodity_totals?.sugar || 0, previous: previousSummary.commodity_totals?.sugar || 0, unit: 'kg' },
+      { group: 'Commodity Distribution', label: 'Kerosene', current: currentSummary.commodity_totals?.koil || 0, previous: previousSummary.commodity_totals?.koil || 0, unit: 'ltr' },
     ];
     if (periods?.current.year >= 2026 && periods?.previous.year >= 2026) {
       comparisonRows.splice(2, 0, {
-        label: 'Estimated Commission',
+        group: 'Activity',
+        label: 'Est. Commission',
         current: currentCommission,
         previous: previousCommission,
         unit: 'currency',
@@ -3373,8 +3376,16 @@ export default function App() {
     }
 
     const displayValue = (value, unit) => {
-      if (unit === 'currency') return `Rs. ${formatNumber(value)}`;
+      if (unit === 'currency') return `₹${formatNumber(Math.round(value), 0)}`;
       return `${formatNumber(value)}${unit ? ` ${unit}` : ''}`;
+    };
+
+    const displayDifference = (value, unit) => {
+      const number = Number(value) || 0;
+      const sign = number > 0 ? '+' : number < 0 ? '−' : '';
+      const absolute = Math.abs(number);
+      if (unit === 'currency') return `${sign}₹${formatNumber(Math.round(absolute), 0)}`;
+      return `${sign}${formatNumber(absolute)}${unit ? ` ${unit}` : ''}`;
     };
 
     return (
@@ -3480,66 +3491,161 @@ export default function App() {
         {monthComparisonResult && periods && (
           <Paper
             elevation={0}
-            sx={{ p: { xs: 1.5, sm: 2.5 }, borderRadius: 3, border: '1px solid #dbeafe', background: '#ffffff' }}
+            sx={{
+              borderRadius: 3,
+              border: '1px solid #dbeafe',
+              background: '#ffffff',
+              overflow: 'hidden',
+              boxShadow: '0 18px 42px rgba(15, 76, 129, 0.1)',
+            }}
           >
-            <Typography variant="h6" sx={{ fontWeight: 900, color: '#0f172a' }}>
-              Month Comparison
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.4, color: '#475569', fontWeight: 800 }}>
-              FPS {monthComparisonForm.fps_id}
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.25, mb: 2, color: '#64748b', fontWeight: 700 }}>
-              {currentLabel}: {salesRange(currentSummary)} | {previousLabel}: {salesRange(previousSummary)}
-            </Typography>
-            <Box sx={{ border: '1px solid #dbe5f1', borderRadius: 2, overflow: 'hidden' }}>
+            <Box
+              sx={{
+                p: { xs: 1.75, sm: 2.5 },
+                background: 'linear-gradient(135deg, #075985 0%, #0284c7 100%)',
+                color: '#ffffff',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 1.5 }}>
+                <Typography variant="h6" sx={{ fontWeight: 900, color: 'inherit' }}>
+                  Month Comparison
+                </Typography>
+                <Box
+                  sx={{
+                    px: 1.2,
+                    py: 0.55,
+                    borderRadius: 10,
+                    background: 'rgba(255,255,255,0.16)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    fontSize: 12,
+                    fontWeight: 900,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  FPS {monthComparisonForm.fps_id}
+                </Box>
+              </Box>
+              <Grid container spacing={1}>
+                {[
+                  [currentLabel, salesRange(currentSummary), 'Selected'],
+                  [previousLabel, salesRange(previousSummary), 'Previous'],
+                ].map(([label, range, caption]) => (
+                  <Grid item xs={6} key={caption}>
+                    <Box
+                      sx={{
+                        height: '100%',
+                        p: { xs: 1.1, sm: 1.4 },
+                        borderRadius: 2,
+                        background: 'rgba(255,255,255,0.12)',
+                        border: '1px solid rgba(255,255,255,0.22)',
+                      }}
+                    >
+                      <Typography sx={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                        {caption} month
+                      </Typography>
+                      <Typography sx={{ mt: 0.25, fontSize: { xs: 13, sm: 15 }, fontWeight: 900, lineHeight: 1.2 }}>
+                        {label}
+                      </Typography>
+                      <Typography sx={{ mt: 0.45, fontSize: { xs: 11, sm: 12 }, fontWeight: 700, color: 'rgba(255,255,255,0.86)' }}>
+                        {range}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+            <Box sx={{ m: { xs: 1.25, sm: 2 }, border: '1px solid #dbe5f1', borderRadius: 2.5, overflow: 'hidden' }}>
               <Box
                 component="table"
                 sx={{
                   width: '100%',
                   borderCollapse: 'collapse',
                   tableLayout: 'fixed',
-                  '& th, & td': { borderBottom: '1px solid #e5edf7', px: { xs: 0.5, sm: 1.2 }, py: 1.1 },
-                  '& th': { background: '#f0f9ff', color: '#0c4a6e', fontSize: { xs: 9, sm: 11 }, fontWeight: 900 },
-                  '& td': { fontSize: { xs: 10, sm: 13 }, fontWeight: 800, color: '#0f172a' },
+                  '& th, & td': { borderBottom: '1px solid #e8eef6', px: { xs: 0.65, sm: 1.3 }, py: { xs: 1, sm: 1.15 } },
+                  '& th': { background: '#f8fafc', color: '#475569', fontSize: { xs: 9, sm: 10.5 }, fontWeight: 900, letterSpacing: 0.25 },
+                  '& td': { fontSize: { xs: 10.5, sm: 13 }, fontWeight: 800, color: '#0f172a' },
                   '& tr:last-of-type td': { borderBottom: 0 },
                 }}
               >
                 <Box component="thead">
                   <Box component="tr">
-                    <Box component="th" sx={{ width: '31%', textAlign: 'left' }}>DETAIL</Box>
-                    <Box component="th" sx={{ width: '23%', textAlign: 'center' }}>{currentLabel}</Box>
-                    <Box component="th" sx={{ width: '23%', textAlign: 'center' }}>{previousLabel}</Box>
-                    <Box component="th" sx={{ width: '23%', textAlign: 'center' }}>DIFFERENCE</Box>
+                    <Box component="th" sx={{ width: '30%', textAlign: 'left' }}>DETAIL</Box>
+                    <Box component="th" sx={{ width: '22%', textAlign: 'center' }}>{currentShortLabel}</Box>
+                    <Box component="th" sx={{ width: '22%', textAlign: 'center' }}>{previousShortLabel}</Box>
+                    <Box component="th" sx={{ width: '26%', textAlign: 'center' }}>DIFFERENCE</Box>
                   </Box>
                 </Box>
                 <Box component="tbody">
-                  {comparisonRows.map((row) => {
+                  {comparisonRows.map((row, index) => {
                     const difference = Number(row.current) - Number(row.previous);
                     const percentage = Number(row.previous) !== 0
                       ? (difference / Number(row.previous)) * 100
                       : null;
+                    const isNewGroup = index === 0 || comparisonRows[index - 1].group !== row.group;
+                    const differenceColor = difference > 0 ? '#0369a1' : difference < 0 ? '#b45309' : '#64748b';
+                    const differenceBackground = difference > 0 ? '#e0f2fe' : difference < 0 ? '#fff7ed' : '#f1f5f9';
                     return (
-                      <Box component="tr" key={row.label}>
-                        <Box component="td" sx={{ textAlign: 'left' }}>{row.label}</Box>
-                        <Box component="td" sx={{ textAlign: 'center' }}>{displayValue(row.current, row.unit)}</Box>
-                        <Box component="td" sx={{ textAlign: 'center' }}>{displayValue(row.previous, row.unit)}</Box>
-                        <Box
-                          component="td"
-                          sx={{
-                            textAlign: 'center',
-                            color: difference > 0 ? '#0369a1 !important' : difference < 0 ? '#b45309 !important' : '#64748b !important',
-                          }}
-                        >
-                          {difference > 0 ? '+' : ''}{displayValue(difference, row.unit)}
-                          {percentage !== null && difference !== 0 ? ` (${percentage > 0 ? '+' : ''}${formatNumber(percentage, 1)}%)` : ''}
+                      <React.Fragment key={row.label}>
+                        {isNewGroup && (
+                          <Box component="tr">
+                            <Box
+                              component="td"
+                              colSpan={4}
+                              sx={{
+                                py: '7px !important',
+                                background: '#eef6ff',
+                                color: '#075985 !important',
+                                fontSize: '10px !important',
+                                fontWeight: '900 !important',
+                                letterSpacing: 0.65,
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {row.group}
+                            </Box>
+                          </Box>
+                        )}
+                        <Box component="tr" sx={{ '&:hover': { background: '#f8fbff' } }}>
+                          <Box component="td" sx={{ textAlign: 'left', lineHeight: 1.25 }}>{row.label}</Box>
+                          <Box component="td" sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>{displayValue(row.current, row.unit)}</Box>
+                          <Box component="td" sx={{ textAlign: 'center', whiteSpace: 'nowrap', color: '#334155 !important' }}>{displayValue(row.previous, row.unit)}</Box>
+                          <Box component="td" sx={{ textAlign: 'center' }}>
+                            <Box
+                              component="span"
+                              sx={{
+                                display: 'inline-flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                minWidth: { xs: 58, sm: 72 },
+                                px: { xs: 0.45, sm: 0.75 },
+                                py: 0.45,
+                                borderRadius: 1.5,
+                                color: differenceColor,
+                                background: differenceBackground,
+                                lineHeight: 1.15,
+                              }}
+                            >
+                              <Box component="span" sx={{ fontWeight: 900, whiteSpace: 'nowrap' }}>
+                                {displayDifference(difference, row.unit)}
+                              </Box>
+                              {percentage !== null && difference !== 0 && (
+                                <Box component="span" sx={{ mt: 0.2, fontSize: { xs: 8.5, sm: 10 }, fontWeight: 800, opacity: 0.88 }}>
+                                  {percentage > 0 ? '+' : ''}{formatNumber(percentage, 1)}%
+                                </Box>
+                              )}
+                            </Box>
+                          </Box>
                         </Box>
-                      </Box>
+                      </React.Fragment>
                     );
                   })}
                 </Box>
               </Box>
             </Box>
-            <Typography variant="caption" sx={{ display: 'block', mt: 1.5, color: '#64748b', fontWeight: 700 }}>
+            <Typography
+              variant="caption"
+              sx={{ display: 'block', px: { xs: 1.5, sm: 2.25 }, pb: 2, color: '#64748b', fontWeight: 700 }}
+            >
               Increases and decreases are shown for comparison only; they do not indicate an error.
             </Typography>
           </Paper>
