@@ -990,9 +990,16 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
         datetime.strptime(transaction["date"], "%d-%m-%Y").date()
         for transaction in filtered
     ]
+    portability_transaction_count = sum(
+        1
+        for transaction in filtered
+        if str(transaction.get("portability", "")).strip().upper()
+        not in {"", "SELF", "-", "NA", "N/A", "0"}
+    )
 
     return {
         "transaction_count": len(filtered),
+        "portability_transaction_count": portability_transaction_count,
         "from_date": min(filtered_dates).strftime("%d-%m-%Y") if filtered_dates else from_date,
         "to_date": max(filtered_dates).strftime("%d-%m-%Y") if filtered_dates else to_date,
         "commodity_totals": commodity_totals,

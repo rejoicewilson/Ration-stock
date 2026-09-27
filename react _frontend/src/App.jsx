@@ -3352,6 +3352,7 @@ export default function App() {
     const previousCommission = calculateCommission(previousSummary).commission;
     const comparisonRows = [
       { label: 'Transactions', current: currentSummary.transaction_count || 0, previous: previousSummary.transaction_count || 0, unit: '' },
+      { label: 'Portability Transactions', current: currentSummary.portability_transaction_count || 0, previous: previousSummary.portability_transaction_count || 0, unit: '' },
       { label: 'Raw Rice', current: currentSummary.commodity_totals?.rr || 0, previous: previousSummary.commodity_totals?.rr || 0, unit: 'kg' },
       { label: 'Boiled Rice', current: currentSummary.commodity_totals?.br || 0, previous: previousSummary.commodity_totals?.br || 0, unit: 'kg' },
       { label: 'Matta / CMR', current: currentSummary.commodity_totals?.cmr || 0, previous: previousSummary.commodity_totals?.cmr || 0, unit: 'kg' },
