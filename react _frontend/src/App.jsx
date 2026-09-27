@@ -919,7 +919,7 @@ export default function App() {
       return;
     }
     if (!monthComparisonForm.afso) {
-      setMonthComparisonError('Please select the district and AFSO.');
+      setMonthComparisonError('Please select the district and taluk.');
       setMonthComparisonResult(null);
       return;
     }
@@ -928,7 +928,7 @@ export default function App() {
       || fpsId.slice(2, 4) !== monthComparisonForm.afso
     ) {
       setMonthComparisonError(
-        `FPS ID ${fpsId} belongs to district code ${fpsId.slice(0, 2)} and AFSO code ${fpsId.slice(2, 4)}. Please select the matching district and AFSO.`
+        `FPS ID ${fpsId} belongs to district code ${fpsId.slice(0, 2)} and taluk code ${fpsId.slice(2, 4)}. Please select the matching district and taluk.`
       );
       setMonthComparisonResult(null);
       return;
@@ -3419,7 +3419,7 @@ export default function App() {
               </Grid>
               {[
                 ['dist_code', 'DISTRICT'],
-                ['afso', 'AFSO'],
+                ['afso', 'TALUK'],
                 ['month', 'MONTH'],
                 ['year', 'YEAR'],
               ].map(([name, label]) => (
@@ -3435,7 +3435,7 @@ export default function App() {
                     placeholder: name === 'dist_code'
                       ? 'Select district'
                       : name === 'afso'
-                        ? 'Select AFSO'
+                        ? 'Select taluk'
                         : name === 'month'
                           ? 'Select month'
                           : 'Select year',
