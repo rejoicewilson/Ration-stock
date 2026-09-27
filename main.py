@@ -990,6 +990,13 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
         datetime.strptime(transaction["date"], "%d-%m-%Y").date()
         for transaction in filtered
     ]
+    card_count = len(
+        {
+            re.sub(r"\D+", "", str(transaction.get("rc_no", "")))
+            for transaction in filtered
+            if re.sub(r"\D+", "", str(transaction.get("rc_no", "")))
+        }
+    )
     portability_transactions = [
         transaction
         for transaction in filtered
@@ -1007,6 +1014,7 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
 
     return {
         "transaction_count": len(filtered),
+        "card_count": card_count,
         "portability_transaction_count": portability_transaction_count,
         "portability_card_count": portability_card_count,
         "from_date": min(filtered_dates).strftime("%d-%m-%Y") if filtered_dates else from_date,

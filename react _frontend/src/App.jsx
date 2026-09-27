@@ -3352,6 +3352,7 @@ export default function App() {
     const previousCommission = calculateCommission(previousSummary).commission;
     const comparisonRows = [
       { label: 'Transactions', current: currentSummary.transaction_count || 0, previous: previousSummary.transaction_count || 0, unit: '' },
+      { label: 'Cards', current: currentSummary.card_count || 0, previous: previousSummary.card_count || 0, unit: '' },
       { label: 'Portability Transactions', current: currentSummary.portability_transaction_count || 0, previous: previousSummary.portability_transaction_count || 0, unit: '' },
       { label: 'Portability Cards', current: currentSummary.portability_card_count || 0, previous: previousSummary.portability_card_count || 0, unit: '' },
       { label: 'Raw Rice', current: currentSummary.commodity_totals?.rr || 0, previous: previousSummary.commodity_totals?.rr || 0, unit: 'kg' },
