@@ -3338,6 +3338,14 @@ export default function App() {
     const previousSummary = monthComparisonResult?.previous?.summary || {};
     const periods = monthComparisonResult?.periods;
     const monthName = (month) => monthOptions.find(([value]) => Number(value) === Number(month))?.[1] || month;
+    const shortEposDate = (value) => {
+      const [day, month] = String(value || '').split('-');
+      if (!day || !month) return value || '';
+      return `${Number(day)} ${String(monthName(month)).slice(0, 3)}`;
+    };
+    const salesRange = (summary) => Number(summary.transaction_count) > 0
+      ? `${shortEposDate(summary.from_date)}–${shortEposDate(summary.to_date)}`
+      : 'No sales';
     const currentLabel = periods ? `${monthName(periods.current.month)} ${periods.current.year}` : 'Selected month';
     const previousLabel = periods ? `${monthName(periods.previous.month)} ${periods.previous.year}` : 'Previous month';
     const currentCommission = calculateCommission(currentSummary).commission;
@@ -3474,15 +3482,11 @@ export default function App() {
             <Typography variant="h6" sx={{ fontWeight: 900, color: '#0f172a' }}>
               Month Comparison
             </Typography>
-            <Typography variant="body2" sx={{ mt: 0.4, mb: 2, color: '#64748b', fontWeight: 700 }}>
-              FPS {monthComparisonForm.fps_id} · {currentLabel}:{' '}
-              {Number(currentSummary.transaction_count) > 0
-                ? `${currentSummary.from_date} to ${currentSummary.to_date}`
-                : 'No sales found'}{' '}
-              compared with {previousLabel}:{' '}
-              {Number(previousSummary.transaction_count) > 0
-                ? `${previousSummary.from_date} to ${previousSummary.to_date}`
-                : 'No sales found'}
+            <Typography variant="body2" sx={{ mt: 0.4, color: '#475569', fontWeight: 800 }}>
+              FPS {monthComparisonForm.fps_id}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.25, mb: 2, color: '#64748b', fontWeight: 700 }}>
+              {currentLabel}: {salesRange(currentSummary)} | {previousLabel}: {salesRange(previousSummary)}
             </Typography>
             <Box sx={{ border: '1px solid #dbe5f1', borderRadius: 2, overflow: 'hidden' }}>
               <Box
