@@ -146,6 +146,48 @@ const toEposDate = (value) => {
   return `${day}-${month}-${year}`;
 };
 
+const toDateInputValue = (year, month, day) =>
+  `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+const getMonthComparisonPeriods = (yearValue, monthValue) => {
+  const year = Number(yearValue);
+  const month = Number(monthValue);
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth() + 1;
+
+  if (year > currentYear || (year === currentYear && month > currentMonth)) {
+    throw new Error('Please select the current month or a previous month.');
+  }
+
+  const previousDate = new Date(year, month - 2, 1);
+  const previousYear = previousDate.getFullYear();
+  const previousMonth = previousDate.getMonth() + 1;
+  const selectedMonthDays = new Date(year, month, 0).getDate();
+  const previousMonthDays = new Date(previousYear, previousMonth, 0).getDate();
+  const isCurrentMonth = year === currentYear && month === currentMonth;
+  const selectedEndDay = isCurrentMonth ? today.getDate() : selectedMonthDays;
+  const previousEndDay = isCurrentMonth
+    ? Math.min(selectedEndDay, previousMonthDays)
+    : previousMonthDays;
+
+  return {
+    current: {
+      year,
+      month,
+      start: toDateInputValue(year, month, 1),
+      end: toDateInputValue(year, month, selectedEndDay),
+    },
+    previous: {
+      year: previousYear,
+      month: previousMonth,
+      start: toDateInputValue(previousYear, previousMonth, 1),
+      end: toDateInputValue(previousYear, previousMonth, previousEndDay),
+    },
+    isCurrentMonth,
+  };
+};
+
 const calculateCommission = (summary) => {
   const totals = summary?.commodity_totals || {};
   const schemeTotals = summary?.scheme_commodity_totals || {};
@@ -562,6 +604,13 @@ export default function App() {
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
   });
+  const [monthComparisonForm, setMonthComparisonForm] = useState({
+    dist_code: '18',
+    afso: '42',
+    fps_id: '',
+    month: String(new Date().getMonth() + 1).padStart(2, '0'),
+    year: String(new Date().getFullYear()),
+  });
   const [stockBoardForm, setStockBoardForm] = useState({
     dist_code: '22',
     office_code: '62',
@@ -584,6 +633,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [commissionLoading, setCommissionLoading] = useState(false);
+  const [monthComparisonLoading, setMonthComparisonLoading] = useState(false);
   const [stockBoardLoading, setStockBoardLoading] = useState(false);
   const [stockTableOpen, setStockTableOpen] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(false);
@@ -591,6 +641,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [transactionsError, setTransactionsError] = useState('');
   const [commissionError, setCommissionError] = useState('');
+  const [monthComparisonError, setMonthComparisonError] = useState('');
   const [stockBoardError, setStockBoardError] = useState('');
   const [settingsError, setSettingsError] = useState('');
   const [rationCardError, setRationCardError] = useState('');
@@ -603,6 +654,7 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [transactionsResult, setTransactionsResult] = useState(null);
   const [commissionResult, setCommissionResult] = useState(null);
+  const [monthComparisonResult, setMonthComparisonResult] = useState(null);
   const [stockBoardResult, setStockBoardResult] = useState(null);
   const [settingsResult, setSettingsResult] = useState(null);
   const [roQuantityResult, setRoQuantityResult] = useState(null);
@@ -618,6 +670,7 @@ export default function App() {
     { key: 'KOIL', label: 'KOIL', icon: '🛢️', color: '#8a6bff' },
   ];
   const featurePages = [
+    { title: 'Month Comparison', category: 'മാസങ്ങൾ താരതമ്യം ചെയ്യാൻ', view: 'monthComparison', mark: 'MC', color: '#0369a1', background: '#f0f9ff' },
     { title: 'Stock Summary', category: 'കടയിലെ സ്റ്റോക്ക് നോക്കാൻ', view: 'stock', mark: 'ST', color: '#2563eb', background: '#eff6ff' },
     { title: 'Ration Stock Board', category: 'സ്റ്റോക്ക് ബോർഡ് എഴുതാൻ', view: 'stockBoard', mark: 'RB', color: '#b42318', background: '#fff4e5' },
     { title: 'Transactions', category: 'ദിവസ ചിലവ് / വരവ് അറിയാൻ', view: 'transactions', mark: 'TX', color: '#087f5b', background: '#ecfdf3' },
@@ -641,6 +694,7 @@ export default function App() {
     transactions: '/transactions',
     settings: '/ro-orders',
     commission: '/commission',
+    monthComparison: '/month-comparison',
     rationCard: '/ration-card-details',
     eTreasury: '/e-treasury',
   };
@@ -684,6 +738,22 @@ export default function App() {
       return;
     }
     setCommissionForm({ ...commissionForm, [e.target.name]: e.target.value });
+  };
+
+  const handleMonthComparisonChange = (e) => {
+    if (e.target.name === 'dist_code') {
+      const nextAfsoOptions = afsoOptionsByDistrict[e.target.value] || [];
+      setMonthComparisonForm({
+        ...monthComparisonForm,
+        dist_code: e.target.value,
+        afso: nextAfsoOptions[0]?.[0] || '',
+      });
+      return;
+    }
+    setMonthComparisonForm({
+      ...monthComparisonForm,
+      [e.target.name]: e.target.name === 'fps_id' ? e.target.value.replace(/\D/g, '') : e.target.value,
+    });
   };
 
   const handleStockBoardChange = (e) => {
@@ -835,6 +905,87 @@ export default function App() {
     setError: setCommissionError,
     setResult: setCommissionResult,
   });
+
+  const handleMonthComparisonSubmit = async (e) => {
+    e.preventDefault();
+    const fpsId = String(monthComparisonForm.fps_id || '').trim();
+    if (!/^\d{7}$/.test(fpsId)) {
+      setMonthComparisonError('FPS ID must contain exactly 7 digits.');
+      setMonthComparisonResult(null);
+      return;
+    }
+    if (!monthComparisonForm.afso) {
+      setMonthComparisonError('Please select the district and AFSO.');
+      setMonthComparisonResult(null);
+      return;
+    }
+    if (
+      fpsId.slice(0, 2) !== monthComparisonForm.dist_code
+      || fpsId.slice(2, 4) !== monthComparisonForm.afso
+    ) {
+      setMonthComparisonError(
+        `FPS ID ${fpsId} belongs to district code ${fpsId.slice(0, 2)} and AFSO code ${fpsId.slice(2, 4)}. Please select the matching district and AFSO.`
+      );
+      setMonthComparisonResult(null);
+      return;
+    }
+
+    let periods;
+    try {
+      periods = getMonthComparisonPeriods(monthComparisonForm.year, monthComparisonForm.month);
+    } catch (error) {
+      setMonthComparisonError(error.message);
+      setMonthComparisonResult(null);
+      return;
+    }
+
+    const fetchPeriod = async (period, label) => {
+      const res = await fetch(TRANSACTIONS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from_date: toEposDate(period.start),
+          to_date: toEposDate(period.end),
+          dist_code: Number(monthComparisonForm.dist_code),
+          afso: monthComparisonForm.afso,
+          fps_id: Number(fpsId),
+          month: period.month,
+          year: period.year,
+        }),
+      });
+      const responseText = await res.text();
+      let data = {};
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        data = { detail: responseText || 'Server returned an empty response' };
+      }
+      if (!res.ok) {
+        throw new Error(`${label}: ${data?.detail || data?.message || 'Unable to get transaction data.'}`);
+      }
+      return data;
+    };
+
+    setMonthComparisonLoading(true);
+    setMonthComparisonError('');
+    setMonthComparisonResult(null);
+    try {
+      const [currentResult, previousResult] = await Promise.all([
+        fetchPeriod(periods.current, 'Selected month'),
+        fetchPeriod(periods.previous, 'Previous month'),
+      ]);
+      setMonthComparisonResult({
+        current: currentResult,
+        previous: previousResult,
+        periods,
+      });
+    } catch (error) {
+      console.error('Month comparison fetch failed:', error);
+      setMonthComparisonError(error.message || 'Unable to compare these months. Please try again.');
+    } finally {
+      setMonthComparisonLoading(false);
+    }
+  };
 
   const handleStockBoardSubmit = async (e) => {
     e.preventDefault();
@@ -3178,6 +3329,210 @@ export default function App() {
   const serviceChangeHandler = isCommissionView ? handleCommissionChange : handleTransactionChange;
   const serviceSubmitHandler = isCommissionView ? handleCommissionSubmit : handleTransactionsSubmit;
   const commissionCalculation = calculateCommission(commissionResult?.summary);
+  const renderMonthComparison = () => {
+    const currentSummary = monthComparisonResult?.current?.summary || {};
+    const previousSummary = monthComparisonResult?.previous?.summary || {};
+    const periods = monthComparisonResult?.periods;
+    const monthName = (month) => monthOptions.find(([value]) => Number(value) === Number(month))?.[1] || month;
+    const currentLabel = periods ? `${monthName(periods.current.month)} ${periods.current.year}` : 'Selected month';
+    const previousLabel = periods ? `${monthName(periods.previous.month)} ${periods.previous.year}` : 'Previous month';
+    const currentCommission = calculateCommission(currentSummary).commission;
+    const previousCommission = calculateCommission(previousSummary).commission;
+    const comparisonRows = [
+      { label: 'Transactions', current: currentSummary.transaction_count || 0, previous: previousSummary.transaction_count || 0, unit: '' },
+      { label: 'Amount Collected', current: currentSummary.total_amount || 0, previous: previousSummary.total_amount || 0, unit: 'currency' },
+      { label: 'Raw Rice', current: currentSummary.commodity_totals?.rr || 0, previous: previousSummary.commodity_totals?.rr || 0, unit: 'kg' },
+      { label: 'Boiled Rice', current: currentSummary.commodity_totals?.br || 0, previous: previousSummary.commodity_totals?.br || 0, unit: 'kg' },
+      { label: 'Matta / CMR', current: currentSummary.commodity_totals?.cmr || 0, previous: previousSummary.commodity_totals?.cmr || 0, unit: 'kg' },
+      { label: 'Wheat', current: currentSummary.commodity_totals?.wheat || 0, previous: previousSummary.commodity_totals?.wheat || 0, unit: 'kg' },
+      { label: 'Atta', current: currentSummary.commodity_totals?.atta || 0, previous: previousSummary.commodity_totals?.atta || 0, unit: 'kg' },
+      { label: 'Sugar', current: currentSummary.commodity_totals?.sugar || 0, previous: previousSummary.commodity_totals?.sugar || 0, unit: 'kg' },
+      { label: 'Kerosene', current: currentSummary.commodity_totals?.koil || 0, previous: previousSummary.commodity_totals?.koil || 0, unit: 'ltr' },
+    ];
+    if (periods?.current.year >= 2026 && periods?.previous.year >= 2026) {
+      comparisonRows.splice(2, 0, {
+        label: 'Estimated Commission',
+        current: currentCommission,
+        previous: previousCommission,
+        unit: 'currency',
+      });
+    }
+
+    const displayValue = (value, unit) => {
+      if (unit === 'currency') return `Rs. ${formatNumber(value)}`;
+      return `${formatNumber(value)}${unit ? ` ${unit}` : ''}`;
+    };
+
+    return (
+      <>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            borderRadius: 3,
+            background: '#ffffff',
+            boxShadow: '0 20px 40px rgba(14, 116, 144, 0.12)',
+            border: '1px solid #e0f2fe',
+            mb: 3,
+          }}
+        >
+          <Stack spacing={2} component="form" onSubmit={handleMonthComparisonSubmit}>
+            <Grid container spacing={1.5}>
+              <Grid item xs={12}>
+                <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                  FPS ID *
+                </Typography>
+                <Box
+                  component="input"
+                  name="fps_id"
+                  value={monthComparisonForm.fps_id}
+                  onChange={handleMonthComparisonChange}
+                  inputMode="numeric"
+                  required
+                  placeholder="Enter 7-digit FPS ID"
+                  sx={{
+                    width: '100%',
+                    p: 1.7,
+                    borderRadius: 2,
+                    border: '1px solid #dfe5f0',
+                    background: '#fbfcff',
+                    outline: 'none',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </Grid>
+              {[
+                ['dist_code', 'DISTRICT'],
+                ['afso', 'AFSO'],
+                ['month', 'MONTH'],
+                ['year', 'YEAR'],
+              ].map(([name, label]) => (
+                <Grid item xs={6} key={name}>
+                  <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
+                    {label} *
+                  </Typography>
+                  {renderSelectControl({
+                    selectKey: `month-comparison-${name}`,
+                    name,
+                    value: monthComparisonForm[name],
+                    onChange: handleMonthComparisonChange,
+                    placeholder: name === 'dist_code'
+                      ? 'Select district'
+                      : name === 'afso'
+                        ? 'Select AFSO'
+                        : name === 'month'
+                          ? 'Select month'
+                          : 'Select year',
+                    options: name === 'dist_code'
+                      ? districtOptions
+                      : name === 'afso'
+                        ? afsoOptionsByDistrict[monthComparisonForm.dist_code] || []
+                        : name === 'month'
+                          ? monthOptions
+                          : yearOptions,
+                    pickerType: name === 'month' ? 'month' : name === 'year' ? 'year' : 'district',
+                    disabled: name === 'afso' && !(afsoOptionsByDistrict[monthComparisonForm.dist_code]?.length),
+                  })}
+                </Grid>
+              ))}
+            </Grid>
+            <Alert severity="info" sx={{ textAlign: 'left' }}>
+              For the current month, the app compares the same date range from the previous month. Completed months are compared in full.
+            </Alert>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={monthComparisonLoading}
+              sx={{
+                py: 1.4,
+                fontSize: 15,
+                fontWeight: 700,
+                textTransform: 'none',
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                boxShadow: '0 12px 24px rgba(3, 105, 161, 0.28)',
+              }}
+            >
+              {monthComparisonLoading ? <CircularProgress size={22} color="inherit" /> : 'Compare Months'}
+            </Button>
+          </Stack>
+        </Paper>
+
+        {monthComparisonError && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {monthComparisonError}
+          </Alert>
+        )}
+
+        {monthComparisonResult && periods && (
+          <Paper
+            elevation={0}
+            sx={{ p: { xs: 1.5, sm: 2.5 }, borderRadius: 3, border: '1px solid #dbeafe', background: '#ffffff' }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 900, color: '#0f172a' }}>
+              Month Comparison
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.4, mb: 2, color: '#64748b', fontWeight: 700 }}>
+              FPS {monthComparisonForm.fps_id} · {toEposDate(periods.current.start)} to {toEposDate(periods.current.end)} compared with {toEposDate(periods.previous.start)} to {toEposDate(periods.previous.end)}
+            </Typography>
+            <Box sx={{ border: '1px solid #dbe5f1', borderRadius: 2, overflow: 'hidden' }}>
+              <Box
+                component="table"
+                sx={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  tableLayout: 'fixed',
+                  '& th, & td': { borderBottom: '1px solid #e5edf7', px: { xs: 0.5, sm: 1.2 }, py: 1.1 },
+                  '& th': { background: '#f0f9ff', color: '#0c4a6e', fontSize: { xs: 9, sm: 11 }, fontWeight: 900 },
+                  '& td': { fontSize: { xs: 10, sm: 13 }, fontWeight: 800, color: '#0f172a' },
+                  '& tr:last-of-type td': { borderBottom: 0 },
+                }}
+              >
+                <Box component="thead">
+                  <Box component="tr">
+                    <Box component="th" sx={{ width: '31%', textAlign: 'left' }}>DETAIL</Box>
+                    <Box component="th" sx={{ width: '23%', textAlign: 'center' }}>{currentLabel}</Box>
+                    <Box component="th" sx={{ width: '23%', textAlign: 'center' }}>{previousLabel}</Box>
+                    <Box component="th" sx={{ width: '23%', textAlign: 'center' }}>CHANGE</Box>
+                  </Box>
+                </Box>
+                <Box component="tbody">
+                  {comparisonRows.map((row) => {
+                    const difference = Number(row.current) - Number(row.previous);
+                    const percentage = Number(row.previous) !== 0
+                      ? (difference / Number(row.previous)) * 100
+                      : null;
+                    return (
+                      <Box component="tr" key={row.label}>
+                        <Box component="td" sx={{ textAlign: 'left' }}>{row.label}</Box>
+                        <Box component="td" sx={{ textAlign: 'center' }}>{displayValue(row.current, row.unit)}</Box>
+                        <Box component="td" sx={{ textAlign: 'center' }}>{displayValue(row.previous, row.unit)}</Box>
+                        <Box
+                          component="td"
+                          sx={{
+                            textAlign: 'center',
+                            color: difference > 0 ? '#0369a1 !important' : difference < 0 ? '#b45309 !important' : '#64748b !important',
+                          }}
+                        >
+                          {difference > 0 ? '+' : ''}{displayValue(difference, row.unit)}
+                          {percentage !== null && difference !== 0 ? ` (${percentage > 0 ? '+' : ''}${formatNumber(percentage, 1)}%)` : ''}
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
+            </Box>
+            <Typography variant="caption" sx={{ display: 'block', mt: 1.5, color: '#64748b', fontWeight: 700 }}>
+              Increases and decreases are shown for comparison only; they do not indicate an error.
+            </Typography>
+          </Paper>
+        )}
+      </>
+    );
+  };
   const handleDownloadCommissionPayslip = () => {
     if (!commissionResult?.summary) return;
 
@@ -4261,6 +4616,8 @@ export default function App() {
               )}
             </Stack>
           </>
+        ) : activeView === 'monthComparison' ? (
+          renderMonthComparison()
         ) : activeView === 'transactions' || activeView === 'commission' ? (
           <>
             <Paper
