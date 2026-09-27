@@ -3441,9 +3441,6 @@ export default function App() {
                 </Grid>
               ))}
             </Grid>
-            <Alert severity="info" sx={{ textAlign: 'left' }}>
-              The app uses the actual first and last sales dates returned by ePoS. Completed allocation months also check the first seven days of the next month for extended sales.
-            </Alert>
             <Button
               type="submit"
               variant="contained"
