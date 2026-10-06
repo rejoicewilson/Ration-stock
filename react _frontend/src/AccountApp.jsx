@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Dialog, DialogContent, DialogTitle, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
 import App from './App';
 import AdminDashboard from './AdminDashboard';
 import { accountRequest } from './accountApi';
@@ -35,7 +35,6 @@ export default function AccountApp() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [deviceChallenge, setDeviceChallenge] = useState(null);
-  const [deviceList, setDeviceList] = useState(null);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '' });
   function goHome() {
@@ -66,7 +65,7 @@ export default function AccountApp() {
   useEffect(() => {
     refreshAccount();
     const refresh = () => { if (document.visibilityState === 'visible') refreshAccount(); };
-    const ended = () => { ++refreshSequence.current; setAccount(null); setDeviceList(null); };
+    const ended = () => { ++refreshSequence.current; setAccount(null); };
     const changed = (event) => { if (event.key === 'ration-session-change') refresh(); };
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
@@ -118,7 +117,7 @@ export default function AccountApp() {
     try {
       await accountRequest('logout', {});
       ++refreshSequence.current;
-      setAccount(null); setPendingView(null); setDeviceList(null); setError('');
+      setAccount(null); setPendingView(null); setError('');
       setMode('login'); setPasswordVisible(false);
       setShowPasswordForm(false); setPasswords({ current_password: '', new_password: '' });
       broadcastSessionChange();
@@ -193,8 +192,7 @@ export default function AccountApp() {
     {account && <Box sx={{ px: 2, py: 1.5, bgcolor: '#e8efff', borderBottom: '1px solid #d8e3f7' }}>
       <Box sx={{ maxWidth: 1100, mx: 'auto', display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1.25 }}>
         <Typography sx={{ fontWeight: 800, fontSize: 14, color: '#183456', textAlign: { xs: 'center', sm: 'left' }, whiteSpace: 'nowrap' }}>FPS {account.fps_id}</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.65fr) minmax(0, 1fr)', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 'auto' }, '& .MuiButton-root': { minWidth: 0, minHeight: 44, px: 1, py: 0.75, borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: { xs: 12, sm: 13 }, lineHeight: 1.3, bgcolor: '#fff' } }}>
-          <Button variant="outlined" onClick={async () => { try { setDeviceList((await accountRequest('devices')).devices); } catch (err) { setError(err.message); } }}>Devices</Button>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 'auto' }, '& .MuiButton-root': { minWidth: 0, minHeight: 44, px: 1, py: 0.75, borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: { xs: 12, sm: 13 }, lineHeight: 1.3, bgcolor: '#fff' } }}>
           <Button variant="outlined" onClick={() => setShowPasswordForm(true)}>Change password</Button>
           <Button variant="outlined" color="error" disabled={busy} onClick={signOut}>Sign out</Button>
         </Box>
@@ -205,17 +203,6 @@ export default function AccountApp() {
     <App key={account?.id || 'guest'} initialView={account ? pendingView || 'home' : 'home'}
       onHome={() => setPendingView(null)}
       onProtectedFeature={(view) => { setPendingView(view); setError(''); return !account; }} />
-    <Dialog open={deviceList !== null} onClose={() => setDeviceList(null)} fullWidth maxWidth="xs">
-      <DialogTitle>Registered browsers</DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" sx={{ mb: 2 }}>Your account allows two browsers. Multiple tabs in the same browser count as one. Signing in on a third browser lets you choose which one to replace, once every seven days.</Typography>
-        {deviceList?.map((device) => <Paper key={device.id} variant="outlined" sx={{ p: 2, mb: 1 }}>
-          <Typography sx={{ fontWeight: 700 }}>{device.label}{device.current ? ' (this browser)' : ''}</Typography>
-          <Typography variant="body2">{device.signed_in ? 'Signed in' : 'Signed out'} · Last used {new Date(device.last_seen_at).toLocaleDateString('en-IN')}</Typography>
-        </Paper>)}
-        <Button fullWidth onClick={() => setDeviceList(null)}>Close</Button>
-      </DialogContent>
-    </Dialog>
   </>;
 }
 
