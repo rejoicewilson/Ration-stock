@@ -15,6 +15,10 @@
   ],
   "routes": [
     {
+      "src": "/auth/(.*)",
+      "dest": "api/index.py"
+    },
+    {
       "src": "/count",
       "dest": "api/index.py"
     },

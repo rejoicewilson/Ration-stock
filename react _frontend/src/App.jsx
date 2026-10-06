@@ -20,6 +20,7 @@ import {
 import attaIcon from './assets/atta-flour.svg';
 import sugarIcon from './assets/sugar-cubes.svg';
 import upiButtonImage from './assets/upi-button.png';
+import { featureFetch } from './accountApi';
 
 const PrivateShieldIcon = ({ size = 42 }) => (
   <Box
@@ -272,7 +273,7 @@ const calculateCommission = (summary) => {
 const formatNumber = (value, maximumFractionDigits = 2) =>
   Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits });
 
-export default function App() {
+export default function App({ initialView = 'home', onProtectedFeature, onHome }) {
   const currentYear = new Date().getFullYear();
   const monthOptions = [
     ['01', 'January'],
@@ -576,7 +577,7 @@ export default function App() {
       ['1401803', 'VELIYAMPARAMBA'],
     ],
   };
-  const [activeView, setActiveView] = useState('home');
+  const [activeView, setActiveView] = useState(initialView);
   const [picker, setPicker] = useState(null);
   const [pendingPickerValue, setPendingPickerValue] = useState('');
   const [form, setForm] = useState({
@@ -804,7 +805,7 @@ export default function App() {
     setError('');
     setResult(null);
     try {
-      const res = await fetch(API_URL, {
+      const res = await featureFetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -862,9 +863,9 @@ export default function App() {
     setError('');
     setResult(null);
     try {
-      const res = await fetch(TRANSACTIONS_API_URL, {
+      const res = await featureFetch(TRANSACTIONS_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-App-Feature': isCommission ? 'commission' : 'transactions' },
         body: JSON.stringify({
           from_date: toEposDate(requestForm.from_date),
           to_date: toEposDate(requestForm.to_date),
@@ -944,9 +945,9 @@ export default function App() {
     }
 
     const fetchPeriod = async (period, label) => {
-      const res = await fetch(TRANSACTIONS_API_URL, {
+      const res = await featureFetch(TRANSACTIONS_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-App-Feature': 'monthComparison' },
         body: JSON.stringify({
           from_date: toEposDate(period.start),
           to_date: toEposDate(period.end),
@@ -1016,7 +1017,7 @@ export default function App() {
     setStockBoardError('');
     setStockBoardResult(null);
     try {
-      const res = await fetch(STOCK_REGISTER_API_URL, {
+      const res = await featureFetch(STOCK_REGISTER_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1057,7 +1058,7 @@ export default function App() {
     setRoQuantityResult(null);
     setRoQuantityError('');
     try {
-      const res = await fetch(RO_DETAILS_API_URL, {
+      const res = await featureFetch(RO_DETAILS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1121,7 +1122,7 @@ export default function App() {
     setRationCardError('');
     setRationCardResult(null);
     try {
-      const res = await fetch(RATION_CARD_DETAILS_API_URL, {
+      const res = await featureFetch(RATION_CARD_DETAILS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1173,7 +1174,7 @@ export default function App() {
     setRoQuantityError('');
     setRoQuantityResult(null);
     try {
-      const res = await fetch(RO_QUANTITY_DETAILS_API_URL, {
+      const res = await featureFetch(RO_QUANTITY_DETAILS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -4037,7 +4038,7 @@ export default function App() {
           <Button
               type="button"
               variant="outlined"
-              onClick={() => setActiveView('home')}
+              onClick={() => { setActiveView('home'); onHome?.(); }}
               sx={{
                 height: 40,
                 borderRadius: 2,
@@ -4113,6 +4114,7 @@ export default function App() {
                     type="button"
                     elevation={0}
                     onClick={() => {
+                      if (onProtectedFeature?.(page.view)) return;
                       if (page.externalUrl) {
                         window.location.href = page.externalUrl;
                         return;

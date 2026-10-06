@@ -16,8 +16,24 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 import requests
 from bs4 import BeautifulSoup
+from account_auth import ALLOWED_ORIGINS, account_gate, router as account_router
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
+app.include_router(account_router)
+app.middleware('http')(account_gate)
+
+
+@app.exception_handler(RequestValidationError)
+async def safe_validation_error(request, exc):
+    if request.url.path.startswith('/auth/'):
+        # FastAPI's default errors echo invalid input, including passwords.
+        return JSONResponse(status_code=422, content={'detail': 'Check your details. Use a 7-digit shop number, a valid Indian mobile number, and at least 12 characters for a new password.'})
+    return await request_validation_exception_handler(request, exc)
+
+
 BASE_DIR = Path(__file__).resolve().parent
 REACT_DIST_DIR = BASE_DIR / "react _frontend" / "dist"
 REACT_INDEX_FILE = REACT_DIST_DIR / "index.html"
@@ -57,10 +73,10 @@ if not logger.handlers:
         except OSError as exc:
             logger.warning("file_logging_disabled reason=%s", exc)
 
-# Allow the Vite dev server (and fallback to any origin during development) to hit the API
+# Cookies require explicit trusted origins; local Vite proxies use the same origin.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
