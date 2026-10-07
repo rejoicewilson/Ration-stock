@@ -23,7 +23,12 @@ All existing features require login; no paid-access checks are included.
   remember only a yes/no flag and show Sign in. Passwords are never stored there.
 - Mobile number is unique; shop numbers may repeat. Phone ownership is unverified.
 - Argon2id password hashes and HttpOnly cookies; backend authentication for every
-  feature endpoint. Two browser slots, one replacement per seven days.
+  feature endpoint. No browser-count or replacement-cooldown limits for free login.
+  Password checks and the 15-minute sign-in attempt limits remain in force.
+  Existing sessions remain valid; no account or session cleanup is needed.
+  Rerun the updated accounts SQL to remove database-side browser checks as well.
+  Old MAX_ACTIVE_DEVICE_SESSIONS/DEVICE_REPLACEMENT_COOLDOWN_DAYS variables are
+  ignored by this version and can be removed from Vercel and local configuration.
 - Owner dashboard: `/admin`. Every dashboard API call checks the owner UUID.
   Tracks daily/monthly unique accounts and successful feature-request counts in
   India time. Login itself and e-Treasury visits do not count. The account cards

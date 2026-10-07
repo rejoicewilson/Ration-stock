@@ -194,19 +194,22 @@ class AccountSecurityTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.body, b'feature result')
 
-    def test_login_device_challenges_do_not_issue_cookies(self):
+    def test_login_ignores_old_device_limit_configuration(self):
         password_hash = auth.hasher.hash('long test password')
-        for challenge in ('device_limit', 'replacement_cooldown'):
-            def reply(action, data):
-                if action == 'limit':
-                    return {'allowed': True}
-                if action == 'find':
-                    return {'id': 'test', 'password_hash': password_hash, 'disabled': False}
-                return {'error': challenge, 'devices': []}
-            self.rpc.side_effect = reply
+        def reply(action, data):
+            if action == 'limit':
+                return {'allowed': True}
+            if action == 'find':
+                return {'id': 'test', 'password_hash': password_hash, 'disabled': False}
+            return {'ok': True}
+        self.rpc.side_effect = reply
+        with patch.dict('os.environ', {'MAX_ACTIVE_DEVICE_SESSIONS': '2', 'DEVICE_REPLACEMENT_COOLDOWN_DAYS': '7'}):
             response = self.client.post('/auth/login', json={'mobile': '9447645196', 'password': 'long test password'})
-            self.assertEqual(response.status_code, 409)
-            self.assertNotIn('set-cookie', response.headers)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('set-cookie', response.headers)
+        self.assertEqual(self.rpc.call_args.args[0], 'open_session')
+        for field in ('max_devices', 'cooldown_days', 'replace_device_id'):
+            self.assertNotIn(field, self.rpc.call_args.args[1])
 
     def test_disabled_account_cannot_login(self):
         password_hash = auth.hasher.hash('long test password')

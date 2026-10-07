@@ -26,8 +26,6 @@ SECURE_COOKIES = bool(os.getenv('VERCEL')) or os.getenv('COOKIE_SECURE', 'false'
 SESSION_COOKIE = '__Host-ration_session' if SECURE_COOKIES else 'ration_session'
 DEVICE_COOKIE = '__Host-ration_device' if SECURE_COOKIES else 'ration_device'
 SESSION_DAYS = 30
-MAX_DEVICES = int(os.getenv('MAX_ACTIVE_DEVICE_SESSIONS', '2'))
-COOLDOWN_DAYS = int(os.getenv('DEVICE_REPLACEMENT_COOLDOWN_DAYS', '7'))
 SUPPORT_NUMBER = os.getenv('SUPPORT_WHATSAPP', '919447645196')
 PROTECTED_PATHS = {'/count', '/fps-stock', '/transactions', '/stock-register', '/ro-details',
                    '/ro-quantity-details', '/ration-card-details'}
@@ -121,7 +119,6 @@ def normalize_mobile(value):
 class LoginBody(BaseModel):
     mobile: str = Field(max_length=20)
     password: SecretStr
-    replace_device_id: UUID | None = None
 
     @field_validator('mobile')
     @classmethod
@@ -286,11 +283,8 @@ def login(body: LoginBody, request: Request, response: Response):
         raise HTTPException(401, 'Mobile number or password is incorrect.')
     device, token, session = new_session(request)
     result = rpc('open_session', {**session, 'account_id': account['id'],
-        'expected_hash': account['password_hash'], 'max_devices': MAX_DEVICES,
-        'cooldown_days': COOLDOWN_DAYS, 'replace_device_id': str(body.replace_device_id) if body.replace_device_id else ''})
+        'expected_hash': account['password_hash']})
     code = result.get('error')
-    if code in ('device_limit', 'replacement_cooldown'):
-        raise HTTPException(409, result)
     if code or not result.get('ok'):
         raise HTTPException(401, 'Sign-in could not be completed. Please try again.')
     set_cookies(response, device, token)

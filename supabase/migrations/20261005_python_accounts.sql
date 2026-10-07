@@ -50,7 +50,6 @@ declare
   account_uuid uuid;
   device_list jsonb;
   attempt_count integer;
-  next_replacement timestamptz;
 begin
   if p_action = 'limit' then
     delete from ration_private.attempts where expires_at < now();
@@ -89,20 +88,7 @@ begin
     end if;
     select * into d from ration_private.devices where account_id = a.id and device_hash = p_data->>'device_hash';
     if not found then
-      if (select count(*) from ration_private.devices where account_id = a.id) >= (p_data->>'max_devices')::integer then
-        next_replacement := a.last_device_replaced_at + make_interval(days => (p_data->>'cooldown_days')::integer);
-        select coalesce(jsonb_agg(jsonb_build_object('id', id, 'label', label, 'last_seen_at', last_seen_at)
-          order by created_at), '[]'::jsonb) into device_list from ration_private.devices where account_id = a.id;
-        if next_replacement > now() then
-          return jsonb_build_object('error', 'replacement_cooldown', 'available_at', next_replacement);
-        end if;
-        if nullif(p_data->>'replace_device_id', '') is null then
-          return jsonb_build_object('error', 'device_limit', 'devices', device_list);
-        end if;
-        delete from ration_private.devices where account_id = a.id and id = (p_data->>'replace_device_id')::uuid;
-        if not found then return jsonb_build_object('error', 'device_not_found'); end if;
-        update ration_private.accounts set last_device_replaced_at = now() where id = a.id;
-      end if;
+      -- Free-login rollout: add a browser without evicting any existing session.
       insert into ration_private.devices(account_id, device_hash, session_hash, label, expires_at)
         values (a.id, p_data->>'device_hash', p_data->>'session_hash', left(p_data->>'label', 80),
           now() + make_interval(days => (p_data->>'session_days')::integer));
@@ -112,7 +98,7 @@ begin
     end if;
     return jsonb_build_object('ok', true);
   elsif p_action = 'logout' then
-    -- Keep the slot: signing out must not bypass the device replacement limit.
+    -- Retain the browser identity, but revoke its session.
     update ration_private.devices set session_hash = null, expires_at = null
       where session_hash = p_data->>'session_hash';
     return jsonb_build_object('ok', true);

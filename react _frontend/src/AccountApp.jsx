@@ -34,7 +34,6 @@ export default function AccountApp() {
   const [form, setForm] = useState({ fps_id: '', mobile: '', password: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [deviceChallenge, setDeviceChallenge] = useState(null);
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '' });
   function goHome() {
@@ -82,33 +81,24 @@ export default function AccountApp() {
   }, []);
 
   const changeField = (event) => {
-    setDeviceChallenge(null);
     setForm((previous) => ({ ...previous, [event.target.name]: event.target.value }));
   };
 
-  async function submit(event, replacement = null) {
+  async function submit(event) {
     event?.preventDefault();
     setBusy(true); setError('');
     try {
       const body = { mobile: form.mobile, password: form.password };
       if (mode === 'register') body.fps_id = form.fps_id;
-      if (replacement) body.replace_device_id = replacement;
       await accountRequest(mode, body);
       rememberReturningUser();
       setMode('login');
       setPasswordVisible(false);
       setForm((previous) => ({ ...previous, password: '' }));
-      setDeviceChallenge(null);
       await refreshAccount();
       broadcastSessionChange();
     } catch (err) {
-      if (err.detail?.error === 'device_limit') {
-        setDeviceChallenge(err.detail.devices);
-        setError('Two browsers are already registered. Choose one to replace. Its access will end immediately. You can replace a browser once every seven days.');
-      } else if (err.detail?.error === 'replacement_cooldown') {
-        setDeviceChallenge(null);
-        setError(`Another browser can be replaced after ${new Date(err.detail.available_at).toLocaleString('en-IN')}. Contact support if you need help sooner.`);
-      } else setError(err.message || 'Could not sign in. Please try again.');
+      setError(err.message || 'Could not sign in. Please try again.');
     } finally { setBusy(false); }
   }
 
@@ -169,14 +159,13 @@ export default function AccountApp() {
             InputProps={{ endAdornment: <InputAdornment position="end"><Button type="button" size="small" aria-label={passwordVisible ? 'Hide password' : 'Show password'} aria-pressed={passwordVisible} onClick={() => setPasswordVisible(value => !value)} sx={{ minWidth: 0, minHeight: 44, px: 0.5, fontSize: 12, textTransform: 'none' }}>{passwordVisible ? 'Hide' : 'Show'}</Button></InputAdornment> }}
             helperText={mode === 'register' ? 'At least 12 characters' : undefined} />
           {error && <Alert severity="error">{error}</Alert>}
-          {deviceChallenge?.map((device) => <Button key={device.id} variant="outlined" disabled={busy} onClick={() => submit(null, device.id)} sx={buttonStyle}>Replace {device.label}</Button>)}
           <Button type="submit" variant="contained" disabled={busy} sx={{ ...buttonStyle, minHeight: 52, fontSize: 16, bgcolor: '#2563eb', boxShadow: '0 5px 14px #2563eb25', '&:hover': { bgcolor: '#1d4ed8', boxShadow: '0 6px 18px #2563eb30' } }}>{busy ? 'Please wait…' : mode === 'register' ? 'Create account' : 'Sign in'}</Button>
-          <Button disabled={busy} onClick={() => { setMode(mode === 'register' ? 'login' : 'register'); setPasswordVisible(false); setError(''); setDeviceChallenge(null); setForm({ ...form, password: '' }); }} sx={{ textTransform: 'none', lineHeight: 1.6, flexWrap: 'wrap', gap: 0.5, fontSize: 14, minHeight: 44, color: '#52647f' }}>
+          <Button disabled={busy} onClick={() => { setMode(mode === 'register' ? 'login' : 'register'); setPasswordVisible(false); setError(''); setForm({ ...form, password: '' }); }} sx={{ textTransform: 'none', lineHeight: 1.6, flexWrap: 'wrap', gap: 0.5, fontSize: 14, minHeight: 44, color: '#52647f' }}>
             {mode === 'register' ? 'Already have an account?' : 'New to the app?'} <Box component="span" sx={{ color: '#2563eb', fontWeight: 700 }}>{mode === 'register' ? 'Sign in' : 'Create account'}</Box>
           </Button>
           {mode === 'login' && <Button component="a" href={supportUrl} target="_blank" rel="noopener noreferrer" sx={{ textTransform: 'none' }}>Forgot password? Contact support</Button>}
           <Box sx={{ borderTop: '1px solid #edf1f7', pt: 1.5, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 0.5 }}>
-            <Button disabled={busy} onClick={() => { goHome(); setPasswordVisible(false); setError(''); setDeviceChallenge(null); setForm({ ...form, password: '' }); }} sx={{ textTransform: 'none', color: '#64748b', px: 0.5, minHeight: 44, fontSize: 12 }}>← Back to home</Button>
+            <Button disabled={busy} onClick={() => { goHome(); setPasswordVisible(false); setError(''); setForm({ ...form, password: '' }); }} sx={{ textTransform: 'none', color: '#64748b', px: 0.5, minHeight: 44, fontSize: 12 }}>← Back to home</Button>
             <Typography component="a" href="tel:9447645196" sx={{ color: '#64748b', textDecoration: 'none', fontSize: 12, py: 1.5, '&:hover': { textDecoration: 'underline' } }}>Support: 9447645196</Typography>
           </Box>
         </Stack>
