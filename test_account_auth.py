@@ -81,7 +81,49 @@ class AccountSecurityTests(unittest.TestCase):
     def test_only_expected_account_routes_registered(self):
         routes = {route.path for route in app.routes if route.path.startswith('/auth/')}
         self.assertEqual(routes, {'/auth/me', '/auth/support', '/auth/register', '/auth/login',
-            '/auth/logout', '/auth/devices', '/auth/change-password', '/auth/admin/dashboard'})
+            '/auth/logout', '/auth/devices', '/auth/change-password', '/auth/admin/dashboard', '/auth/admin/reset-password'})
+
+    def test_owner_reset_security_and_password_hash(self):
+        owner_id = '00000000-0000-0000-0000-000000000001'
+        target_id = '00000000-0000-0000-0000-000000000002'
+        password_hash = auth.hasher.hash('owner test password')
+        owner = {'id': owner_id, 'mobile': '919999999999'}
+        payload = {'account_id': target_id, 'mobile': '918888888888', 'owner_password': 'owner test password',
+                   'temporary_password': 'member temporary phrase',
+                   'reason': 'Verified independently by support', 'ownership_verified': True}
+        def reply(action, data):
+            if action == 'session': return owner
+            if action == 'limit': return {'allowed': True}
+            if action == 'find':
+                return {'id': owner_id, 'password_hash': password_hash} if data['mobile'] == owner['mobile'] else {'id': target_id}
+            return {'ok': True}
+        self.rpc.side_effect = reply
+        self.client.cookies.set(auth.SESSION_COOKIE, 'A' * 43)
+        with patch.dict('os.environ', {'OWNER_ACCOUNT_ID': owner_id}):
+            response = self.client.post('/auth/admin/reset-password', json=payload)
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers['cache-control'], 'no-store')
+            self.assertEqual(response.json(), {'ok': True})
+            temporary = payload['temporary_password']
+            self.assertGreaterEqual(len(temporary), 12)
+            action, data = self.rpc.call_args.args
+            self.assertEqual(action, 'reset_password')
+            self.assertTrue(auth.check_password(temporary, data['password_hash']))
+            self.assertIn(owner_id, data['reason'])
+            self.assertNotIn(temporary, data['reason'])
+            invalid = self.client.post('/auth/admin/reset-password', json={**payload, 'temporary_password': 'short'})
+            self.assertEqual(invalid.status_code, 422)
+            self.assertNotIn('owner test password', invalid.text)
+            self.assertEqual(self.client.post('/auth/admin/reset-password', json={**payload, 'temporary_password': payload['owner_password']}).status_code, 400)
+            self.assertEqual(self.client.post('/auth/admin/reset-password', json={**payload, 'owner_password': 'wrong'}).status_code, 401)
+            self.assertEqual(self.client.post('/auth/admin/reset-password', json={**payload, 'ownership_verified': False}).status_code, 422)
+            self.assertEqual(self.client.post('/auth/admin/reset-password', json={**payload, 'account_id': owner_id}).status_code, 400)
+        with patch.dict('os.environ', {'OWNER_ACCOUNT_ID': target_id}):
+            self.rpc.reset_mock()
+            self.assertEqual(self.client.post('/auth/admin/reset-password', json=payload).status_code, 403)
+            self.assertEqual(self.rpc.call_count, 1)
+        self.client.cookies.clear()
+        self.assertEqual(self.client.post('/auth/admin/reset-password', json=payload).status_code, 401)
 
     def test_dashboard_denies_guest(self):
         self.assertEqual(self.client.get('/auth/admin/dashboard').status_code, 401)
@@ -102,8 +144,12 @@ class AccountSecurityTests(unittest.TestCase):
         self.rpc.side_effect = lambda action, data: {'id': owner} if action == 'session' else {'accounts': []}
         with patch.dict('os.environ', {'OWNER_ACCOUNT_ID': owner}):
             self.assertEqual(self.client.get('/auth/admin/dashboard?page=2').status_code, 200)
-            self.rpc.assert_called_with('dashboard', {'offset': 50})
+            self.rpc.assert_called_with('dashboard', {'offset': 50, 'search': ''})
             self.assertEqual(self.client.get('/auth/admin/dashboard?page=0').status_code, 400)
+            self.rpc.side_effect = lambda action, data: {'id': owner} if action == 'session' else {'accounts': [], 'matching_accounts': 0}
+            self.assertEqual(self.client.get('/auth/admin/dashboard', params={'page': 2, 'search': '+91 98476-04587'}).status_code, 200)
+            self.rpc.assert_called_with('dashboard', {'offset': 50, 'search': '919847604587'})
+            self.assertEqual(self.client.get('/auth/admin/dashboard', params={'search': '%'}).status_code, 400)
 
     def test_owner_config_fails_closed(self):
         with patch.dict('os.environ', {'OWNER_ACCOUNT_ID': ''}):

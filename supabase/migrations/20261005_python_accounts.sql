@@ -138,7 +138,7 @@ begin
       expires_at = now() + make_interval(days => (p_data->>'session_days')::integer) where id = d.id;
     return jsonb_build_object('ok', true);
   elsif p_action = 'reset_password' then
-    -- Operator-only recovery; no public HTTP endpoint maps to this action.
+    -- Operator-only recovery via CLI or owner-authorized, reauthenticated dashboard.
     select * into a from ration_private.accounts where mobile = p_data->>'mobile' for update;
     if not found then return jsonb_build_object('error', 'account_not_found'); end if;
     if length(trim(coalesce(p_data->>'reason', ''))) < 10 then raise exception 'Recovery reason is required'; end if;

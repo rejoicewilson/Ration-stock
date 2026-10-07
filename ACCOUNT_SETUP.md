@@ -28,8 +28,19 @@ All existing features require login; no paid-access checks are included.
   Tracks daily/monthly unique accounts and successful feature-request counts in
   India time. Login itself and e-Treasury visits do not count. The account cards
   show this month's features and last use. No queried ration card data is stored.
+  Member search covers all accounts by shop/mobile number, including partial
+  matches. Matching results are paginated in groups of 50; summary totals remain
+  global. Rerun the updated activity-dashboard SQL to enable server-side search.
 - Recovery: `python recover_account.py`, only after independent ownership checks.
   Resets require a recorded reason and revoke sessions; new password required.
+  Alternatively, the owner dashboard provides Reset member password. This requires
+  the owner's current password, an ownership-verification note, and confirmation.
+  The owner chooses and confirms a temporary password of at least 12 characters.
+  It is hashed server-side, never saved in browser storage, and must differ from
+  the owner's password. The member must still replace it at the next sign-in.
+  Audit notes record the acting owner UUID. Share the password only with the
+  verified account owner. Self-reset is blocked; use Change password instead.
+  The existing reset RPC is reused; no database migration is needed for this UI.
 
 ## Before deployment
 

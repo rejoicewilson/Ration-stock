@@ -7,6 +7,7 @@ import re
 import secrets
 from pathlib import Path
 from uuid import UUID
+from typing import Literal
 
 import requests
 from argon2 import PasswordHasher
@@ -203,18 +204,65 @@ def is_owner(account):
 
 
 @router.get('/admin/dashboard')
-def dashboard(request: Request, page: int = 1):
+def dashboard(request: Request, page: int = 1, search: str = ''):
     account = session_user(request)
     if not is_owner(account) or account.get('must_change_password'):
         raise HTTPException(403, 'Owner access only.')
     if not 1 <= page <= 100000:
         raise HTTPException(400, 'Invalid page.')
-    return rpc('dashboard', {'offset': (page - 1) * 50})
+    if len(search) > 30:
+        raise HTTPException(400, 'Search is too long.')
+    query = re.sub(r'[\s()+-]', '', search)
+    if query and not re.fullmatch(r'[0-9]{1,20}', query):
+        raise HTTPException(400, 'Search using a shop or mobile number.')
+    result = rpc('dashboard', {'offset': (page - 1) * 50, 'search': query})
+    if query and 'matching_accounts' not in result:
+        raise HTTPException(503, 'Run the updated activity dashboard SQL to enable all-member search.')
+    return result
 
 
 @router.get('/support')
 def support():
     return {'whatsapp': SUPPORT_NUMBER}
+
+
+class OwnerResetBody(BaseModel):
+    account_id: UUID
+    mobile: str = Field(pattern=r'^91[6-9][0-9]{9}$')
+    owner_password: SecretStr = Field(min_length=1, max_length=128)
+    temporary_password: SecretStr = Field(min_length=12, max_length=128)
+    reason: str = Field(min_length=10, max_length=350)
+    ownership_verified: Literal[True]
+
+
+@router.post('/admin/reset-password')
+def owner_reset_password(body: OwnerResetBody, request: Request):
+    owner = session_user(request)
+    if not is_owner(owner) or owner.get('must_change_password'):
+        raise HTTPException(403, 'Owner access only.')
+    if str(body.account_id) == owner['id']:
+        raise HTTPException(400, 'Use Change password for your own account.')
+    reason = body.reason.strip()
+    if len(reason) < 10:
+        raise HTTPException(400, 'Please describe how ownership was verified.')
+    throttle(request, owner['mobile'])
+    credentials = rpc('find', {'mobile': owner['mobile']})
+    if not credentials or not check_password(body.owner_password.get_secret_value(), credentials['password_hash']):
+        raise HTTPException(401, 'Your owner password is incorrect.')
+    target = rpc('find', {'mobile': body.mobile})
+    if not target or str(target['id']) != str(body.account_id):
+        raise HTTPException(404, 'Account details changed. Refresh the dashboard.')
+    if target.get('disabled'):
+        raise HTTPException(400, 'This account is disabled. Password reset will not enable it.')
+    temporary = body.temporary_password.get_secret_value()
+    if temporary == body.owner_password.get_secret_value():
+        raise HTTPException(400, 'Do not use your own password as the temporary password.')
+    result = rpc('reset_password', {'mobile': body.mobile,
+        'password_hash': hasher.hash(temporary),
+        'reason': f"Dashboard owner {owner['id']}: {reason}"})
+    if not result.get('ok'):
+        raise HTTPException(409, 'Reset could not be completed. Refresh and try again.')
+    return {'ok': True}
 
 
 @router.post('/register')

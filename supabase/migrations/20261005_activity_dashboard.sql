@@ -18,6 +18,7 @@ declare
   today date := (now() at time zone 'Asia/Kolkata')::date;
   month_start date := date_trunc('month', now() at time zone 'Asia/Kolkata')::date;
   result jsonb;
+  search_term text := coalesce(p_data->>'search', '');
 begin
   if p_action = 'record_activity' then
     if not (p_data->>'feature' = any(array['/count','/fps-stock','/transactions',
@@ -34,6 +35,8 @@ begin
     select jsonb_build_object(
       'date', today, 'timezone', 'Asia/Kolkata',
       'total_accounts', (select count(*) from ration_private.accounts),
+      'matching_accounts', (select count(*) from ration_private.accounts
+        where search_term = '' or position(search_term in fps_id) > 0 or position(search_term in mobile) > 0),
       'new_today', (select count(*) from ration_private.accounts where (created_at at time zone 'Asia/Kolkata')::date = today),
       'new_month', (select count(*) from ration_private.accounts where (created_at at time zone 'Asia/Kolkata')::date between month_start and today),
       'active_today', (select count(distinct account_id) from ration_private.activity_daily where activity_date = today),
@@ -51,7 +54,9 @@ begin
             group by d.feature order by max(d.last_used_at) desc
           ) usage) as features,
           (select max(last_used_at) from ration_private.activity_daily d where d.account_id = a.id) as last_activity
-        from ration_private.accounts a order by a.created_at desc, a.id
+        from ration_private.accounts a
+        where search_term = '' or position(search_term in a.fps_id) > 0 or position(search_term in a.mobile) > 0
+        order by a.created_at desc, a.id
         limit 50 offset greatest(0, (p_data->>'offset')::integer)) u)
     ) into result;
     return result;
