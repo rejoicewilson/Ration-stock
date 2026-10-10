@@ -273,7 +273,7 @@ const calculateCommission = (summary) => {
 const formatNumber = (value, maximumFractionDigits = 2) =>
   Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits });
 
-export default function App({ initialView = 'home', onProtectedFeature, onHome }) {
+export default function App({ initialView = 'home', onProtectedFeature, onHome, registeredFpsId = '' }) {
   const currentYear = new Date().getFullYear();
   const monthOptions = [
     ['01', 'January'],
@@ -577,13 +577,21 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome }
       ['1401803', 'VELIYAMPARAMBA'],
     ],
   };
+  // AccountApp remounts this component when the account changes. These defaults
+  // only initialize the forms, so subsequent user edits are preserved.
+  const defaultFpsId = String(registeredFpsId || '');
+  const fpsDistrict = /^\d{7}$/.test(defaultFpsId) ? defaultFpsId.slice(0, 2) : '';
+  const defaultDistrict = districtOptions.some(([code]) => code === fpsDistrict) ? fpsDistrict : '';
+  const fpsOffice = defaultFpsId.slice(2, 4);
+  const defaultOffice = (afsoOptionsByDistrict[defaultDistrict] || []).some(([code]) => code === fpsOffice)
+    ? fpsOffice : '';
   const [activeView, setActiveView] = useState(initialView);
   const [picker, setPicker] = useState(null);
   const [pendingPickerValue, setPendingPickerValue] = useState('');
   const [form, setForm] = useState({
-    fps_id: '',
-    month: '',
-    year: '',
+    fps_id: defaultFpsId,
+    month: String(new Date().getMonth() + 1).padStart(2, '0'),
+    year: String(new Date().getFullYear()),
     raw_rice_bag_weight: '50',
     boiled_rice_bag_weight: '50',
     matta_cmr_bag_weight: '50',
@@ -594,41 +602,41 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome }
   const [transactionForm, setTransactionForm] = useState({
     from_date: todayForDateInput(),
     to_date: todayForDateInput(),
-    dist_code: '18',
-    afso: '42',
-    fps_id: '',
+    dist_code: defaultDistrict || '18',
+    afso: defaultDistrict ? defaultOffice : '42',
+    fps_id: defaultFpsId,
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
   });
   const [commissionForm, setCommissionForm] = useState({
     from_date: todayForDateInput(),
     to_date: todayForDateInput(),
-    dist_code: '18',
-    afso: '42',
-    fps_id: '',
+    dist_code: defaultDistrict || '18',
+    afso: defaultDistrict ? defaultOffice : '42',
+    fps_id: defaultFpsId,
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
   });
   const [monthComparisonForm, setMonthComparisonForm] = useState({
-    dist_code: '18',
-    afso: '42',
-    fps_id: '',
+    dist_code: defaultDistrict || '18',
+    afso: defaultDistrict ? defaultOffice : '42',
+    fps_id: defaultFpsId,
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
   });
   const [stockBoardForm, setStockBoardForm] = useState({
-    dist_code: '22',
-    office_code: '62',
-    fps_id: '',
+    dist_code: defaultDistrict || '22',
+    office_code: defaultDistrict ? defaultOffice : '62',
+    fps_id: defaultFpsId,
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
   });
   const [settingsForm, setSettingsForm] = useState({
     month: String(new Date().getMonth() + 1).padStart(2, '0'),
     year: String(new Date().getFullYear()),
-    shop_no: '',
-    dist_code: '18',
-    depot_id: '0802801',
+    shop_no: defaultFpsId,
+    dist_code: defaultDistrict || '18',
+    depot_id: defaultDistrict ? '' : '0802801',
   });
   const [rationCardForm, setRationCardForm] = useState({
     src_no: '',

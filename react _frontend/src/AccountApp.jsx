@@ -190,6 +190,7 @@ export default function AccountApp() {
     {error && <Alert severity="warning" sx={{ m: 2 }}>{error}</Alert>}
     {account?.is_owner && <Box sx={{ textAlign: 'center', py: 1 }}><Button variant="outlined" onClick={() => { window.history.replaceState(null, '', '/admin'); setPendingView('admin'); }}>Owner dashboard</Button></Box>}
     <App key={account?.id || 'guest'} initialView={account ? pendingView || 'home' : 'home'}
+      registeredFpsId={account?.fps_id || ''}
       onHome={() => setPendingView(null)}
       onProtectedFeature={(view) => { setPendingView(view); setError(''); return !account; }} />
   </>;
