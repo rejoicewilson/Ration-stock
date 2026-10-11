@@ -160,9 +160,14 @@ export default function AccountApp() {
             helperText={mode === 'register' ? 'At least 12 characters' : undefined} />
           {error && <Alert severity="error">{error}</Alert>}
           <Button type="submit" variant="contained" disabled={busy} sx={{ ...buttonStyle, minHeight: 52, fontSize: 16, bgcolor: '#2563eb', boxShadow: '0 5px 14px #2563eb25', '&:hover': { bgcolor: '#1d4ed8', boxShadow: '0 6px 18px #2563eb30' } }}>{busy ? 'Please wait…' : mode === 'register' ? 'Create account' : 'Sign in'}</Button>
-          <Button disabled={busy} onClick={() => { setMode(mode === 'register' ? 'login' : 'register'); setPasswordVisible(false); setError(''); setForm({ ...form, password: '' }); }} sx={{ textTransform: 'none', lineHeight: 1.6, flexWrap: 'wrap', gap: 0.5, fontSize: 14, minHeight: 44, color: '#52647f' }}>
-            {mode === 'register' ? 'Already have an account?' : 'New to the app?'} <Box component="span" sx={{ color: '#2563eb', fontWeight: 700 }}>{mode === 'register' ? 'Sign in' : 'Create account'}</Box>
-          </Button>
+          <Stack spacing={1}>
+            <Typography sx={{ textAlign: 'center', color: '#52647f', fontSize: 14 }}>
+              {mode === 'register' ? 'Already have an account?' : 'New to the app?'}
+            </Typography>
+            <Button type="button" variant="outlined" fullWidth disabled={busy} onClick={() => { setMode(mode === 'register' ? 'login' : 'register'); setPasswordVisible(false); setError(''); setForm({ ...form, password: '' }); }} sx={{ minHeight: 52, borderRadius: 2.5, textTransform: 'none', fontSize: 16, fontWeight: 700, color: '#2563eb', borderColor: '#2563eb', bgcolor: '#f1f6ff', '&:hover': { bgcolor: '#e5eeff', borderColor: '#1d4ed8' } }}>
+              {mode === 'register' ? 'Sign in' : 'Create account'}
+            </Button>
+          </Stack>
           {mode === 'login' && <Button component="a" href={supportUrl} target="_blank" rel="noopener noreferrer" sx={{ textTransform: 'none' }}>Forgot password? Contact support</Button>}
           <Box sx={{ borderTop: '1px solid #edf1f7', pt: 1.5, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 0.5 }}>
             <Button disabled={busy} onClick={() => { goHome(); setPasswordVisible(false); setError(''); setForm({ ...form, password: '' }); }} sx={{ textTransform: 'none', color: '#64748b', px: 0.5, minHeight: 44, fontSize: 12 }}>← Back to home</Button>
