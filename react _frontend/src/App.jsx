@@ -196,6 +196,7 @@ const getMonthComparisonPeriods = (yearValue, monthValue) => {
 const calculateCommission = (summary) => {
   const totals = summary?.commodity_totals || {};
   const schemeTotals = summary?.scheme_commodity_totals || {};
+  const omssSplTotals = summary?.scheme_omss_spl_rice_totals || {};
   const eligibleKg = ['wheat', 'atta', 'rr', 'br', 'cmr'].reduce(
     (sum, key) => sum + (Number(totals[key]) || 0),
     0
@@ -206,7 +207,7 @@ const calculateCommission = (summary) => {
     (sum, scheme) => sum + ['rr', 'br', 'cmr'].reduce(
       (schemeSum, key) => schemeSum + (Number(schemeTotals[scheme]?.[key]) || 0),
       0
-    ),
+    ) - (Number(omssSplTotals[scheme]) || 0),
     0
   );
   const attaCollectedKg = attaSchemes.reduce(
@@ -217,11 +218,18 @@ const calculateCommission = (summary) => {
     (sum, scheme) => sum + (Number(schemeTotals[scheme]?.wheat) || 0),
     0
   );
-  const alreadyCollectedKg = riceCollectedKg + attaCollectedKg + wheatCollectedKg;
-  const alreadyCollectedAmount = alreadyCollectedKg * 2;
+  // OMSS SPL remains in gross sales, but is collected once at its own rate.
+  const omssSplCollectedKg = ['NPS', 'NPNS', 'NPI', 'PHH'].reduce(
+    (sum, scheme) => sum + (Number(omssSplTotals[scheme]) || 0),
+    0
+  );
+  const regularCollectedKg = riceCollectedKg + attaCollectedKg + wheatCollectedKg;
+  const alreadyCollectedKg = regularCollectedKg + omssSplCollectedKg;
+  const alreadyCollectedAmount = Math.round((regularCollectedKg * 2 + omssSplCollectedKg * 2.7) * 100) / 100;
 
   const collectionDetails = {
     riceCollectedKg,
+    omssSplCollectedKg,
     attaCollectedKg,
     wheatCollectedKg,
     alreadyCollectedKg,

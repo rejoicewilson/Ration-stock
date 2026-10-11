@@ -983,6 +983,7 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
     }
 
     scheme_commodity_totals = {}
+    scheme_omss_spl_rice_totals = {}
     scheme_transaction_counts = {}
     for transaction in filtered:
         scheme = str(transaction.get("scheme", "")).strip().upper()
@@ -996,6 +997,14 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
             group = commodity_group(header)
             if group:
                 scheme_totals[group] += to_float(quantity)
+                if (
+                    group in {"rr", "br", "cmr"}
+                    and commodity_has_token(header, "OMSS")
+                    and commodity_has_token(header, "SPL")
+                ):
+                    scheme_omss_spl_rice_totals[scheme] = (
+                        scheme_omss_spl_rice_totals.get(scheme, 0.0) + to_float(quantity)
+                    )
 
     scheme_commodity_totals = {
         scheme: {key: round(value, 3) for key, value in totals.items()}
@@ -1037,6 +1046,10 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
         "to_date": max(filtered_dates).strftime("%d-%m-%Y") if filtered_dates else to_date,
         "commodity_totals": commodity_totals,
         "scheme_commodity_totals": scheme_commodity_totals,
+        "scheme_omss_spl_rice_totals": {
+            scheme: round(quantity, 3)
+            for scheme, quantity in scheme_omss_spl_rice_totals.items()
+        },
         "scheme_transaction_counts": scheme_transaction_counts,
     }
 
