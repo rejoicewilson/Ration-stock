@@ -5143,6 +5143,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
                           <Box component="tbody">
                             {[
                               ['TRANSACTIONS', null],
+                              ['CARDS', null],
                               ['WHEAT', 'wheat'],
                               ['ATTA', 'atta'],
                               ['RR', 'rr'],
@@ -5169,7 +5170,9 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
                                         serviceResult.summary?.scheme_commodity_totals?.[scheme]?.[commodityKey] || 0,
                                         commodityKey === 'koil' ? 'ltr' : 'kg'
                                       )
-                                      : serviceResult.summary?.scheme_transaction_counts?.[scheme] || 0}
+                                      : label === 'CARDS'
+                                        ? serviceResult.summary?.scheme_card_counts?.[scheme] ?? 0
+                                        : serviceResult.summary?.scheme_transaction_counts?.[scheme] || 0}
                                     </Box>
                                 ))}
                                 <Box
@@ -5181,7 +5184,9 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
                                       serviceResult.summary?.commodity_totals?.[commodityKey] || 0,
                                       commodityKey === 'koil' ? 'ltr' : 'kg'
                                     )
-                                    : serviceResult.summary?.transaction_count || 0}
+                                    : label === 'CARDS'
+                                      ? serviceResult.summary?.card_count ?? 0
+                                      : serviceResult.summary?.transaction_count || 0}
                                 </Box>
                               </Box>
                             ))}

@@ -985,11 +985,16 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
     scheme_commodity_totals = {}
     scheme_omss_spl_rice_totals = {}
     scheme_transaction_counts = {}
+    scheme_cards = {}
     for transaction in filtered:
         scheme = str(transaction.get("scheme", "")).strip().upper()
         if not scheme:
             continue
         scheme_transaction_counts[scheme] = scheme_transaction_counts.get(scheme, 0) + 1
+        cards = scheme_cards.setdefault(scheme, set())
+        card = re.sub(r"\D+", "", str(transaction.get("rc_no", "")))
+        if card:
+            cards.add(card)
         scheme_totals = scheme_commodity_totals.setdefault(
             scheme, {key: 0.0 for key in commodity_keys}
         )
@@ -1051,6 +1056,7 @@ def summarize_fps_transaction_details(transactions, from_date: str, to_date: str
             for scheme, quantity in scheme_omss_spl_rice_totals.items()
         },
         "scheme_transaction_counts": scheme_transaction_counts,
+        "scheme_card_counts": {scheme: len(cards) for scheme, cards in scheme_cards.items()},
     }
 
 
