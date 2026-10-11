@@ -612,8 +612,6 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
     year: String(new Date().getFullYear()),
   });
   const [commissionForm, setCommissionForm] = useState({
-    from_date: todayForDateInput(),
-    to_date: todayForDateInput(),
     dist_code: defaultDistrict || '18',
     afso: defaultDistrict ? defaultOffice : '42',
     fps_id: defaultFpsId,
@@ -861,7 +859,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
     e.preventDefault();
     if (
       isCommission
-      && (requestForm.from_date < '2026-01-01' || Number(requestForm.year) < 2026)
+      && Number(requestForm.year) < 2026
     ) {
       setError('The new commission rates apply only from January 2026.');
       return;
@@ -874,12 +872,18 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
     setError('');
     setResult(null);
     try {
+      const period = isCommission
+        ? getMonthComparisonPeriods(requestForm.year, requestForm.month).current
+        : { start: requestForm.from_date, end: requestForm.to_date };
+      const requestedPeriod = {
+        from_date: toEposDate(period.start),
+        to_date: toEposDate(period.end),
+      };
       const res = await featureFetch(TRANSACTIONS_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-App-Feature': isCommission ? 'commission' : 'transactions' },
         body: JSON.stringify({
-          from_date: toEposDate(requestForm.from_date),
-          to_date: toEposDate(requestForm.to_date),
+          ...requestedPeriod,
           dist_code: Number(requestForm.dist_code),
           afso: requestForm.afso,
           fps_id: Number(requestForm.fps_id),
@@ -900,7 +904,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
         const suffix = requestId ? ` Request ID: ${requestId}` : '';
         throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
       }
-      setResult(data);
+      setResult({ ...data, requested_period: requestedPeriod });
     } catch (err) {
       console.error(`${isCommission ? 'Commission' : 'Transactions'} fetch failed:`, err);
       setError(err.message || `Failed to fetch ${isCommission ? 'commission data' : 'transactions'}.`);
@@ -3613,7 +3617,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
     const rows = [
       ['FPS ID', commissionForm.fps_id || '-'],
       ['Period', periodLabel],
-      ['Date Range', `${summary.from_date || toEposDate(commissionForm.from_date)} to ${summary.to_date || toEposDate(commissionForm.to_date)}`],
+      ['Date Range', `${summary.from_date || commissionResult.requested_period?.from_date || '-'} to ${summary.to_date || commissionResult.requested_period?.to_date || '-'}`],
       ['Gross Commission', `Rs. ${formatNumber(commissionCalculation.commission)}`],
       ['TDS @ 2%', `Rs. ${formatNumber(tdsAmount)}`],
       ['Collected from RC Holders', `Rs. ${formatNumber(commissionCalculation.alreadyCollectedAmount)}`],
@@ -4702,7 +4706,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
               }}
             >
               <Stack spacing={2} component="form" onSubmit={serviceSubmitHandler}>
-                <Grid container spacing={1.5}>
+                {!isCommissionView && <Grid container spacing={1.5}>
                   <Grid item xs={6}>
                     <Typography sx={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.4, color: '#6d7584' }}>
                       FROM DATE *
@@ -4749,7 +4753,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
                       }}
                     />
                   </Grid>
-                </Grid>
+                </Grid>}
 
                 <Grid container spacing={1.5}>
                   {[
@@ -4879,7 +4883,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
                     )}
                     {activeView === 'transactions' && (
                       <Typography variant="body2" sx={{ color: '#6d7584', mt: 0.4, fontWeight: 700 }}>
-                        From: {serviceResult.summary?.from_date || toEposDate(serviceForm.from_date)} · To: {serviceResult.summary?.to_date || toEposDate(serviceForm.to_date)}
+                        From: {serviceResult.summary?.from_date || serviceResult.requested_period?.from_date || '-'} · To: {serviceResult.summary?.to_date || serviceResult.requested_period?.to_date || '-'}
                       </Typography>
                     )}
                   </Box>
