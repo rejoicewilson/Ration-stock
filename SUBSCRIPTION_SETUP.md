@@ -77,3 +77,19 @@ Supabase, so they cannot replace that end-to-end check.
 Next: test this flow end to end, then add a server-side access switch and
 explicit November launch configuration. Do not turn on the paywall until the
 payment and recovery flow is tested end to end.
+
+## Preview webhook check
+
+Deploy only `feature/99-subscription` to Vercel Preview. Confirm the deployment
+details show that branch as the source; a Preview deployment of `main` does not
+contain the payment endpoint. Scope the test Razorpay keys, `BILLING_MODE=test`,
+`PAYMENTS_ENABLED=true`, `RAZORPAY_WEBHOOK_SECRET`, and Supabase connection
+values to Preview for this branch. Do not copy test settings to Production.
+
+Vercel may protect Preview URLs. If protection is on, use a dedicated
+Protection Bypass for Automation token in the Razorpay test webhook URL; keep
+that token private and revoke it after testing. The endpoint path is
+`/auth/subscription/webhook`. The Razorpay webhook signing secret is separate
+from both the API key secret and the Vercel bypass token. Use Test mode and
+subscribe to `payment.captured` and `order.paid`. The webhook is idempotent:
+receiving both events for one payment must not add two periods of access.
