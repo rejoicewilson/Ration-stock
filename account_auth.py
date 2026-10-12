@@ -44,7 +44,9 @@ def rpc(action, data):
     if not url.startswith('https://') or not key or 'REPLACE' in key:
         raise HTTPException(503, 'Account service is not configured yet.')
     try:
-        function = 'ration_activity' if action in ('record_activity', 'dashboard') else 'ration_auth'
+        function = ('ration_subscription' if action in ('subscription_status', 'billing_intent',
+                    'billing_attach', 'billing_order', 'billing_pending', 'billing_activate') else
+                    'ration_activity' if action in ('record_activity', 'dashboard') else 'ration_auth')
         response = requests.post(f'{url}/rest/v1/rpc/{function}',
             headers={'apikey': key, 'User-Agent': 'ration-stock-backend/1.0'},
             json={'p_action': action, 'p_data': data}, timeout=(5, 12))
@@ -76,7 +78,7 @@ async def account_gate(request, call_next):
     if request.method == 'OPTIONS':
         return await call_next(request)
     try:
-        if (protected or is_auth) and request.method not in ('GET', 'HEAD'):
+        if (protected or is_auth) and path != '/auth/subscription/webhook' and request.method not in ('GET', 'HEAD'):
             # Browser POSTs must carry an exact trusted origin (including the port).
             if request.headers.get('origin', '').rstrip('/') not in ALLOWED_ORIGINS:
                 raise HTTPException(403, 'This request did not come from the app. Please reopen the app.')
@@ -191,6 +193,23 @@ def set_cookies(response, device, token):
 def me(request: Request):
     account = session_user(request)
     return {'account': {**account, 'is_owner': is_owner(account)}}
+
+
+@router.get('/subscription/status')
+def subscription_status(request: Request):
+    account = session_user(request)
+    mode = os.getenv('BILLING_MODE', 'test').strip().lower()
+    if mode not in ('test', 'live'):
+        raise HTTPException(503, 'Subscription mode is not configured.')
+    status = rpc('subscription_status', {'account_id': account['id'], 'mode': mode})
+    return {
+        'active': bool(status.get('active')),
+        'paid_until': status.get('paid_until'),
+        'mode': mode,
+        'price_paise': 9900,
+        'duration_days': 30,
+        'required': False,  # Feature access stays free during this setup step.
+    }
 
 
 def is_owner(account):

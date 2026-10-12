@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
 import App from './App';
 import AdminDashboard from './AdminDashboard';
+import SubscriptionPage from './SubscriptionPage';
 import { accountRequest } from './accountApi';
 
 const supportUrl = 'https://wa.me/919447645196?text=' + encodeURIComponent('Hello, I need help recovering my Ration Stock App account.');
@@ -28,7 +29,10 @@ export default function AccountApp() {
   const refreshSequence = useRef(0);
   const [account, setAccount] = useState(null);
   const [checking, setChecking] = useState(true);
-  const [pendingView, setPendingView] = useState(window.location.pathname.replace(/\/$/, '') === '/admin' ? 'admin' : null);
+  const [pendingView, setPendingView] = useState(() => {
+    const path = window.location.pathname.replace(/\/$/, '');
+    return path === '/admin' ? 'admin' : path === '/subscription' ? 'subscription' : null;
+  });
   const [mode, setMode] = useState(initialAccountMode);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [form, setForm] = useState({ fps_id: '', mobile: '', password: '' });
@@ -182,11 +186,16 @@ export default function AccountApp() {
     return account.is_owner ? <AdminDashboard onHome={goHome} /> : <AccountCard title="Owner access only"><Alert severity="warning">This account cannot access the dashboard.</Alert><Button onClick={goHome}>Home</Button></AccountCard>;
   }
 
+  if (account && pendingView === 'subscription') {
+    return <SubscriptionPage onHome={goHome} />;
+  }
+
   return <>
     {account && <Box sx={{ px: 2, py: 1.5, bgcolor: '#e8efff', borderBottom: '1px solid #d8e3f7' }}>
       <Box sx={{ maxWidth: 1100, mx: 'auto', display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1.25 }}>
         <Typography sx={{ fontWeight: 800, fontSize: 14, color: '#183456', textAlign: { xs: 'center', sm: 'left' }, whiteSpace: 'nowrap' }}>FPS {account.fps_id}</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 'auto' }, '& .MuiButton-root': { minWidth: 0, minHeight: 44, px: 1, py: 0.75, borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: { xs: 12, sm: 13 }, lineHeight: 1.3, bgcolor: '#fff' } }}>
+          {import.meta.env.VITE_SUBSCRIPTION_TEST_UI === 'true' && <Button variant="outlined" sx={{ gridColumn: '1 / -1' }} onClick={() => { window.history.replaceState(null, '', '/subscription'); setPendingView('subscription'); }}>Test ₹99 plan</Button>}
           <Button variant="outlined" onClick={() => setShowPasswordForm(true)}>Change password</Button>
           <Button variant="outlined" color="error" disabled={busy} onClick={signOut}>Sign out</Button>
         </Box>

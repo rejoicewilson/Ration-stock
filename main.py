@@ -17,12 +17,14 @@ from pydantic import BaseModel, Field, field_validator
 import requests
 from bs4 import BeautifulSoup
 from account_auth import ALLOWED_ORIGINS, account_gate, router as account_router
+from payments import router as payment_router
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse
 
 app = FastAPI()
 app.include_router(account_router)
+app.include_router(payment_router)
 app.middleware('http')(account_gate)
 
 

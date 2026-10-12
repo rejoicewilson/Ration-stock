@@ -80,8 +80,10 @@ class AccountSecurityTests(unittest.TestCase):
 
     def test_only_expected_account_routes_registered(self):
         routes = {route.path for route in app.routes if route.path.startswith('/auth/')}
-        self.assertEqual(routes, {'/auth/me', '/auth/support', '/auth/register', '/auth/login',
-            '/auth/logout', '/auth/devices', '/auth/change-password', '/auth/admin/dashboard', '/auth/admin/reset-password'})
+        self.assertEqual(routes, {'/auth/me', '/auth/support', '/auth/subscription/status', '/auth/register', '/auth/login',
+            '/auth/subscription/order', '/auth/subscription/verify', '/auth/subscription/reconcile',
+            '/auth/subscription/webhook', '/auth/logout', '/auth/devices', '/auth/change-password',
+            '/auth/admin/dashboard', '/auth/admin/reset-password'})
 
     def test_owner_reset_security_and_password_hash(self):
         owner_id = '00000000-0000-0000-0000-000000000001'
