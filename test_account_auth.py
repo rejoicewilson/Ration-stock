@@ -30,6 +30,20 @@ class AccountSecurityTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         self.rpc.assert_not_called()
 
+    def test_preview_origins_use_only_vercel_system_hostnames(self):
+        with patch.dict('os.environ', {
+            'VERCEL_ENV': 'preview',
+            'VERCEL_URL': 'ration-stock-preview.vercel.app',
+            'VERCEL_BRANCH_URL': 'ration-stock-git-feature.vercel.app',
+        }):
+            origins = auth.configured_origins()
+        self.assertIn('https://ration-stock-preview.vercel.app', origins)
+        self.assertIn('https://ration-stock-git-feature.vercel.app', origins)
+        with patch.dict('os.environ', {'VERCEL_ENV': 'production', 'VERCEL_URL': 'ration-stock-preview.vercel.app'}):
+            self.assertNotIn('https://ration-stock-preview.vercel.app', auth.configured_origins())
+        with patch.dict('os.environ', {'VERCEL_ENV': 'preview', 'VERCEL_URL': 'evil.example'}):
+            self.assertNotIn('https://evil.example', auth.configured_origins())
+
     def test_validation_does_not_echo_password(self):
         response = self.client.post('/auth/register', json={'mobile': 'bad', 'password': 'private-secret', 'fps_id': 'bad'})
         self.assertEqual(response.status_code, 422)

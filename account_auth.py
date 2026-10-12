@@ -19,9 +19,20 @@ from pydantic import BaseModel, Field, SecretStr, field_validator
 from starlette.concurrency import run_in_threadpool
 
 load_dotenv(Path(__file__).resolve().parent / '.env', override=False)
-ALLOWED_ORIGINS = [x.strip().rstrip('/') for x in os.getenv(
-    'APP_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://ration-stock.vercel.app'
-).split(',') if x.strip()]
+def configured_origins():
+    origins = [x.strip().rstrip('/') for x in os.getenv(
+        'APP_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://ration-stock.vercel.app'
+    ).split(',') if x.strip()]
+    if os.getenv('VERCEL_ENV') == 'preview':
+        # Only trust hostnames supplied by Vercel itself, never a request header.
+        for name in ('VERCEL_URL', 'VERCEL_BRANCH_URL'):
+            host = os.getenv(name, '').lower().strip()
+            if re.fullmatch(r'[a-z0-9-]+(?:\.[a-z0-9-]+)*\.vercel\.app', host):
+                origins.append(f'https://{host}')
+    return origins
+
+
+ALLOWED_ORIGINS = configured_origins()
 SECURE_COOKIES = bool(os.getenv('VERCEL')) or os.getenv('COOKIE_SECURE', 'false').lower() == 'true'
 SESSION_COOKIE = '__Host-ration_session' if SECURE_COOKIES else 'ration_session'
 DEVICE_COOKIE = '__Host-ration_device' if SECURE_COOKIES else 'ration_device'
