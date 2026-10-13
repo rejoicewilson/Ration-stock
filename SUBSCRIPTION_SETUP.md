@@ -85,6 +85,9 @@ details show that branch as the source; a Preview deployment of `main` does not
 contain the payment endpoint. Scope the test Razorpay keys, `BILLING_MODE=test`,
 `PAYMENTS_ENABLED=true`, `RAZORPAY_WEBHOOK_SECRET`, and Supabase connection
 values to Preview for this branch. Do not copy test settings to Production.
+After adding or changing Preview environment variables, build a fresh deployment
+from this feature branch. An already-built Preview will not acquire new secrets,
+and redeploying `main` will not update the subscription Preview.
 
 Vercel may protect Preview URLs. If protection is on, use a dedicated
 Protection Bypass for Automation token in the Razorpay test webhook URL; keep
