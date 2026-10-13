@@ -96,3 +96,7 @@ that token private and revoke it after testing. The endpoint path is
 from both the API key secret and the Vercel bypass token. Use Test mode and
 subscribe to `payment.captured` and `order.paid`. The webhook is idempotent:
 receiving both events for one payment must not add two periods of access.
+After creating or rotating the webhook secret, deploy this feature branch again
+before testing delivery. Check the Razorpay test webhook's delivery history for
+an HTTP success response; a protected Preview also needs its automation bypass
+token in the webhook URL. Do not share either secret or the full bypass URL.
