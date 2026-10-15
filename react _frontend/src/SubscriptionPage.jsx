@@ -139,7 +139,9 @@ export default function SubscriptionPage({ onHome }) {
         </Stack>
         <Typography sx={{ color: '#52647f', mb: 2 }}>Check any FPS number. No automatic renewal.</Typography>
         <Alert severity="warning" sx={{ mb: 2 }}>Test mode only — no real payment. Test access will not carry over to live mode.</Alert>
-        <Alert severity="info" sx={{ mb: 2 }}>All features are still free. Paying is not required yet.</Alert>
+        {!loading && status && (status.required
+          ? <Alert severity="info" sx={{ mb: 2 }}>You are still signed in. Activate a test plan to use the services in this test version.</Alert>
+          : <Alert severity="info" sx={{ mb: 2 }}>All features are still free. Paying is not required yet.</Alert>)}
         {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}><CircularProgress aria-label="Checking subscription" /></Box> : status?.active ?
           <Alert severity="success" sx={{ mb: 2 }}>Test plan active until {indiaDate(status.paid_until)} IST.</Alert> :
           <Typography sx={{ color: '#52647f', mb: 2 }}>No active test plan.</Typography>}

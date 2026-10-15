@@ -23,5 +23,9 @@ export async function featureFetch(url, options = {}) {
     window.dispatchEvent(new Event('ration-session-ended'));
     throw new Error('Please sign in again to continue.');
   }
+  if (response.status === 402) {
+    window.dispatchEvent(new Event('ration-subscription-required'));
+    throw new Error('Open the subscription page to continue.');
+  }
   return response;
 }

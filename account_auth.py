@@ -82,6 +82,14 @@ def session_user(request):
     return account
 
 
+def subscription_gate_enabled():
+    # This switch is for test-mode Preview/local validation only. Production
+    # remains free until a separate, reviewed live-billing rollout.
+    return (os.getenv('SUBSCRIPTION_ACCESS_REQUIRED', 'false').strip().lower() == 'true'
+            and os.getenv('BILLING_MODE', 'test').strip().lower() == 'test'
+            and os.getenv('VERCEL_ENV', '').strip().lower() != 'production')
+
+
 async def account_gate(request, call_next):
     path = request.url.path.rstrip('/')
     protected = path in PROTECTED_PATHS
@@ -97,6 +105,11 @@ async def account_gate(request, call_next):
             request.state.account = await run_in_threadpool(session_user, request)
             if request.state.account.get('must_change_password'):
                 raise HTTPException(403, 'Please change your temporary password first.')
+            if subscription_gate_enabled() and not is_owner(request.state.account):
+                status = await run_in_threadpool(rpc, 'subscription_status', {
+                    'account_id': request.state.account['id'], 'mode': 'test'})
+                if not status or not status.get('active'):
+                    raise HTTPException(402, 'An active test plan is needed to use this feature.')
         response = await call_next(request)
         if protected and request.method == 'POST' and 200 <= response.status_code < 300:
             try:
@@ -203,7 +216,8 @@ def set_cookies(response, device, token):
 @router.get('/me')
 def me(request: Request):
     account = session_user(request)
-    return {'account': {**account, 'is_owner': is_owner(account)}}
+    return {'account': {**account, 'is_owner': is_owner(account),
+                        'subscription_required': subscription_gate_enabled() and not is_owner(account)}}
 
 
 @router.get('/subscription/status')
@@ -219,7 +233,7 @@ def subscription_status(request: Request):
         'mode': mode,
         'price_paise': 9900,
         'duration_days': 30,
-        'required': False,  # Feature access stays free during this setup step.
+        'required': subscription_gate_enabled() and not is_owner(account),
     }
 
 

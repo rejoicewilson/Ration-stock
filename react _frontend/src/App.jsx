@@ -4136,8 +4136,8 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
                     component="button"
                     type="button"
                     elevation={0}
-                    onClick={() => {
-                      if (onProtectedFeature?.(page.view)) return;
+                    onClick={async () => {
+                      if (await onProtectedFeature?.(page.view)) return;
                       if (page.externalUrl) {
                         window.location.href = page.externalUrl;
                         return;

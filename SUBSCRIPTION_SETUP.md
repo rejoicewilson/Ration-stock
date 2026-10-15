@@ -74,9 +74,18 @@ and sign in with a test account. Check a successful test payment, dismissal,
 refresh, and early renewal. Local automated tests do not contact Razorpay or
 Supabase, so they cannot replace that end-to-end check.
 
-Next: test this flow end to end, then add a server-side access switch and
-explicit November launch configuration. Do not turn on the paywall until the
-payment and recovery flow is tested end to end.
+The server-side test access switch is `SUBSCRIPTION_ACCESS_REQUIRED` (default
+`false`). It works only with `BILLING_MODE=test` outside Vercel Production.
+When enabled in Preview, signed-in members without an active test plan are
+sent to the subscription screen; the backend also rejects protected feature
+requests with HTTP 402. Login, password changes, the owner dashboard, and the
+subscription screen remain available. The owner account is exempt from the
+test gate. Turn the switch back off after testing. Changing a Vercel Preview
+environment variable requires a fresh feature-branch deployment.
+
+This switch is deliberately unable to enforce live subscriptions. A separate
+live-billing implementation, live keys/webhook, and explicit launch decision
+are required before production access can change.
 
 ## Preview webhook check
 

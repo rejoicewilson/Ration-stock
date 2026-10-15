@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, InputAdornment, Paper, Stack, SvgIcon, TextField, Typography } from '@mui/material';
 import App from './App';
 import AdminDashboard from './AdminDashboard';
 import SubscriptionPage from './SubscriptionPage';
@@ -7,6 +7,22 @@ import { accountRequest } from './accountApi';
 
 const supportUrl = 'https://wa.me/919447645196?text=' + encodeURIComponent('Hello, I need help recovering my Ration Stock App account.');
 const buttonStyle = { borderRadius: 2, textTransform: 'none', fontWeight: 700, minHeight: 46 };
+
+function PlanCheckIcon(props) {
+  return <SvgIcon {...props}><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1 15-5-5 1.41-1.41L11 14.17l5.59-5.59L18 10l-7 7Z" /></SvgIcon>;
+}
+
+function PlanClockIcon(props) {
+  return <SvgIcon {...props}><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 5v5.4l3.6 2.1-1 1.7L11 13V7h2Z" /></SvgIcon>;
+}
+
+function PasswordIcon(props) {
+  return <SvgIcon {...props}><path d="M12.65 10A6 6 0 1 0 12.65 14H17v4h4v-4h2v-4H12.65ZM7 14a2 2 0 1 1 0-4 2 2 0 0 1 0 4Z" /></SvgIcon>;
+}
+
+function SignOutIcon(props) {
+  return <SvgIcon {...props}><path d="m10 17 5-5-5-5v3H3v4h7v3ZM19 3H9v2h10v14H9v2h10a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z" /></SvgIcon>;
+}
 
 const RETURNING_USER_KEY = 'ration-returning-user';
 function initialAccountMode() {
@@ -28,6 +44,8 @@ function broadcastSessionChange() {
 export default function AccountApp() {
   const refreshSequence = useRef(0);
   const [account, setAccount] = useState(null);
+  const [planStatus, setPlanStatus] = useState(null);
+  const [planError, setPlanError] = useState(false);
   const [checking, setChecking] = useState(true);
   const [pendingView, setPendingView] = useState(() => {
     const path = window.location.pathname.replace(/\/$/, '');
@@ -69,11 +87,17 @@ export default function AccountApp() {
     refreshAccount();
     const refresh = () => { if (document.visibilityState === 'visible') refreshAccount(); };
     const ended = () => { ++refreshSequence.current; setAccount(null); };
+    const planNeeded = () => {
+      window.history.replaceState(null, '', '/subscription');
+      setPendingView('subscription');
+      setError('');
+    };
     const changed = (event) => { if (event.key === 'ration-session-change') refresh(); };
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
     window.addEventListener('storage', changed);
     window.addEventListener('ration-session-ended', ended);
+    window.addEventListener('ration-subscription-required', planNeeded);
     const timer = window.setInterval(refresh, 60000);
     return () => {
       window.clearInterval(timer);
@@ -81,8 +105,28 @@ export default function AccountApp() {
       document.removeEventListener('visibilitychange', refresh);
       window.removeEventListener('storage', changed);
       window.removeEventListener('ration-session-ended', ended);
+      window.removeEventListener('ration-subscription-required', planNeeded);
     };
   }, []);
+
+  useEffect(() => {
+    if (!account?.id) {
+      setPlanStatus(null);
+      setPlanError(false);
+      return;
+    }
+    let cancelled = false;
+    setPlanError(false);
+    accountRequest('subscription/status').then((status) => {
+      if (!cancelled) setPlanStatus({ accountId: account.id, ...status });
+    }).catch(() => {
+      if (!cancelled) {
+        setPlanStatus(null);
+        setPlanError(true);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [account, pendingView]);
 
   const changeField = (event) => {
     setForm((previous) => ({ ...previous, [event.target.name]: event.target.value }));
@@ -190,14 +234,24 @@ export default function AccountApp() {
     return <SubscriptionPage onHome={goHome} />;
   }
 
+  const currentPlan = planStatus?.accountId === account?.id ? planStatus : null;
+  const planLabel = planError ? 'Plan unavailable' : !currentPlan ? 'Checking plan' : currentPlan.active
+    ? currentPlan.mode === 'test' ? 'Test plan' : '₹99 plan'
+    : currentPlan.required ? 'No active plan' : 'Free plan';
+  const planActive = !planError && currentPlan && (currentPlan.active || !currentPlan.required);
+
   return <>
     {account && <Box sx={{ px: 2, py: 1.5, bgcolor: '#e8efff', borderBottom: '1px solid #d8e3f7' }}>
       <Box sx={{ maxWidth: 1100, mx: 'auto', display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1.25 }}>
         <Typography sx={{ fontWeight: 800, fontSize: 14, color: '#183456', textAlign: { xs: 'center', sm: 'left' }, whiteSpace: 'nowrap' }}>FPS {account.fps_id}</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 'auto' }, '& .MuiButton-root': { minWidth: 0, minHeight: 44, px: 1, py: 0.75, borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: { xs: 12, sm: 13 }, lineHeight: 1.3, bgcolor: '#fff' } }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 'auto' }, '& .MuiButton-root': { minWidth: 0, minHeight: 54, px: 0.5, py: 0.6, borderRadius: 2, textTransform: 'none', fontWeight: 700, fontSize: { xs: 10, sm: 12 }, lineHeight: 1.1, bgcolor: '#fff', display: 'flex', flexDirection: 'column', gap: 0.25 } }}>
           {import.meta.env.VITE_SUBSCRIPTION_TEST_UI === 'true' && <Button variant="outlined" sx={{ gridColumn: '1 / -1' }} onClick={() => { window.history.replaceState(null, '', '/subscription'); setPendingView('subscription'); }}>Test ₹99 plan</Button>}
-          <Button variant="outlined" onClick={() => setShowPasswordForm(true)}>Change password</Button>
-          <Button variant="outlined" color="error" disabled={busy} onClick={signOut}>Sign out</Button>
+          <Box role="status" aria-label={`Current plan: ${planLabel}`} title={currentPlan?.active && currentPlan.paid_until ? `Active until ${new Date(currentPlan.paid_until).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST` : undefined} sx={{ minHeight: 54, borderRadius: 2, border: `1px solid ${planActive ? '#b9e8d0' : '#d3ddea'}`, bgcolor: planActive ? '#effbf4' : '#f7f9fc', color: planActive ? '#176b45' : '#52647f', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.25 }}>
+            {planActive ? <PlanCheckIcon sx={{ fontSize: 19 }} /> : <PlanClockIcon sx={{ fontSize: 19 }} />}
+            <Typography sx={{ fontSize: { xs: 10, sm: 12 }, fontWeight: 800, lineHeight: 1.1, whiteSpace: 'nowrap' }}>{planLabel}</Typography>
+          </Box>
+          <Button variant="outlined" aria-label="Change password" onClick={() => setShowPasswordForm(true)}><PasswordIcon sx={{ fontSize: 19 }} />Password</Button>
+          <Button variant="outlined" color="error" aria-label="Sign out" disabled={busy} onClick={signOut}><SignOutIcon sx={{ fontSize: 19 }} />Sign out</Button>
         </Box>
       </Box>
     </Box>}
@@ -206,7 +260,23 @@ export default function AccountApp() {
     <App key={account?.id || 'guest'} initialView={account ? pendingView || 'home' : 'home'}
       registeredFpsId={account?.fps_id || ''}
       onHome={() => setPendingView(null)}
-      onProtectedFeature={(view) => { setPendingView(view); setError(''); return !account; }} />
+      onProtectedFeature={async (view) => {
+        setError('');
+        if (!account) { setPendingView(view); return true; }
+        if (!account.subscription_required) return false;
+        try {
+          const status = await accountRequest('subscription/status');
+          if (status.required && !status.active) {
+            window.history.replaceState(null, '', '/subscription');
+            setPendingView('subscription');
+            return true;
+          }
+          return false;
+        } catch (err) {
+          setError(err.message || 'Could not check your plan. Please try again.');
+          return true;
+        }
+      }} />
   </>;
 }
 
