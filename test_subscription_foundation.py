@@ -38,7 +38,9 @@ class SubscriptionFoundationTests(unittest.TestCase):
 
         self.rpc.side_effect = response
         for mode, expected_active in [('test', True), ('live', False)]:
-            with self.subTest(mode=mode), patch.dict('os.environ', {'BILLING_MODE': mode}):
+            with self.subTest(mode=mode), patch.dict('os.environ', {
+                'BILLING_MODE': mode, 'SUBSCRIPTION_ACCESS_REQUIRED': 'false',
+                'LIVE_PILOT_ENABLED': 'false'}):
                 result = self.client.get('/auth/subscription/status')
                 self.assertEqual(result.status_code, 200)
                 self.assertEqual(result.headers['cache-control'], 'no-store')
@@ -68,6 +70,63 @@ class SubscriptionFoundationTests(unittest.TestCase):
         with patch.dict('os.environ', {'SUBSCRIPTION_ACCESS_REQUIRED': 'true', 'BILLING_MODE': 'live',
                                        'VERCEL_ENV': 'preview'}):
             self.assertFalse(auth.subscription_gate_enabled())
+
+    def test_live_pilot_requires_preview_and_exact_signed_in_account(self):
+        pilot = {'id': '11111111-1111-4111-8111-111111111111', 'fps_id': '1234567',
+                 'mobile': '919999999999'}
+        env = {'LIVE_PILOT_ENABLED': 'true', 'LIVE_PILOT_ACCESS_REQUIRED': 'true',
+               'BILLING_MODE': 'live', 'VERCEL_ENV': 'preview',
+               'VERCEL_GIT_COMMIT_REF': 'feature/99-subscription',
+               'PAYMENTS_ENABLED': 'true', 'RAZORPAY_KEY_ID': 'rzp_live_example',
+               'RAZORPAY_KEY_SECRET': 'live-secret', 'RAZORPAY_WEBHOOK_SECRET': 'live-hook-secret',
+               'LIVE_PILOT_FPS_ID': '1234567', 'LIVE_PILOT_MOBILE': '919999999999',
+               'SUBSCRIPTION_ACCESS_REQUIRED': 'false', 'OWNER_ACCOUNT_ID': ''}
+        with patch.dict('os.environ', env):
+            self.assertTrue(auth.live_pilot_account(pilot))
+            self.assertTrue(auth.subscription_required_for(pilot))
+            self.assertFalse(auth.subscription_required_for({**pilot, 'mobile': '919888888888'}))
+            self.assertFalse(auth.subscription_required_for({**pilot, 'fps_id': '7654321'}))
+            with patch.dict('os.environ', {'VERCEL_ENV': 'production'}):
+                self.assertFalse(auth.subscription_required_for(pilot))
+            with patch.dict('os.environ', {'VERCEL_GIT_COMMIT_REF': 'main'}):
+                self.assertFalse(auth.subscription_required_for(pilot))
+            with patch.dict('os.environ', {'LIVE_PILOT_ENABLED': 'false'}):
+                self.assertFalse(auth.subscription_required_for(pilot))
+            with patch.dict('os.environ', {'LIVE_PILOT_ACCESS_REQUIRED': 'false'}):
+                self.assertTrue(auth.live_pilot_account(pilot))
+                self.assertFalse(auth.subscription_required_for(pilot))
+            with patch.dict('os.environ', {'PAYMENTS_ENABLED': 'false'}):
+                self.assertFalse(auth.subscription_required_for(pilot))
+
+    def test_live_pilot_status_and_protected_feature_are_scoped(self):
+        pilot = {'id': '11111111-1111-4111-8111-111111111111', 'fps_id': '1234567',
+                 'mobile': '919999999999', 'must_change_password': False}
+        other = {**pilot, 'id': '22222222-2222-4222-8222-222222222222',
+                 'mobile': '919888888888'}
+        self.client.cookies.set(auth.SESSION_COOKIE, 'A' * 43)
+        self.rpc.side_effect = lambda action, data: (
+            pilot if action == 'session' else
+            {'active': False, 'paid_until': None} if action == 'subscription_status' else {'ok': True})
+        env = {'LIVE_PILOT_ENABLED': 'true', 'LIVE_PILOT_ACCESS_REQUIRED': 'true',
+               'BILLING_MODE': 'live', 'VERCEL_ENV': 'preview',
+               'VERCEL_GIT_COMMIT_REF': 'feature/99-subscription',
+               'PAYMENTS_ENABLED': 'true', 'RAZORPAY_KEY_ID': 'rzp_live_example',
+               'RAZORPAY_KEY_SECRET': 'live-secret', 'RAZORPAY_WEBHOOK_SECRET': 'live-hook-secret',
+               'LIVE_PILOT_FPS_ID': '1234567', 'LIVE_PILOT_MOBILE': '919999999999',
+               'SUBSCRIPTION_ACCESS_REQUIRED': 'false', 'OWNER_ACCOUNT_ID': ''}
+        with patch.dict('os.environ', env):
+            pilot_status = self.client.get('/auth/subscription/status')
+            self.assertTrue(pilot_status.json()['required'])
+            self.assertTrue(pilot_status.json()['eligible'])
+            self.assertEqual(pilot_status.json()['mode'], 'live')
+            self.assertEqual(self.client.post('/count', json={}).status_code, 402)
+            self.rpc.side_effect = lambda action, data: (
+                other if action == 'session' else
+                {'active': False, 'paid_until': None} if action == 'subscription_status' else {'ok': True})
+            other_status = self.client.get('/auth/subscription/status')
+            self.assertFalse(other_status.json()['required'])
+            self.assertFalse(other_status.json()['eligible'])
+            self.assertFalse(self.client.get('/auth/me').json()['account']['subscription_required'])
 
     def test_preview_switch_blocks_unpaid_features_without_signing_out(self):
         self.client.cookies.set(auth.SESSION_COOKIE, 'A' * 43)

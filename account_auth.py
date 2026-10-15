@@ -90,6 +90,33 @@ def subscription_gate_enabled():
             and os.getenv('VERCEL_ENV', '').strip().lower() != 'production')
 
 
+def live_pilot_enabled():
+    # Live money is allowed only for the explicitly configured Preview pilot.
+    return (os.getenv('LIVE_PILOT_ENABLED', 'false').strip().lower() == 'true'
+            and os.getenv('BILLING_MODE', 'test').strip().lower() == 'live'
+            and os.getenv('PAYMENTS_ENABLED', 'false').strip().lower() == 'true'
+            and os.getenv('RAZORPAY_KEY_ID', '').startswith('rzp_live_')
+            and bool(os.getenv('RAZORPAY_KEY_SECRET', ''))
+            and bool(os.getenv('RAZORPAY_WEBHOOK_SECRET', ''))
+            and all('REPLACE' not in os.getenv(name, '').upper() for name in (
+                'RAZORPAY_KEY_ID', 'RAZORPAY_KEY_SECRET', 'RAZORPAY_WEBHOOK_SECRET'))
+            and os.getenv('VERCEL_ENV', '').strip().lower() == 'preview'
+            and os.getenv('VERCEL_GIT_COMMIT_REF', '') == 'feature/99-subscription'
+            and bool(re.fullmatch(r'[0-9]{7}', os.getenv('LIVE_PILOT_FPS_ID', '')))
+            and bool(re.fullmatch(r'91[6-9][0-9]{9}', os.getenv('LIVE_PILOT_MOBILE', ''))))
+
+
+def live_pilot_account(account):
+    return (live_pilot_enabled() and account.get('fps_id') == os.getenv('LIVE_PILOT_FPS_ID')
+            and account.get('mobile') == os.getenv('LIVE_PILOT_MOBILE'))
+
+
+def subscription_required_for(account):
+    return not is_owner(account) and (subscription_gate_enabled() or (
+        live_pilot_account(account)
+        and os.getenv('LIVE_PILOT_ACCESS_REQUIRED', 'false').strip().lower() == 'true'))
+
+
 async def account_gate(request, call_next):
     path = request.url.path.rstrip('/')
     protected = path in PROTECTED_PATHS
@@ -105,11 +132,12 @@ async def account_gate(request, call_next):
             request.state.account = await run_in_threadpool(session_user, request)
             if request.state.account.get('must_change_password'):
                 raise HTTPException(403, 'Please change your temporary password first.')
-            if subscription_gate_enabled() and not is_owner(request.state.account):
+            if subscription_required_for(request.state.account):
                 status = await run_in_threadpool(rpc, 'subscription_status', {
-                    'account_id': request.state.account['id'], 'mode': 'test'})
+                    'account_id': request.state.account['id'],
+                    'mode': os.getenv('BILLING_MODE', 'test').strip().lower()})
                 if not status or not status.get('active'):
-                    raise HTTPException(402, 'An active test plan is needed to use this feature.')
+                    raise HTTPException(402, 'An active subscription is needed to use this feature.')
         response = await call_next(request)
         if protected and request.method == 'POST' and 200 <= response.status_code < 300:
             try:
@@ -217,7 +245,7 @@ def set_cookies(response, device, token):
 def me(request: Request):
     account = session_user(request)
     return {'account': {**account, 'is_owner': is_owner(account),
-                        'subscription_required': subscription_gate_enabled() and not is_owner(account)}}
+                        'subscription_required': subscription_required_for(account)}}
 
 
 @router.get('/subscription/status')
@@ -233,7 +261,8 @@ def subscription_status(request: Request):
         'mode': mode,
         'price_paise': 9900,
         'duration_days': 30,
-        'required': subscription_gate_enabled() and not is_owner(account),
+        'required': subscription_required_for(account),
+        'eligible': mode == 'test' or live_pilot_account(account),
     }
 
 

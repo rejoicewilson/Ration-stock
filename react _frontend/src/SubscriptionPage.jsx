@@ -38,13 +38,13 @@ export default function SubscriptionPage({ onHome }) {
   const refreshStatus = useCallback(async (reconcile = false) => {
     setError('');
     try {
-      const result = await accountRequest(reconcile ? 'subscription/reconcile' : 'subscription/status',
-        reconcile ? {} : undefined);
+      if (reconcile) await accountRequest('subscription/reconcile', {});
+      const result = await accountRequest('subscription/status');
       if (mounted.current) {
         setStatus(result);
         if (reconcile) setMessage(result.active
-          ? 'Your test subscription is active.'
-          : 'No captured test payment found yet. Check again in a moment if you just paid.');
+          ? 'Your subscription is active.'
+          : 'No captured payment found yet. Check again in a moment if you just paid.');
       }
       return result;
     } catch (err) {
@@ -72,7 +72,7 @@ export default function SubscriptionPage({ onHome }) {
     try {
       await loadCheckout();
       const order = await accountRequest('subscription/order', {});
-      if (order.mode !== 'test' || order.amount !== 9900 || order.currency !== 'INR') {
+      if (!status?.eligible || order.mode !== status.mode || order.amount !== 9900 || order.currency !== 'INR') {
         throw new Error('Unexpected payment details. Please contact support.');
       }
       let completed = false;
@@ -81,7 +81,7 @@ export default function SubscriptionPage({ onHome }) {
         amount: order.amount,
         currency: order.currency,
         name: 'Ration Stock App',
-        description: 'Test plan · 30 days',
+        description: `${order.mode === 'test' ? 'Test' : 'Subscription'} plan · 30 days`,
         order_id: order.order_id,
         prefill: { contact: order.contact },
         theme: { color: '#2563eb' },
@@ -95,7 +95,7 @@ export default function SubscriptionPage({ onHome }) {
               setMessage('Payment is still being captured. Use “Check payment status” in a moment.');
             } else {
               await refreshStatus();
-              setMessage('Test payment verified. Your 30-day test plan is active.');
+              setMessage('Payment verified. Your 30-day plan is active.');
             }
           } catch (err) {
             setError(`${err.message || 'Could not verify payment.'} Check payment status before paying again.`);
@@ -138,20 +138,21 @@ export default function SubscriptionPage({ onHome }) {
           <Typography sx={{ color: '#61728d', fontWeight: 700 }}>/ 30 days</Typography>
         </Stack>
         <Typography sx={{ color: '#52647f', mb: 2 }}>Check any FPS number. No automatic renewal.</Typography>
-        <Alert severity="warning" sx={{ mb: 2 }}>Test mode only — no real payment. Test access will not carry over to live mode.</Alert>
+        {status?.mode === 'test' && <Alert severity="warning" sx={{ mb: 2 }}>Test mode only — no real payment. Test access will not carry over to live mode.</Alert>}
+        {status?.mode === 'live' && status.eligible && <Alert severity="warning" sx={{ mb: 2 }}>This is a real ₹99 payment. It activates 30 days of access for this account.</Alert>}
         {!loading && status && (status.required
-          ? <Alert severity="info" sx={{ mb: 2 }}>You are still signed in. Activate a test plan to use the services in this test version.</Alert>
-          : <Alert severity="info" sx={{ mb: 2 }}>All features are still free. Paying is not required yet.</Alert>)}
+          ? <Alert severity="info" sx={{ mb: 2 }}>You are still signed in. Activate a plan to use the services.</Alert>
+          : <Alert severity="info" sx={{ mb: 2 }}>All features are still free for this account. Paying is not required.</Alert>)}
         {loading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}><CircularProgress aria-label="Checking subscription" /></Box> : status?.active ?
-          <Alert severity="success" sx={{ mb: 2 }}>Test plan active until {indiaDate(status.paid_until)} IST.</Alert> :
-          <Typography sx={{ color: '#52647f', mb: 2 }}>No active test plan.</Typography>}
+          <Alert severity="success" sx={{ mb: 2 }}>{status.mode === 'test' ? 'Test plan' : '₹99 plan'} active until {indiaDate(status.paid_until)} IST.</Alert> :
+          <Typography sx={{ color: '#52647f', mb: 2 }}>No active {status?.mode === 'test' ? 'test ' : ''}plan.</Typography>}
         {message && <Alert severity="info" sx={{ mb: 2 }}>{message}</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        <Button variant="contained" fullWidth disabled={busy || loading || checkoutOpen} onClick={pay}
+        <Button variant="contained" fullWidth disabled={busy || loading || checkoutOpen || !status?.eligible} onClick={pay}
           sx={{ minHeight: 52, borderRadius: 2.5, fontWeight: 800, textTransform: 'none', fontSize: 16 }}>
-          {busy || checkoutOpen ? 'Please wait…' : status?.active ? 'Renew test plan for ₹99' : 'Test payment · ₹99'}
+          {busy || checkoutOpen ? 'Please wait…' : !status?.eligible ? 'Not available for this account' : status.active ? `Renew ${status.mode === 'test' ? 'test ' : ''}plan for ₹99` : `${status.mode === 'test' ? 'Test payment' : 'Pay'} · ₹99`}
         </Button>
-        <Button fullWidth disabled={busy || checkoutOpen} onClick={checkPayment} sx={{ mt: 1.5, minHeight: 44, textTransform: 'none' }}>Check payment status</Button>
+        <Button fullWidth disabled={busy || checkoutOpen || !status?.eligible} onClick={checkPayment} sx={{ mt: 1.5, minHeight: 44, textTransform: 'none' }}>Check payment status</Button>
         <Typography sx={{ color: '#718198', fontSize: 12, mt: 2, textAlign: 'center' }}>Early renewal adds 30 days to your expiry. Check payment status before retrying a payment.</Typography>
       </Paper>
     </Box>

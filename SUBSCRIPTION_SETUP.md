@@ -1,8 +1,9 @@
 # ₹99 subscription rollout
 
-Development branch: `feature/99-subscription`. Current step: private subscription
-storage, status endpoint, Razorpay **test-mode backend**, and test checkout screen.
-No scheduled November switch, live payment collection, or feature paywall is active yet.
+Development branch: `feature/99-subscription`. Test checkout and a single-account
+live-payment pilot are supported. No scheduled November switch or production
+paywall is active. Live payments are disabled unless the Preview pilot is
+explicitly configured.
 
 ## Step 1: subscription foundation
 
@@ -43,8 +44,9 @@ Set `BILLING_MODE=test`, `PAYMENTS_ENABLED=true`, `RAZORPAY_KEY_ID` and
 `RAZORPAY_WEBHOOK_SECRET` configured for `POST /auth/subscription/webhook`.
 Use an HTTPS backend URL for the webhook. Never put the key secret or webhook
 secret in the frontend or commit them. `PAYMENTS_ENABLED=false` prevents new
-orders and user verification; the signed webhook can still finish a test
-payment already in flight. A live Razorpay key is deliberately rejected.
+orders and user verification; the signed webhook can still finish a payment
+already in flight. Live keys are accepted only by the explicitly enabled,
+account-scoped Preview pilot described below.
 
 The signed-in backend flow is `POST /auth/subscription/order` to create a
 ₹99 order, then `POST /auth/subscription/verify` with the Checkout order ID,
@@ -84,8 +86,73 @@ test gate. Turn the switch back off after testing. Changing a Vercel Preview
 environment variable requires a fresh feature-branch deployment.
 
 This switch is deliberately unable to enforce live subscriptions. A separate
-live-billing implementation, live keys/webhook, and explicit launch decision
-are required before production access can change.
+production launch decision and rollout are required before production access
+can change.
+
+## Single-account real-payment pilot on Preview
+
+This pilot is for **one signed-in account** on the `feature/99-subscription`
+Vercel Preview. It cannot run on Vercel Production or another branch. The
+server checks the account's FPS ID **and** registered mobile, both sourced
+from its authenticated session. Matching only an FPS ID is not enough because
+multiple accounts can use the same shop number. All other Preview accounts
+retain free feature access and cannot create a live payment order. `main` is
+unchanged. Test entitlements never grant live access.
+
+After confirming Razorpay Live Mode is active, configure these as
+**branch-specific Preview** environment variables for `feature/99-subscription`:
+
+```text
+BILLING_MODE=live
+LIVE_PILOT_ENABLED=true
+LIVE_PILOT_ACCESS_REQUIRED=false
+LIVE_PILOT_FPS_ID=1234567
+LIVE_PILOT_MOBILE=<registered mobile in 91XXXXXXXXXX format>
+PAYMENTS_ENABLED=true
+RAZORPAY_KEY_ID=<rzp_live_... key ID>
+RAZORPAY_KEY_SECRET=<matching live key secret>
+RAZORPAY_WEBHOOK_SECRET=<new live webhook secret>
+```
+
+Do not put secrets in Git, frontend variables, chat, or Production settings.
+Create a **Live Mode** Razorpay webhook for this Preview's HTTPS
+`/auth/subscription/webhook` endpoint using the same new webhook secret.
+Select `payment.captured` and `order.paid`. If Preview protection is enabled,
+ensure Razorpay can reach the endpoint using the configured protection bypass;
+do not expose the bypass value publicly. Keep the existing test webhook/secret
+separate. Redeploy the feature branch after changing Vercel variables. Vercel
+must provide `VERCEL_GIT_COMMIT_REF=feature/99-subscription` at runtime;
+without it, live checkout fails closed.
+
+First leave `LIVE_PILOT_ACCESS_REQUIRED=false`. Check that the pilot account's
+`/auth/subscription/status` reports `mode=live`, `eligible=true`, and
+`required=false`, then open `/subscription` manually and confirm Razorpay
+Checkout can create a real ₹99 order. Do not complete that order yet if you
+want to see the unpaid paywall first. Set `LIVE_PILOT_ACCESS_REQUIRED=true`
+for this Preview branch and redeploy to begin the paywall test. If payment
+configuration is missing or `PAYMENTS_ENABLED=false`, the pilot gate stays off
+to avoid trapping the account without a way to pay.
+
+Before paying, sign in as the pilot account and check `/auth/subscription/status`:
+`mode=live`, `required=true`, `eligible=true`, `active=false`. Sign in as any
+other account and confirm `required=false`, `eligible=false`. Pilot checkout
+charges **real ₹99**. After payment, check Razorpay shows **Captured** and
+the app reports `active=true` with a 30-day `paid_until`; opening services
+should work without signing in again. Test a declined/cancelled checkout and
+the “Check payment status” recovery action too. Do not repeat a successful
+payment merely to refresh the screen: a second captured order extends access
+by another 30 days.
+
+To stop new live charges, set `PAYMENTS_ENABLED=false` and redeploy. This also
+returns the pilot account to free access instead of leaving it locked out. Keep
+`BILLING_MODE=live`, live API keys, and live webhook secret in place until all
+pending live payments have been reconciled; the signed webhook can still
+activate an already-captured order while new orders are disabled. Never
+switch Preview back to test keys while a live order may still be unsettled.
+The Production environment is deliberately excluded; a separate reviewed
+implementation is required to launch paid access on `main`. This pilot does
+not automatically revoke access after a later refund or dispute; review those
+events manually before expanding beyond the pilot.
 
 ## Preview webhook check
 

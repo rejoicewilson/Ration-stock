@@ -1,4 +1,4 @@
-"""Manual ₹99/30-day Razorpay Orders, initially limited to test mode."""
+"""Manual ₹99/30-day Razorpay Orders with a single-account live Preview pilot."""
 import hashlib
 import hmac
 import json
@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
-from account_auth import digest, rpc, session_user
+from account_auth import digest, live_pilot_account, live_pilot_enabled, rpc, session_user
 
 
 router = APIRouter(prefix='/auth/subscription')
@@ -22,23 +22,28 @@ ORDER_ID = re.compile(r'order_[A-Za-z0-9]+\Z')
 PAYMENT_ID = re.compile(r'pay_[A-Za-z0-9]+\Z')
 
 
-def test_config(require_enabled=True):
+def payment_config(require_enabled=True):
     if require_enabled and os.getenv('PAYMENTS_ENABLED', 'false').lower() != 'true':
         raise HTTPException(503, 'Payments are not enabled yet.')
+    mode = os.getenv('BILLING_MODE', 'test').strip().lower()
     key = os.getenv('RAZORPAY_KEY_ID', '')
     secret = os.getenv('RAZORPAY_KEY_SECRET', '')
-    if (os.getenv('BILLING_MODE', 'test').strip().lower() != 'test'
-            or not key.startswith('rzp_test_') or not secret
-            or 'REPLACE' in key.upper() or 'REPLACE' in secret.upper()):
-        raise HTTPException(503, 'Razorpay test payments are not configured.')
-    return key, secret
+    if (mode not in ('test', 'live') or not key.startswith(f'rzp_{mode}_')
+            or not secret or 'REPLACE' in key.upper() or 'REPLACE' in secret.upper()
+            or (mode == 'live' and (os.getenv('VERCEL_ENV', '').strip().lower() != 'preview'
+                                   or os.getenv('VERCEL_GIT_COMMIT_REF', '') != 'feature/99-subscription'
+                                   or (require_enabled and not live_pilot_enabled())))):
+        raise HTTPException(503, 'Razorpay payments are not configured for this mode.')
+    return mode, key, secret
 
 
 def payment_user(request):
     account = session_user(request)
     if account.get('must_change_password'):
         raise HTTPException(403, 'Change your password before paying.')
-    test_config()
+    mode, _, _ = payment_config()
+    if mode == 'live' and not live_pilot_account(account):
+        raise HTTPException(403, 'This plan is not available for this account yet.')
     return account
 
 
@@ -48,7 +53,7 @@ def rate_limit(account):
 
 
 def razor(method, path, payload=None, require_enabled=True):
-    key, secret = test_config(require_enabled=require_enabled)
+    _, key, secret = payment_config(require_enabled=require_enabled)
     try:
         response = requests.request(method, f'https://api.razorpay.com/v1/{path}',
                                     auth=(key, secret), json=payload, timeout=(5, 15))
@@ -59,13 +64,15 @@ def razor(method, path, payload=None, require_enabled=True):
 
 
 def stored_order(order_id, account_id=None):
-    order = rpc('billing_order', {'order_id': order_id, 'mode': 'test'})
+    mode, _, _ = payment_config()
+    order = rpc('billing_order', {'order_id': order_id, 'mode': mode})
     if not order or (account_id and order['account_id'] != account_id):
         raise HTTPException(404, 'Payment order not found.')
     return order
 
 
 def settle(order, payment):
+    mode, _, _ = payment_config(require_enabled=False)
     if (payment.get('order_id') != order['order_id']
             or payment.get('amount') != order['amount_paise']
             or payment.get('currency') != CURRENCY
@@ -76,16 +83,16 @@ def settle(order, payment):
     if payment.get('amount_refunded', 0) != 0:
         raise HTTPException(409, 'This payment has a refund. Contact support.')
     return rpc('billing_activate', {
-        'order_id': order['order_id'], 'payment_id': payment['id'], 'mode': 'test'})
+        'order_id': order['order_id'], 'payment_id': payment['id'], 'mode': mode})
 
 
 @router.post('/order')
 def create_order(request: Request):
     account = payment_user(request)
     rate_limit(account)
-    key, _ = test_config()
+    mode, key, _ = payment_config()
     receipt = str(uuid4())
-    rpc('billing_intent', {'receipt': receipt, 'account_id': account['id'], 'mode': 'test'})
+    rpc('billing_intent', {'receipt': receipt, 'account_id': account['id'], 'mode': mode})
     order = razor('POST', 'orders', {
         'amount': AMOUNT_PAISE, 'currency': CURRENCY, 'receipt': receipt,
         'partial_payment': False,
@@ -95,9 +102,9 @@ def create_order(request: Request):
             or order.get('currency') != CURRENCY
             or order.get('receipt') != receipt):
         raise HTTPException(502, 'Unexpected payment order response.')
-    rpc('billing_attach', {'receipt': receipt, 'order_id': order['id'], 'mode': 'test'})
+    rpc('billing_attach', {'receipt': receipt, 'order_id': order['id'], 'mode': mode})
     return {'key': key, 'order_id': order['id'], 'amount': AMOUNT_PAISE,
-            'currency': CURRENCY, 'mode': 'test', 'contact': account['mobile'][-10:]}
+            'currency': CURRENCY, 'mode': mode, 'contact': account['mobile'][-10:]}
 
 
 class Verification(BaseModel):
@@ -112,7 +119,7 @@ def verify(body: Verification, request: Request):
     rate_limit(account)
     order = stored_order(body.razorpay_order_id, account['id'])
     message = f"{order['order_id']}|{body.razorpay_payment_id}".encode()
-    signature = hmac.new(test_config()[1].encode(), message, hashlib.sha256).hexdigest()
+    signature = hmac.new(payment_config()[2].encode(), message, hashlib.sha256).hexdigest()
     if not hmac.compare_digest(signature, body.razorpay_signature.lower()):
         raise HTTPException(400, 'Invalid payment signature.')
     return settle(order, razor('GET', f'payments/{body.razorpay_payment_id}'))
@@ -122,7 +129,8 @@ def verify(body: Verification, request: Request):
 def reconcile(request: Request):
     account = payment_user(request)
     rate_limit(account)
-    orders = rpc('billing_pending', {'account_id': account['id'], 'mode': 'test'})
+    mode, _, _ = payment_config()
+    orders = rpc('billing_pending', {'account_id': account['id'], 'mode': mode})
     for order in orders:
         if not ORDER_ID.fullmatch(str(order.get('order_id', ''))):
             continue
@@ -130,11 +138,11 @@ def reconcile(request: Request):
         for payment in payments.get('items', []):
             if payment.get('status') == 'captured':
                 settle(order, payment)
-    return rpc('subscription_status', {'account_id': account['id'], 'mode': 'test'})
+    return rpc('subscription_status', {'account_id': account['id'], 'mode': mode})
 
 
 def process_webhook(raw, signature):
-    test_config(require_enabled=False)
+    mode, _, _ = payment_config(require_enabled=False)
     secret = os.getenv('RAZORPAY_WEBHOOK_SECRET', '')
     if not secret or 'REPLACE' in secret.upper():
         raise HTTPException(503, 'Webhook is not configured.')
@@ -153,7 +161,7 @@ def process_webhook(raw, signature):
     except (ValueError, KeyError, TypeError, AttributeError):
         raise HTTPException(400, 'Invalid webhook payload.') from None
     # A Razorpay account may also serve other products; ignore their orders.
-    order = rpc('billing_order', {'order_id': order_id, 'mode': 'test'})
+    order = rpc('billing_order', {'order_id': order_id, 'mode': mode})
     if not order:
         return {'ok': True}
     result = settle(order, razor('GET', f'payments/{payment_id}', require_enabled=False))

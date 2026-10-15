@@ -19,6 +19,11 @@ PAYMENT = {'id': 'pay_ABC123', 'order_id': ORDER['order_id'], 'amount': 9900,
 ENV = {'PAYMENTS_ENABLED': 'true', 'BILLING_MODE': 'test',
        'RAZORPAY_KEY_ID': 'rzp_test_example', 'RAZORPAY_KEY_SECRET': 'test-secret',
        'RAZORPAY_WEBHOOK_SECRET': 'hook-secret'}
+LIVE_ENV = {'PAYMENTS_ENABLED': 'true', 'BILLING_MODE': 'live', 'VERCEL_ENV': 'preview',
+            'VERCEL_GIT_COMMIT_REF': 'feature/99-subscription',
+            'LIVE_PILOT_ENABLED': 'true', 'LIVE_PILOT_FPS_ID': '1234567',
+            'LIVE_PILOT_MOBILE': '919999999999', 'RAZORPAY_KEY_ID': 'rzp_live_example',
+            'RAZORPAY_KEY_SECRET': 'live-secret', 'RAZORPAY_WEBHOOK_SECRET': 'live-hook-secret'}
 
 
 class PaymentTests(unittest.TestCase):
@@ -135,6 +140,58 @@ class PaymentTests(unittest.TestCase):
             headers={'x-razorpay-signature': signature, 'origin': ''})
         self.assertEqual(response.status_code, 200)
         self.razor.assert_not_called()
+
+    def test_live_pilot_order_only_for_exact_account_in_preview(self):
+        with patch.dict('os.environ', LIVE_ENV):
+            self.session.return_value = {'id': ACCOUNT, 'fps_id': '1234567', 'mobile': '919999999999'}
+            self.razor.return_value = {'id': ORDER['order_id'], 'amount': 9900,
+                                       'currency': 'INR'}
+            def create(method, path, payload):
+                return {**self.razor.return_value, 'receipt': payload['receipt']}
+            self.razor.side_effect = create
+            result = self.client.post('/auth/subscription/order')
+            self.assertEqual(result.status_code, 200)
+            self.assertEqual(result.json()['mode'], 'live')
+            self.assertTrue(result.json()['key'].startswith('rzp_live_'))
+            intent = next(data for action, data in (c.args for c in self.rpc.call_args_list)
+                          if action == 'billing_intent')
+            self.assertEqual(intent['account_id'], ACCOUNT)
+            self.assertEqual(intent['mode'], 'live')
+            self.rpc.reset_mock()
+            for account in ({'id': ACCOUNT, 'fps_id': '1234567', 'mobile': '919888888888'},
+                            {'id': ACCOUNT, 'fps_id': '7654321', 'mobile': '919999999999'}):
+                self.session.return_value = account
+                self.assertEqual(self.client.post('/auth/subscription/order').status_code, 403)
+            self.assertFalse(any(c.args[0] == 'billing_intent' for c in self.rpc.call_args_list))
+            self.session.return_value = {'id': ACCOUNT, 'fps_id': '1234567', 'mobile': '919999999999'}
+            with patch.dict('os.environ', {'VERCEL_ENV': 'production'}):
+                self.assertEqual(self.client.post('/auth/subscription/order').status_code, 503)
+
+    def test_live_pilot_verify_and_webhook_use_live_ledger(self):
+        live_order = {**ORDER, 'mode': 'live'}
+        with patch.dict('os.environ', LIVE_ENV):
+            self.session.return_value = {'id': ACCOUNT, 'fps_id': '1234567', 'mobile': '919999999999'}
+            self.rpc.side_effect = lambda action, data: (
+                live_order.copy() if action == 'billing_order' else self.rpc_reply(action, data))
+            body = {'razorpay_order_id': ORDER['order_id'], 'razorpay_payment_id': PAYMENT['id']}
+            body['razorpay_signature'] = hmac.new(b'live-secret',
+                f"{ORDER['order_id']}|{PAYMENT['id']}".encode(), hashlib.sha256).hexdigest()
+            self.assertEqual(self.client.post('/auth/subscription/verify', json=body).status_code, 200)
+            self.rpc.assert_any_call('billing_activate', {
+                'order_id': ORDER['order_id'], 'payment_id': PAYMENT['id'], 'mode': 'live'})
+            self.rpc.reset_mock()
+            event = {'event': 'payment.captured', 'payload': {'payment': {'entity': PAYMENT}}}
+            raw = json.dumps(event).encode()
+            signature = hmac.new(b'live-hook-secret', raw, hashlib.sha256).hexdigest()
+            test_signature = hmac.new(b'hook-secret', raw, hashlib.sha256).hexdigest()
+            self.assertEqual(self.client.post('/auth/subscription/webhook', content=raw,
+                headers={'x-razorpay-signature': test_signature, 'origin': ''}).status_code, 400)
+            with patch.dict('os.environ', {'PAYMENTS_ENABLED': 'false', 'LIVE_PILOT_ENABLED': 'false'}):
+                response = self.client.post('/auth/subscription/webhook', content=raw,
+                    headers={'x-razorpay-signature': signature, 'origin': ''})
+            self.assertEqual(response.status_code, 200)
+            self.rpc.assert_any_call('billing_activate', {
+                'order_id': ORDER['order_id'], 'payment_id': PAYMENT['id'], 'mode': 'live'})
 
 
 if __name__ == '__main__':
