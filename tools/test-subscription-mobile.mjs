@@ -17,16 +17,23 @@ const bundle = await build({
     import React from 'react';
     import { createRoot } from 'react-dom/client';
     import { CssBaseline } from '@mui/material';
-    import SubscriptionAccess from './src/SubscriptionAccess';
+    import AccountApp from './src/AccountApp';
     window.__checkoutCalls = 0;
     window.__outcome = 'pending';
-    createRoot(document.getElementById('root')).render(<><CssBaseline />
-      <header style={{height:110,background:'#e8efff',textAlign:'center',padding:16}}>FPS 1234567<br/>Expired · Password · Sign out</header>
-      <SubscriptionAccess accountId="layout-fixture" status={{mode:'live', payments_enabled:true}}
-        onRefresh={() => { window.__refreshed = true; }} onHome={() => { window.__home = true; }} />
-    </>);` },
+    window.fetch = async url => {
+      if(url === '/auth/me') return new Response(JSON.stringify({account:{id:'layout-fixture',fps_id:'1234567'}}));
+      if(url === '/auth/subscription/status') return new Response(JSON.stringify({plan:'expired',mode:'live',payments_enabled:true,access_allowed:false}));
+      throw new Error('Unexpected live request blocked by test: '+url);
+    };
+    createRoot(document.getElementById('root')).render(<><CssBaseline /><AccountApp /></>);` },
   bundle: true, write: false, format: 'iife', define: { 'process.env.NODE_ENV': '"production"' },
   plugins: [{ name: 'mock-payments', setup(b) {
+    // Keep the real account header/navigation; replace only the unrelated feature pages.
+    b.onLoad({ filter: /src[\\/]App\.jsx$/ }, () => ({ loader: 'jsx', contents: `
+      import React from 'react';
+      export default function FeatureFixture({onProtectedFeature}) {
+        return <button data-testid="open-protected-feature" onClick={()=>onProtectedFeature('stock')}>Open feature</button>;
+      }` }));
     b.onLoad({ filter: /razorpayCheckout\.js$/ }, () => ({ loader: 'js', contents: `
       export async function reconcilePayment(){ return {subscription:{paid_active:false}}; }
       export async function openSubscriptionCheckout(){
@@ -99,12 +106,17 @@ try {
   await command('Page.enable');
   await viewport(360, 640);
   await command('Page.navigate', { url: `http://127.0.0.1:${server.address().port}` });
+  await until(`!!document.querySelector('[data-testid="open-protected-feature"]') && !!document.querySelector('[data-testid="account-heading"]')`);
+  await evaluate(`document.querySelector('[data-testid="open-protected-feature"]').click()`);
   await until(`${cta} && !${cta}.disabled`);
   for (const [w, h] of [[320, 568], [360, 640], [390, 844], [568, 320]]) {
     await viewport(w, h);
     assert.equal(await evaluate(`document.querySelector('[data-testid="subscription-payment-dock"]') === null`), true, 'No fixed payment dock');
     assert.equal(await evaluate(`getComputedStyle(${cta}).position`), 'relative', 'CTA stays in card flow');
     assert.equal(await evaluate(`document.body.textContent.includes('കമ്മീഷൻ')`), false, 'Feature tiles removed');
+    assert.equal(await evaluate(`document.querySelectorAll('[aria-label="Back to home"]').length`), 1, 'Only one Home button');
+    assert.equal(await evaluate(`(()=>{const h=document.querySelector('[data-testid="account-heading"]');return !!h.querySelector('[aria-label="Back to home"]')&&h.textContent.includes('FPS 1234567')})()`), true, 'Home beside FPS');
+    assert.equal(await evaluate(`(()=>{const h=document.querySelector('[data-testid="account-heading"]');const a=h.querySelector('p').getBoundingClientRect(), b=h.querySelector('button').getBoundingClientRect();return Math.abs((a.top+a.height/2)-(b.top+b.height/2))<2})()`), true, 'Home and FPS share a row');
     console.log(w+'x'+h+' visible without scrolling:', await evaluate(visible));
     await evaluate(`${cta}.scrollIntoView({block:'center'})`);
     assert.equal(await evaluate(visible), true, 'Inline CTA reachable without obstruction');
@@ -129,7 +141,10 @@ try {
   assert.equal(await evaluate(visible), true, 'Inline CTA reachable after payment error');
   await viewport(1024, 768);
   assert.equal(await evaluate(`document.querySelector('[data-testid="subscription-payment-dock"]') === null`), true, 'Desktop has no fixed payment dock');
-  console.log('PASS: original inline layout, feature tiles removed, four mobile/landscape viewports, one checkout and busy/pending/error states. Mock payments only.');
+  await evaluate(`document.querySelector('[aria-label="Back to home"]').click()`);
+  await until(`!!document.querySelector('[data-testid="open-protected-feature"]')`);
+  assert.equal(await evaluate(`document.querySelector('[data-testid="subscription-checkout-button"]') === null`), true, 'Home exits subscription screen');
+  console.log('PASS: Home beside FPS on one row, working navigation, inline payment layout, four mobile/landscape viewports, one checkout and busy/pending/error states. Mock payments only.');
 } finally {
   ws?.close();
   browser.kill();

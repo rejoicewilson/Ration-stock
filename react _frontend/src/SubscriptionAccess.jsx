@@ -5,14 +5,10 @@ import { SubscriptionHero } from './SubscriptionArtwork';
 import SubscriptionPaymentButton from './SubscriptionPaymentButton';
 
 const malayalamFont = '"Noto Sans Malayalam", "Nirmala UI", Kartika, sans-serif';
-export default function SubscriptionAccess({ accountId, status, loading, error, onRefresh, onHome }) {
+export default function SubscriptionAccess({ accountId, status, loading, error, onRefresh }) {
   const waiting = loading && !status;
   return <Box component="main" lang="ml" sx={{ px: { xs: 1.5, sm: 3 }, py: { xs: 3, sm: 5 }, display: 'grid', placeItems: 'center',
     '& .MuiTypography-root, & .MuiButton-root:not([lang="en"])': { fontFamily: malayalamFont } }}>
-    <Box sx={{ width: '100%', maxWidth: 440, display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-      <Button type="button" lang="en" variant="outlined" onClick={onHome} aria-label="Back to home"
-        sx={{ height: 40, borderRadius: 2, px: 2, fontWeight: 800, textTransform: 'none', background: '#ffffff' }}>Home</Button>
-    </Box>
     <Paper elevation={0} sx={{ width: '100%', maxWidth: 440, boxSizing: 'border-box', overflow: 'hidden', borderRadius: 4,
       border: '1px solid #dce5f3', bgcolor: '#fff', boxShadow: '0 20px 55px #183b701a' }}>
       {waiting || error ? <Stack spacing={2.5} alignItems="center" sx={{ p: { xs: 3, sm: 4 }, textAlign: 'center' }} aria-busy={waiting}>

@@ -187,10 +187,17 @@ export default function AccountApp() {
     return account.is_owner ? <AdminDashboard onHome={goHome} /> : <AccountCard title="Owner access only"><Alert severity="warning">This account cannot access the dashboard.</Alert><Button onClick={goHome}>Home</Button></AccountCard>;
   }
 
+  const showingSubscription = Boolean(account && pendingView && pendingView !== 'home' && !plan.status?.access_allowed);
+
   return <>
     {account && <Box sx={{ px: 2, py: 1.5, bgcolor: '#e8efff', borderBottom: '1px solid #d8e3f7' }}>
       <Box sx={{ maxWidth: 1100, mx: 'auto', display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1.25 }}>
-        <Typography sx={{ fontWeight: 800, fontSize: 14, color: '#183456', textAlign: { xs: 'center', sm: 'left' }, whiteSpace: 'nowrap' }}>FPS {account.fps_id}</Typography>
+        <Box data-testid="account-heading" sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', sm: 'flex-start' }, gap: 1.5 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: 14, color: '#183456', textAlign: { xs: 'center', sm: 'left' }, whiteSpace: 'nowrap' }}>FPS {account.fps_id}</Typography>
+          {showingSubscription && <Button type="button" variant="outlined" onClick={goHome} aria-label="Back to home"
+            startIcon={<AccountIcon name="home" sx={{ fontSize: 17 }} />}
+            sx={{ minHeight: 44, borderRadius: 2, px: 1.5, fontSize: 12, fontWeight: 800, textTransform: 'none', bgcolor: '#fff' }}>Home</Button>}
+        </Box>
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 330 }, '& .MuiButton-root': { minWidth: 0, minHeight: 56, px: 0.75, py: 0.75, borderRadius: 2, flexDirection: 'column', gap: 0.5, textTransform: 'none', fontWeight: 700, fontSize: { xs: 11, sm: 12 }, lineHeight: 1.3 } }}>
           <AccountPlanButton key={account.id} {...plan} onRefresh={plan.refresh} />
           <Button variant="outlined" aria-label="Change password" onClick={() => setShowPasswordForm(true)} sx={{ bgcolor: '#fff' }}><AccountIcon name="password" sx={{ fontSize: 21 }} /><span>Password</span></Button>
@@ -200,7 +207,7 @@ export default function AccountApp() {
     </Box>}
     {error && <Alert severity="warning" sx={{ m: 2 }}>{error}</Alert>}
     {account?.is_owner && <Box sx={{ textAlign: 'center', py: 1 }}><Button variant="outlined" onClick={() => { window.history.replaceState(null, '', '/admin'); setPendingView('admin'); }}>Owner dashboard</Button></Box>}
-    {account && pendingView && pendingView !== 'home' && !plan.status?.access_allowed ? <SubscriptionAccess accountId={account.id} {...plan} onRefresh={plan.refresh} onHome={goHome} /> : <App key={account?.id || 'guest'} initialView={account ? pendingView || 'home' : 'home'}
+    {showingSubscription ? <SubscriptionAccess accountId={account.id} {...plan} onRefresh={plan.refresh} /> : <App key={account?.id || 'guest'} initialView={account ? pendingView || 'home' : 'home'}
       registeredFpsId={account?.fps_id || ''}
       onHome={() => setPendingView(null)}
       onProtectedFeature={(view) => { setPendingView(view); setError(''); return !account || !plan.status?.access_allowed; }} />}
