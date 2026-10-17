@@ -1,0 +1,133 @@
+// Real Chromium layout test with mocked checkout: no live accounts or payments.
+// Uses an installed Chrome/Edge and the frontend's existing esbuild dependency.
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { createServer } from 'node:http';
+import { spawn } from 'node:child_process';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const frontend = fileURLToPath(new URL('../react _frontend/', import.meta.url));
+const require = createRequire(join(frontend, 'package.json'));
+const { build } = require('esbuild');
+const bundle = await build({
+  stdin: { resolveDir: frontend, loader: 'jsx', contents: `
+    import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { CssBaseline } from '@mui/material';
+    import SubscriptionAccess from './src/SubscriptionAccess';
+    window.__checkoutCalls = 0;
+    window.__outcome = 'pending';
+    createRoot(document.getElementById('root')).render(<><CssBaseline />
+      <header style={{height:110,background:'#e8efff',textAlign:'center',padding:16}}>FPS 1234567<br/>Expired · Password · Sign out</header>
+      <SubscriptionAccess accountId="layout-fixture" status={{mode:'live', payments_enabled:true}}
+        onRefresh={() => { window.__refreshed = true; }} onHome={() => { window.__home = true; }} />
+    </>);` },
+  bundle: true, write: false, format: 'iife', define: { 'process.env.NODE_ENV': '"production"' },
+  plugins: [{ name: 'mock-payments', setup(b) {
+    b.onLoad({ filter: /razorpayCheckout\.js$/ }, () => ({ loader: 'js', contents: `
+      export async function reconcilePayment(){ return {subscription:{paid_active:false}}; }
+      export async function openSubscriptionCheckout(){
+        window.__checkoutCalls++;
+        await new Promise(r=>setTimeout(r,250));
+        if(window.__outcome==='error') throw new Error('mock failure');
+        return {state:window.__outcome};
+      }` }));
+  } }],
+});
+const server = createServer((req, res) => {
+  if (req.url === '/app.js') { res.setHeader('Content-Type', 'application/javascript'); res.end(bundle.outputFiles[0].contents); }
+  else { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div><script src="/app.js"></script>'); }
+});
+await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+const profile = await mkdtemp(join(tmpdir(), 'ration-mobile-layout-'));
+const browser = spawn(process.env.CHROME_PATH || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'],
+  { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
+let ws;
+try {
+  const endpoint = await new Promise((resolve, reject) => {
+    let output = '';
+    const timer = setTimeout(() => reject(new Error('Chromium startup timed out')), 20000);
+    browser.on('error', reject);
+    browser.stderr.on('data', chunk => {
+      output += chunk;
+      const match = output.match(/DevTools listening on (ws:\/\/[^\s]+)/);
+      if (match) { clearTimeout(timer); resolve(match[1]); }
+    });
+  });
+  ws = new WebSocket(endpoint);
+  await new Promise((resolve, reject) => { ws.onopen = resolve; ws.onerror = reject; });
+  let sequence = 0;
+  const pending = new Map();
+  ws.onmessage = event => {
+    const message = JSON.parse(event.data);
+    const waiter = pending.get(message.id);
+    if (waiter) { pending.delete(message.id); message.error ? waiter.reject(message.error) : waiter.resolve(message.result); }
+  };
+  function send(method, params = {}, sessionId) {
+    return new Promise((resolve, reject) => {
+      const id = ++sequence;
+      pending.set(id, { resolve, reject });
+      ws.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }));
+    });
+  }
+  const { targetId } = await send('Target.createTarget', { url: 'about:blank' });
+  const { sessionId } = await send('Target.attachToTarget', { targetId, flatten: true });
+  const command = (method, params) => send(method, params, sessionId);
+  const evaluate = async expression => {
+    const r = await command('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
+    if (r.exceptionDetails) throw new Error(JSON.stringify(r.exceptionDetails));
+    return r.result.value;
+  };
+  async function until(expression) {
+    for (let i = 0; i < 100; i++) {
+      if (await evaluate(expression)) return;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    throw new Error(`Timed out: ${expression}`);
+  }
+  async function viewport(width, height) {
+    await command('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: width < 600 });
+    await evaluate('window.scrollTo(0,0)');
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  const cta = `document.querySelector('[data-testid="subscription-checkout-button"]')`;
+  const visible = `(()=>{const b=${cta};if(!b)return false;const r=b.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&r.left>=0&&r.right<=innerWidth&&!b.disabled})()`;
+  await command('Page.enable');
+  await viewport(360, 640);
+  await command('Page.navigate', { url: `http://127.0.0.1:${server.address().port}` });
+  await until(visible);
+  for (const [w, h] of [[320, 568], [360, 640], [390, 844], [568, 320]]) {
+    await viewport(w, h);
+    assert.equal(await evaluate(visible), true, `${w}x${h}: CTA visible without scrolling`);
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('[data-testid="subscription-payment-dock"]')).position`), 'fixed');
+    await evaluate('window.scrollTo(0,document.body.scrollHeight)');
+    assert.equal(await evaluate(visible), true, 'CTA remains visible after scrolling');
+    assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, 'No horizontal overflow');
+  }
+  await viewport(360, 640);
+  const screenshot = await command('Page.captureScreenshot', { format: 'png' });
+  const screenshotPath = join(profile, 'subscription-mobile.png');
+  await writeFile(screenshotPath, Buffer.from(screenshot.data, 'base64'));
+  console.log('Screenshot:', screenshotPath);
+  await evaluate(`${cta}.click()`);
+  await until(`${cta}.disabled`);
+  await until(`document.body.textContent.includes('പേയ്‌മെന്റ് സ്ഥിരീകരണം ലഭിച്ചിട്ടില്ല')`);
+  assert.equal(await evaluate('window.__checkoutCalls'), 1, 'Only one checkout instance/call');
+  assert.equal(await evaluate(`document.querySelectorAll('[data-testid="subscription-payment-dock"]').length`), 1);
+  await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent.includes('പണം നൽകിയിട്ടില്ല')).click()`);
+  await until(visible);
+  await evaluate(`window.__outcome='error';${cta}.click()`);
+  await until(`document.body.textContent.includes('പേയ്‌മെന്റ് പൂർത്തിയാക്കാനായില്ല')`);
+  assert.equal(await evaluate(visible), true, 'CTA visible again after payment error');
+  await viewport(1024, 768);
+  assert.equal(await evaluate(`getComputedStyle(document.querySelector('[data-testid="subscription-payment-dock"]')).position`), 'static', 'Desktop CTA remains inline');
+  console.log('PASS: four mobile/landscape viewports, pinned CTA before/after scrolling, one checkout, busy/pending/error states and desktop inline layout. Mock payments only.');
+} finally {
+  ws?.close();
+  browser.kill();
+  server.close();
+}

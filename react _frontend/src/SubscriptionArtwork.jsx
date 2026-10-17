@@ -2,7 +2,7 @@ import React from 'react';
 import { SvgIcon } from '@mui/material';
 
 export function SubscriptionHero() {
-  return <SvgIcon aria-hidden="true" viewBox="0 0 240 144" sx={{ width: 220, maxWidth: '100%', height: 132, display: 'block', mx: 'auto', overflow: 'visible' }}>
+  return <SvgIcon aria-hidden="true" viewBox="0 0 240 144" sx={{ width: { xs: 160, sm: 220 }, maxWidth: '100%', height: { xs: 96, sm: 132 }, display: 'block', mx: 'auto', overflow: 'visible' }}>
     <ellipse cx="120" cy="128" rx="91" ry="9" fill="#071b59" opacity=".22" />
     <circle cx="120" cy="72" r="63" fill="#fff" opacity=".07" />
     <circle cx="120" cy="72" r="49" fill="#fff" opacity=".05" />

@@ -13,9 +13,9 @@ const benefits = [
 
 export default function SubscriptionAccess({ accountId, status, loading, error, onRefresh, onHome }) {
   const waiting = loading && !status;
-  return <Box component="main" lang="ml" sx={{ px: { xs: 1.5, sm: 3 }, py: { xs: 3, sm: 5 }, display: 'grid', placeItems: 'center',
+  return <Box component="main" lang="ml" sx={{ px: { xs: 1.5, sm: 3 }, py: { xs: 1.5, sm: 5 }, display: 'grid', placeItems: 'center',
     '& .MuiTypography-root, & .MuiButton-root:not([lang="en"])': { fontFamily: malayalamFont } }}>
-    <Box sx={{ width: '100%', maxWidth: 440, display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+    <Box sx={{ width: '100%', maxWidth: 440, display: 'flex', justifyContent: 'flex-end', mb: { xs: 1.5, sm: 3 } }}>
       <Button type="button" lang="en" variant="outlined" onClick={onHome} aria-label="Back to home"
         sx={{ height: 40, borderRadius: 2, px: 2, fontWeight: 800, textTransform: 'none', background: '#ffffff' }}>Home</Button>
     </Box>
@@ -33,14 +33,14 @@ export default function SubscriptionAccess({ accountId, status, loading, error, 
           <Button variant="contained" onClick={onRefresh} startIcon={<AccountIcon name="refresh" />} sx={{ minHeight: 48, borderRadius: 2, textTransform: 'none' }}>വീണ്ടും ശ്രമിക്കാം</Button>
         </>}
       </Stack> : <>
-        <Box sx={{ position: 'relative', overflow: 'hidden', px: { xs: 2.5, sm: 3.5 }, pt: 2.5, pb: 3,
+        <Box sx={{ position: 'relative', overflow: 'hidden', px: { xs: 2.5, sm: 3.5 }, pt: { xs: 1.5, sm: 2.5 }, pb: { xs: 2, sm: 3 },
           textAlign: 'center', background: 'radial-gradient(ellipse at 85% 10%, #5368df 0%, #304fbb 45%, #203d92 100%)' }}>
           <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.75} sx={{ mb: 1, color: '#e1e9ff' }}>
             <AccountIcon name="stock" sx={{ fontSize: 16 }} />
             <Typography lang="en" sx={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.4 }}>Ration Stock App</Typography>
           </Stack>
           <SubscriptionHero />
-          <Typography component="h1" sx={{ fontSize: { xs: 24, sm: 27 }, fontWeight: 800, color: '#fff', lineHeight: 1.65, mt: 0.75, mb: 0.75 }}>
+          <Typography component="h1" sx={{ fontSize: { xs: 22, sm: 27 }, fontWeight: 800, color: '#fff', lineHeight: 1.55, mt: 0.5, mb: 0.75 }}>
             കടയുടെ കണക്കുകൾ<br />ഇനി എളുപ്പം.
           </Typography>
           <Typography sx={{ fontSize: 13, lineHeight: 1.9, color: '#d7e3ff' }}>
@@ -69,10 +69,11 @@ export default function SubscriptionAccess({ accountId, status, loading, error, 
             </Stack>)}
           </Box>
 
-          <SubscriptionPaymentButton key={accountId} accountId={accountId} status={status} onRefresh={onRefresh} />
-          <Typography sx={{ color: '#163563', fontSize: 12, textAlign: 'center', lineHeight: 1.9, mt: 1.5 }}>
-            റേഷൻ കടയുടെ ദൈനംദിന പ്രവർത്തനങ്ങൾ കൂടുതൽ എളുപ്പമാക്കാൻ
-          </Typography>
+          <SubscriptionPaymentButton key={accountId} accountId={accountId} status={status} onRefresh={onRefresh}>
+            <Typography sx={{ color: '#163563', fontSize: 12, textAlign: 'center', lineHeight: 1.9 }}>
+              റേഷൻ കടയുടെ ദൈനംദിന പ്രവർത്തനങ്ങൾ കൂടുതൽ എളുപ്പമാക്കാൻ
+            </Typography>
+          </SubscriptionPaymentButton>
         </Box>
       </>}
     </Paper>
