@@ -1,11 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
+import { Alert, Button, CircularProgress, Stack } from '@mui/material';
 import AccountIcon from './AccountIcon';
 import { openSubscriptionCheckout, reconcilePayment } from './razorpayCheckout';
 
-export default function SubscriptionPaymentButton({ accountId, status, onRefresh, children }) {
-  const dockRef = useRef(null);
-  const [dockHeight, setDockHeight] = useState(156);
+export default function SubscriptionPaymentButton({ accountId, status, onRefresh }) {
   const [busy, setBusy] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [pending, setPending] = useState(false);
@@ -14,17 +12,6 @@ export default function SubscriptionPaymentButton({ accountId, status, onRefresh
   const mounted = useRef(false);
   const refreshRef = useRef(onRefresh);
   refreshRef.current = onRefresh;
-
-  useEffect(() => {
-    const dock = dockRef.current;
-    if (!dock) return;
-    const measure = () => setDockHeight(Math.ceil(dock.getBoundingClientRect().height));
-    measure();
-    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
-    observer?.observe(dock);
-    window.addEventListener('resize', measure);
-    return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
-  }, []);
 
   useEffect(() => {
     mounted.current = true;
@@ -82,21 +69,7 @@ export default function SubscriptionPaymentButton({ accountId, status, onRefresh
     }
   }
 
-  return <>
-    {/* Reserve the actual mobile dock height, including recovery messages and
-        safe-area padding, so scrolling never leaves content hidden behind it. */}
-    <Box aria-hidden="true" sx={{ display: { xs: 'block', sm: 'none' }, height: dockHeight }} />
-    <Box ref={dockRef} data-testid="subscription-payment-dock" sx={{
-      position: { xs: 'fixed', sm: 'static' }, bottom: 0, left: 0, right: 0,
-      zIndex: theme => theme.zIndex.appBar,
-      bgcolor: '#fff', borderTop: { xs: '1px solid #dce5f3', sm: 'none' },
-      boxShadow: { xs: '0 -8px 28px #183b701a', sm: 'none' },
-      px: { xs: 2, sm: 0 }, pt: { xs: 1.25, sm: 0 },
-      pb: { xs: 'calc(12px + env(safe-area-inset-bottom, 0px))', sm: 0 },
-      maxHeight: { xs: '70dvh', sm: 'none' }, overflowY: 'auto', overscrollBehavior: 'contain',
-    }}>
-    <Stack spacing={1.25} sx={{ width: '100%', maxWidth: 440, mx: 'auto' }}>
-    <Typography sx={{ display: { xs: 'block', sm: 'none' }, color: '#526b8f', fontSize: 12, textAlign: 'center' }}>₹99 / 30 ദിവസം · എല്ലാ സേവനങ്ങളും</Typography>
+  return <Stack spacing={1.5}>
     {status?.mode === 'test' && <Alert severity="info" sx={{ fontSize: 12, lineHeight: 1.8 }}>ടെസ്റ്റ് പേയ്‌മെന്റ് — യഥാർത്ഥ പണം ഈടാക്കില്ല.</Alert>}
     <Button data-testid="subscription-checkout-button" variant="contained" fullWidth disabled={busy || pending || !status?.payments_enabled} onClick={pay}
       endIcon={busy ? <CircularProgress size={18} color="inherit" /> : <AccountIcon name="arrow" />}
@@ -112,8 +85,5 @@ export default function SubscriptionPaymentButton({ accountId, status, onRefresh
       <Button variant="outlined" disabled={busy} onClick={checkPayment} sx={{ minHeight: 44, textTransform: 'none', fontSize: 12 }}>പേയ്‌മെന്റ് നില പരിശോധിക്കാം</Button>
       {pending && <Button disabled={busy} onClick={() => setPending(false)} sx={{ minHeight: 44, textTransform: 'none', fontSize: 12 }}>പണം നൽകിയിട്ടില്ല — വീണ്ടും ശ്രമിക്കാം</Button>}
     </>}
-    {children}
-    </Stack>
-    </Box>
-  </>;
+  </Stack>;
 }

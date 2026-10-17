@@ -99,16 +99,19 @@ try {
   await command('Page.enable');
   await viewport(360, 640);
   await command('Page.navigate', { url: `http://127.0.0.1:${server.address().port}` });
-  await until(visible);
+  await until(`${cta} && !${cta}.disabled`);
   for (const [w, h] of [[320, 568], [360, 640], [390, 844], [568, 320]]) {
     await viewport(w, h);
-    assert.equal(await evaluate(visible), true, `${w}x${h}: CTA visible without scrolling`);
-    assert.equal(await evaluate(`getComputedStyle(document.querySelector('[data-testid="subscription-payment-dock"]')).position`), 'fixed');
-    await evaluate('window.scrollTo(0,document.body.scrollHeight)');
-    assert.equal(await evaluate(visible), true, 'CTA remains visible after scrolling');
+    assert.equal(await evaluate(`document.querySelector('[data-testid="subscription-payment-dock"]') === null`), true, 'No fixed payment dock');
+    assert.equal(await evaluate(`getComputedStyle(${cta}).position`), 'relative', 'CTA stays in card flow');
+    assert.equal(await evaluate(`document.body.textContent.includes('കമ്മീഷൻ')`), false, 'Feature tiles removed');
+    console.log(w+'x'+h+' visible without scrolling:', await evaluate(visible));
+    await evaluate(`${cta}.scrollIntoView({block:'center'})`);
+    assert.equal(await evaluate(visible), true, 'Inline CTA reachable without obstruction');
     assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, 'No horizontal overflow');
   }
   await viewport(360, 640);
+  await evaluate(`${cta}.scrollIntoView({block:'center'})`);
   const screenshot = await command('Page.captureScreenshot', { format: 'png' });
   const screenshotPath = join(profile, 'subscription-mobile.png');
   await writeFile(screenshotPath, Buffer.from(screenshot.data, 'base64'));
@@ -117,15 +120,16 @@ try {
   await until(`${cta}.disabled`);
   await until(`document.body.textContent.includes('പേയ്‌മെന്റ് സ്ഥിരീകരണം ലഭിച്ചിട്ടില്ല')`);
   assert.equal(await evaluate('window.__checkoutCalls'), 1, 'Only one checkout instance/call');
-  assert.equal(await evaluate(`document.querySelectorAll('[data-testid="subscription-payment-dock"]').length`), 1);
+  assert.equal(await evaluate(`document.querySelectorAll('[data-testid="subscription-checkout-button"]').length`), 1);
   await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent.includes('പണം നൽകിയിട്ടില്ല')).click()`);
-  await until(visible);
+  await until(`!${cta}.disabled`);
   await evaluate(`window.__outcome='error';${cta}.click()`);
   await until(`document.body.textContent.includes('പേയ്‌മെന്റ് പൂർത്തിയാക്കാനായില്ല')`);
-  assert.equal(await evaluate(visible), true, 'CTA visible again after payment error');
+  await evaluate(`${cta}.scrollIntoView({block:'center'})`);
+  assert.equal(await evaluate(visible), true, 'Inline CTA reachable after payment error');
   await viewport(1024, 768);
-  assert.equal(await evaluate(`getComputedStyle(document.querySelector('[data-testid="subscription-payment-dock"]')).position`), 'static', 'Desktop CTA remains inline');
-  console.log('PASS: four mobile/landscape viewports, pinned CTA before/after scrolling, one checkout, busy/pending/error states and desktop inline layout. Mock payments only.');
+  assert.equal(await evaluate(`document.querySelector('[data-testid="subscription-payment-dock"]') === null`), true, 'Desktop has no fixed payment dock');
+  console.log('PASS: original inline layout, feature tiles removed, four mobile/landscape viewports, one checkout and busy/pending/error states. Mock payments only.');
 } finally {
   ws?.close();
   browser.kill();
