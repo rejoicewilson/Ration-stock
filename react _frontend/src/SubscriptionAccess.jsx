@@ -7,7 +7,7 @@ import SubscriptionPaymentButton from './SubscriptionPaymentButton';
 const malayalamFont = '"Noto Sans Malayalam", "Nirmala UI", Kartika, sans-serif';
 export default function SubscriptionAccess({ accountId, status, loading, error, onRefresh }) {
   const waiting = loading && !status;
-  return <Box component="main" lang="ml" sx={{ px: { xs: 1.5, sm: 3 }, py: { xs: 3, sm: 5 }, display: 'grid', placeItems: 'center',
+  return <Box component="main" lang="ml" sx={{ px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 }, display: 'grid', placeItems: 'center',
     '& .MuiTypography-root, & .MuiButton-root:not([lang="en"])': { fontFamily: malayalamFont } }}>
     <Paper elevation={0} sx={{ width: '100%', maxWidth: 440, boxSizing: 'border-box', overflow: 'hidden', borderRadius: 4,
       border: '1px solid #dce5f3', bgcolor: '#fff', boxShadow: '0 20px 55px #183b701a' }}>
@@ -23,37 +23,31 @@ export default function SubscriptionAccess({ accountId, status, loading, error, 
           <Button variant="contained" onClick={onRefresh} startIcon={<AccountIcon name="refresh" />} sx={{ minHeight: 48, borderRadius: 2, textTransform: 'none' }}>വീണ്ടും ശ്രമിക്കാം</Button>
         </>}
       </Stack> : <>
-        <Box sx={{ position: 'relative', overflow: 'hidden', px: { xs: 2.5, sm: 3.5 }, pt: 2.5, pb: 3,
+        <Box sx={{ position: 'relative', overflow: 'hidden', px: { xs: 2.5, sm: 3.5 }, pt: 2, pb: 2,
           textAlign: 'center', background: 'radial-gradient(ellipse at 85% 10%, #5368df 0%, #304fbb 45%, #203d92 100%)' }}>
-          <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.75} sx={{ mb: 1, color: '#e1e9ff' }}>
+          <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.75} sx={{ mb: 0.5, color: '#e1e9ff' }}>
             <AccountIcon name="stock" sx={{ fontSize: 16 }} />
             <Typography lang="en" sx={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.4 }}>Ration Stock App</Typography>
           </Stack>
           <SubscriptionHero />
-          <Typography component="h1" sx={{ fontSize: { xs: 24, sm: 27 }, fontWeight: 800, color: '#fff', lineHeight: 1.65, mt: 0.75, mb: 0.75 }}>
-            കടയുടെ കണക്കുകൾ<br />ഇനി എളുപ്പം.
-          </Typography>
-          <Typography sx={{ fontSize: 13, lineHeight: 1.9, color: '#d7e3ff' }}>
-            സമയം ലാഭിക്കൂ. സ്മാർട്ടായി മുന്നേറൂ.
+          <Typography component="h1" sx={{ fontSize: { xs: 20, sm: 23 }, fontWeight: 800, color: '#fff', lineHeight: 1.6, mt: 0.75 }}>
+            എല്ലാ സേവനങ്ങളും<br />ഇനി ഒരൊറ്റ പ്ലാനിൽ
           </Typography>
         </Box>
 
-        <Box sx={{ px: { xs: 2.5, sm: 3.5 }, pt: 2.5, pb: 2.5 }}>
-          <Box sx={{ textAlign: 'center', mb: 2.5 }}>
+        <Box sx={{ px: { xs: 2.5, sm: 3.5 }, pt: 2, pb: 2 }}>
+          <Box sx={{ textAlign: 'center', mb: 2 }}>
             <Box>
-              <Typography sx={{ color: '#526b8f', fontSize: 12, mb: 0.5 }}>ഒരു പ്ലാൻ. എല്ലാ സേവനങ്ങളും.</Typography>
               <Stack direction="row" justifyContent="center" alignItems="baseline" spacing={0.75}>
-                <Typography lang="en" sx={{ color: '#163563', fontSize: 48, lineHeight: 1.3, fontWeight: 800, letterSpacing: '-1.5px', fontVariantNumeric: 'tabular-nums' }}>₹99</Typography>
+                <Typography lang="en" sx={{ color: '#163563', fontSize: 44, lineHeight: 1.2, fontWeight: 800, letterSpacing: '-1.5px', fontVariantNumeric: 'tabular-nums' }}>₹99</Typography>
                 <Typography sx={{ color: '#64748b', fontSize: 13 }}>/ 30 ദിവസം</Typography>
               </Stack>
             </Box>
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, mt: 0.75, px: 1.25, py: 0.4, borderRadius: 8, bgcolor: '#eef9f4' }}>
-              <Typography sx={{ color: '#237453', fontSize: 12, lineHeight: 1.8 }}>ദിവസം വെറും ₹3.30</Typography>
-            </Box>
+            <Typography sx={{ color: '#237453', fontSize: 11, lineHeight: 1.8, mt: 0.5 }}>ദിവസം വെറും ₹3.30</Typography>
           </Box>
 
           <SubscriptionPaymentButton key={accountId} accountId={accountId} status={status} onRefresh={onRefresh} />
-          <Typography sx={{ color: '#163563', fontSize: 12, textAlign: 'center', lineHeight: 1.9, mt: 1.5 }}>
+          <Typography sx={{ color: '#163563', fontSize: 11, textAlign: 'center', lineHeight: 1.8, mt: 1.5 }}>
             റേഷൻ കടയുടെ ദൈനംദിന പ്രവർത്തനങ്ങൾ കൂടുതൽ എളുപ്പമാക്കാൻ
           </Typography>
         </Box>

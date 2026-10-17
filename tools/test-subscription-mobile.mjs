@@ -109,6 +109,8 @@ try {
   await until(`!!document.querySelector('[data-testid="open-protected-feature"]') && !!document.querySelector('[data-testid="account-heading"]')`);
   await evaluate(`document.querySelector('[data-testid="open-protected-feature"]').click()`);
   await until(`${cta} && !${cta}.disabled`);
+  assert.equal(await evaluate(`document.querySelector('[aria-label="Change password"]') === null`), true, 'Password hidden only on subscription screen');
+  assert.equal(await evaluate(`[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Sign out'))`), false, 'Sign out stays on Home');
   for (const [w, h] of [[320, 568], [360, 640], [390, 844], [568, 320]]) {
     await viewport(w, h);
     assert.equal(await evaluate(`document.querySelector('[data-testid="subscription-payment-dock"]') === null`), true, 'No fixed payment dock');
@@ -118,6 +120,7 @@ try {
     assert.equal(await evaluate(`(()=>{const h=document.querySelector('[data-testid="account-heading"]');return !!h.querySelector('[aria-label="Back to home"]')&&h.textContent.includes('FPS 1234567')})()`), true, 'Home beside FPS');
     assert.equal(await evaluate(`(()=>{const h=document.querySelector('[data-testid="account-heading"]');const a=h.querySelector('p').getBoundingClientRect(), b=h.querySelector('button').getBoundingClientRect();return Math.abs((a.top+a.height/2)-(b.top+b.height/2))<2})()`), true, 'Home and FPS share a row');
     console.log(w+'x'+h+' visible without scrolling:', await evaluate(visible));
+    if (h >= 568) assert.equal(await evaluate(visible), true, `${w}x${h}: payment CTA visible on first screen`);
     await evaluate(`${cta}.scrollIntoView({block:'center'})`);
     assert.equal(await evaluate(visible), true, 'Inline CTA reachable without obstruction');
     assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, 'No horizontal overflow');
@@ -144,7 +147,9 @@ try {
   await evaluate(`document.querySelector('[aria-label="Back to home"]').click()`);
   await until(`!!document.querySelector('[data-testid="open-protected-feature"]')`);
   assert.equal(await evaluate(`document.querySelector('[data-testid="subscription-checkout-button"]') === null`), true, 'Home exits subscription screen');
-  console.log('PASS: Home beside FPS on one row, working navigation, inline payment layout, four mobile/landscape viewports, one checkout and busy/pending/error states. Mock payments only.');
+  assert.equal(await evaluate(`!!document.querySelector('[aria-label="Change password"]')`), true, 'Password remains available on Home');
+  assert.equal(await evaluate(`[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Sign out'))`), true, 'Sign out remains available on Home');
+  console.log('PASS: compact single-row header, portrait CTA visible without scrolling, Home/password/sign-out navigation, inline layout, one checkout and busy/pending/error states. Mock payments only.');
 } finally {
   ws?.close();
   browser.kill();

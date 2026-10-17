@@ -190,19 +190,19 @@ export default function AccountApp() {
   const showingSubscription = Boolean(account && pendingView && pendingView !== 'home' && !plan.status?.access_allowed);
 
   return <>
-    {account && <Box sx={{ px: 2, py: 1.5, bgcolor: '#e8efff', borderBottom: '1px solid #d8e3f7' }}>
-      <Box sx={{ maxWidth: 1100, mx: 'auto', display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1.25 }}>
-        <Box data-testid="account-heading" sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', sm: 'flex-start' }, gap: 1.5 }}>
-          <Typography sx={{ fontWeight: 800, fontSize: 14, color: '#183456', textAlign: { xs: 'center', sm: 'left' }, whiteSpace: 'nowrap' }}>FPS {account.fps_id}</Typography>
+    {account && <Box sx={{ px: 2, py: showingSubscription ? 1 : 1.5, bgcolor: '#e8efff', borderBottom: '1px solid #d8e3f7' }}>
+      <Box sx={{ maxWidth: showingSubscription ? 440 : 1100, mx: 'auto', display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1.25 }}>
+        <Box data-testid="account-heading" sx={{ display: 'flex', alignItems: 'center', width: showingSubscription ? '100%' : 'auto', justifyContent: showingSubscription ? 'space-between' : { xs: 'center', sm: 'flex-start' }, gap: 1.5 }}>
           {showingSubscription && <Button type="button" variant="outlined" onClick={goHome} aria-label="Back to home"
-            startIcon={<AccountIcon name="home" sx={{ fontSize: 17 }} />}
+            startIcon={<AccountIcon name="arrow" sx={{ fontSize: 17, transform: 'rotate(180deg)' }} />}
             sx={{ minHeight: 44, borderRadius: 2, px: 1.5, fontSize: 12, fontWeight: 800, textTransform: 'none', bgcolor: '#fff' }}>Home</Button>}
+          <Typography sx={{ fontWeight: 800, fontSize: showingSubscription ? 12 : 14, color: '#183456', textAlign: { xs: 'center', sm: 'left' }, whiteSpace: 'nowrap' }}>FPS {account.fps_id}</Typography>
         </Box>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 330 }, '& .MuiButton-root': { minWidth: 0, minHeight: 56, px: 0.75, py: 0.75, borderRadius: 2, flexDirection: 'column', gap: 0.5, textTransform: 'none', fontWeight: 700, fontSize: { xs: 11, sm: 12 }, lineHeight: 1.3 } }}>
+        {!showingSubscription && <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 330 }, '& .MuiButton-root': { minWidth: 0, minHeight: 56, px: 0.75, py: 0.75, borderRadius: 2, flexDirection: 'column', gap: 0.5, textTransform: 'none', fontWeight: 700, fontSize: { xs: 11, sm: 12 }, lineHeight: 1.3 } }}>
           <AccountPlanButton key={account.id} {...plan} onRefresh={plan.refresh} />
           <Button variant="outlined" aria-label="Change password" onClick={() => setShowPasswordForm(true)} sx={{ bgcolor: '#fff' }}><AccountIcon name="password" sx={{ fontSize: 21 }} /><span>Password</span></Button>
           <Button variant="outlined" color="error" disabled={busy} onClick={signOut} sx={{ bgcolor: '#fff' }}><AccountIcon name="logout" sx={{ fontSize: 21 }} /><span>Sign out</span></Button>
-        </Box>
+        </Box>}
       </Box>
     </Box>}
     {error && <Alert severity="warning" sx={{ m: 2 }}>{error}</Alert>}
