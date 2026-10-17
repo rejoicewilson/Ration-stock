@@ -109,6 +109,8 @@ try {
   await until(`!!document.querySelector('[data-testid="open-protected-feature"]') && !!document.querySelector('[data-testid="account-heading"]')`);
   await evaluate(`document.querySelector('[data-testid="open-protected-feature"]').click()`);
   await until(`${cta} && !${cta}.disabled`);
+  assert.equal(await evaluate(`document.body.textContent.includes('സ്വയമേവ പുതുക്കില്ല')`), false, 'Requested text removed');
+  assert.equal(await evaluate(`!!document.querySelector('[data-testid="subscription-daily-work-artwork"] svg')`), true, 'Daily-work illustration present');
   assert.equal(await evaluate(`document.querySelector('[aria-label="Change password"]') === null`), true, 'Password hidden only on subscription screen');
   assert.equal(await evaluate(`[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Sign out'))`), false, 'Sign out stays on Home');
   for (const [w, h] of [[320, 568], [360, 640], [390, 844], [568, 320]]) {
@@ -120,7 +122,11 @@ try {
     assert.equal(await evaluate(`(()=>{const h=document.querySelector('[data-testid="account-heading"]');return !!h.querySelector('[aria-label="Back to home"]')&&h.textContent.includes('FPS 1234567')})()`), true, 'Home beside FPS');
     assert.equal(await evaluate(`(()=>{const h=document.querySelector('[data-testid="account-heading"]');const a=h.querySelector('p').getBoundingClientRect(), b=h.querySelector('button').getBoundingClientRect();return Math.abs((a.top+a.height/2)-(b.top+b.height/2))<2})()`), true, 'Home and FPS share a row');
     console.log(w+'x'+h+' visible without scrolling:', await evaluate(visible));
-    if (h >= 568) assert.equal(await evaluate(visible), true, `${w}x${h}: payment CTA visible on first screen`);
+    console.log(w+'x'+h+' vertical overflow:', await evaluate(`Math.max(0,document.documentElement.scrollHeight-innerHeight)`));
+    if (h >= 568) {
+      assert.equal(await evaluate(visible), true, `${w}x${h}: payment CTA visible on first screen`);
+      assert.equal(await evaluate(`document.documentElement.scrollHeight <= innerHeight + 1`), true, `${w}x${h}: full normal subscription screen fits without scrolling`);
+    }
     await evaluate(`${cta}.scrollIntoView({block:'center'})`);
     assert.equal(await evaluate(visible), true, 'Inline CTA reachable without obstruction');
     assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, 'No horizontal overflow');

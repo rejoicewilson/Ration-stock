@@ -4,6 +4,7 @@ import { SvgIcon } from '@mui/material';
 export function SubscriptionHero() {
   return <SvgIcon aria-hidden="true" viewBox="0 0 240 144" sx={{ width: { xs: 150, sm: 180 }, maxWidth: '100%', height: { xs: 90, sm: 108 }, display: 'block', mx: 'auto', overflow: 'visible',
     '@media (min-height: 740px) and (max-width: 599px)': { width: 200, height: 120 },
+    '@media (max-height: 620px) and (max-width: 599px)': { width: 100, height: 60 },
   }}>
     <ellipse cx="120" cy="128" rx="91" ry="9" fill="#071b59" opacity=".22" />
     <circle cx="120" cy="72" r="63" fill="#fff" opacity=".07" />
@@ -34,6 +35,33 @@ export function SubscriptionHero() {
     <path d="m46 25 2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6Zm153 20 1.5 4.5L205 51l-4.5 1.5L199 57l-1.5-4.5L193 51l4.5-1.5L199 45Z" fill="#ffd665" />
     <circle cx="29" cy="111" r="3" fill="#90beff" />
     <circle cx="216" cy="29" r="2" fill="#9cd9ff" />
+  </SvgIcon>;
+}
+
+// A single daily-work scene, rather than another row of feature cards.
+export function SubscriptionDailyWorkArtwork() {
+  return <SvgIcon aria-hidden="true" viewBox="0 0 240 96" sx={{
+    width: '100%', maxWidth: 240, height: 'clamp(24px, calc(100dvh - 595px), 88px)',
+    display: 'block', mx: 'auto',
+  }}>
+    <ellipse cx="120" cy="83" rx="97" ry="8" fill="#edf2fc" />
+    <path d="M40 71c-16-27 12-54 42-42 21-25 57-28 80-7 32-9 59 21 38 49Z" fill="#f2f5ff" />
+    <rect x="42" y="27" width="65" height="49" rx="7" fill="#e1e8ff" />
+    <rect x="47" y="31" width="55" height="39" rx="4" fill="#fff" />
+    <path d="m55 57 11-10 10 3 17-13m-9 0h9v9" fill="none" stroke="#7b83e8" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M73 77v5m-11 0h22" stroke="#b1bee6" strokeWidth="4" strokeLinecap="round" />
+    <rect x="94" y="13" width="64" height="69" rx="7" fill="#ccdcfa" />
+    <rect x="90" y="9" width="64" height="69" rx="7" fill="#fff" stroke="#d4dff2" strokeWidth="1.5" />
+    <rect x="103" y="6" width="36" height="10" rx="4" fill="#657ed8" />
+    <rect x="101" y="27" width="8" height="8" rx="2" fill="#d4f3e6" />
+    <path d="m103 31 2 2 3-4" fill="none" stroke="#20a17b" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M116 30h25m-25 7h17M102 47h39m-39 9h39m-39 9h27" stroke="#c6d5ef" strokeWidth="3" strokeLinecap="round" />
+    <path d="m152 49 24-12 24 12v27l-24 12-24-12Z" fill="#31b88b" />
+    <path d="m152 49 24 12 24-12-24-12Z" fill="#9ae5c8" />
+    <path d="M176 61v27l24-12V49Z" fill="#239d79" />
+    <path d="m162 44 24 12v10l-7 4V60l-24-12Z" fill="#dcf8eb" />
+    <g transform="rotate(31 154 47)"><rect x="150" y="20" width="7" height="45" rx="2" fill="#ffca70" /><path d="m150 65 3.5 9 3.5-9" fill="#d6b090" /><path d="m152 70 1.5 4 1.5-4" fill="#65728d" /><rect x="150" y="20" width="7" height="7" rx="2" fill="#f5a6a9" /></g>
+    <path d="m28 45 2 5 5 2-5 2-2 5-2-5-5-2 5-2ZM210 24l1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5 4-1.5Z" fill="#aebff0" />
   </SvgIcon>;
 }
 
