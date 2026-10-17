@@ -20,7 +20,8 @@ import {
 import attaIcon from './assets/atta-flour.svg';
 import sugarIcon from './assets/sugar-cubes.svg';
 import upiButtonImage from './assets/upi-button.png';
-import { featureFetch } from './accountApi';
+import { featureFetch, featureErrorMessage } from './accountApi';
+import FeatureError from './FeatureError';
 
 const PrivateShieldIcon = ({ size = 42 }) => (
   <Box
@@ -669,6 +670,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
   const [rationCardError, setRationCardError] = useState('');
   const [roQuantityLoading, setRoQuantityLoading] = useState(false);
   const [roQuantityError, setRoQuantityError] = useState('');
+  const [roQuantityRetryParams, setRoQuantityRetryParams] = useState(null);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [supportModalOpen, setSupportModalOpen] = useState(false);
   const [supportUpiCopied, setSupportUpiCopied] = useState(false);
@@ -853,7 +855,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
       setResult(data);
     } catch (err) {
       console.error('Stock fetch failed:', err);
-      setError(err.message || 'Failed to fetch data. Please check your input and backend.');
+      setError(featureErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -915,7 +917,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
       setResult({ ...data, requested_period: requestedPeriod });
     } catch (err) {
       console.error(`${isCommission ? 'Commission' : 'Transactions'} fetch failed:`, err);
-      setError(err.message || `Failed to fetch ${isCommission ? 'commission data' : 'transactions'}.`);
+      setError(featureErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -1009,7 +1011,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
       });
     } catch (error) {
       console.error('Month comparison fetch failed:', error);
-      setMonthComparisonError(error.message || 'Unable to compare these months. Please try again.');
+      setMonthComparisonError(featureErrorMessage(error));
     } finally {
       setMonthComparisonLoading(false);
     }
@@ -1067,7 +1069,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
       setStockBoardResult(data);
     } catch (err) {
       console.error('Stock board register fetch failed:', err);
-      setStockBoardError(err.message || 'Failed to fetch stock board register.');
+      setStockBoardError(featureErrorMessage(err));
     } finally {
       setStockBoardLoading(false);
     }
@@ -1108,7 +1110,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
       setSettingsResult(data);
     } catch (err) {
       console.error('RO details fetch failed:', err);
-      setSettingsError(err.message || 'Failed to fetch RO details.');
+      setSettingsError(featureErrorMessage(err));
     } finally {
       setSettingsLoading(false);
     }
@@ -1168,7 +1170,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
       setRationCardResult(data);
     } catch (err) {
       console.error('Ration card details fetch failed:', err);
-      setRationCardError(err.message || 'Failed to fetch ration card details.');
+      setRationCardError(featureErrorMessage(err, 'Unable to get ration card details. Please check the card number and try again.'));
     } finally {
       setRationCardLoading(false);
     }
@@ -1176,6 +1178,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
 
   const handleRoQuantityClick = async (actionParams) => {
     if (!actionParams || Object.keys(actionParams).length === 0) return;
+    setRoQuantityRetryParams(actionParams);
 
     const roParts = String(actionParams.ro_no || '').split('/').filter(Boolean);
     const toNumberOrFallback = (value, fallback) => {
@@ -1220,7 +1223,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
       setRoQuantityResult({ ...data, request: payload });
     } catch (err) {
       console.error('RO quantity details fetch failed:', err);
-      setRoQuantityError(err.message || 'Failed to fetch RO quantity details.');
+      setRoQuantityError(featureErrorMessage(err));
     } finally {
       setRoQuantityLoading(false);
     }
@@ -3019,9 +3022,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
             {stockBoardLoading ? <CircularProgress size={22} color="inherit" /> : 'Get Stock Register'}
           </Button>
           {stockBoardError && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {stockBoardError}
-            </Alert>
+            <FeatureError error={stockBoardError} loading={stockBoardLoading} onRetry={() => handleStockBoardSubmit({ preventDefault() {} })} sx={{ mt: 2 }} />
           )}
         </Box>
 
@@ -3505,9 +3506,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
         </Paper>
 
         {monthComparisonError && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {monthComparisonError}
-          </Alert>
+          <FeatureError error={monthComparisonError} loading={monthComparisonLoading} onRetry={() => handleMonthComparisonSubmit({ preventDefault() {} })} sx={{ mb: 3 }} />
         )}
 
         {monthComparisonResult && periods && (
@@ -4360,9 +4359,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
         </Paper>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
+          <FeatureError error={error} loading={loading} onRetry={() => handleSubmit({ preventDefault() {} })} sx={{ mb: 3 }} />
         )}
 
         {result && (
@@ -4677,9 +4674,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
 
             <Stack spacing={2}>
               {rationCardError && (
-                <Alert severity="error">
-                  {rationCardError}
-                </Alert>
+                <FeatureError error={rationCardError} loading={rationCardLoading} onRetry={() => handleRationCardSubmit({ preventDefault() {} })} />
               )}
 
               {rationCardResult && (
@@ -4859,9 +4854,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
             </Paper>
 
             {serviceError && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {serviceError}
-              </Alert>
+              <FeatureError error={serviceError} loading={serviceLoading} onRetry={() => serviceSubmitHandler({ preventDefault() {} })} sx={{ mb: 3 }} />
             )}
 
             {serviceResult && (
@@ -5345,9 +5338,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
             </Paper>
 
             {settingsError && (
-              <Alert severity="error" sx={{ mb: 3 }}>
-                {settingsError}
-              </Alert>
+              <FeatureError error={settingsError} loading={settingsLoading} onRetry={() => handleSettingsSubmit({ preventDefault() {} })} sx={{ mb: 3 }} />
             )}
 
             {settingsResult && (
@@ -5483,9 +5474,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
                 )}
 
                 {roQuantityError && (
-                  <Alert severity="error">
-                    {roQuantityError}
-                  </Alert>
+                  <FeatureError error={roQuantityError} loading={roQuantityLoading} onRetry={() => handleRoQuantityClick(roQuantityRetryParams)} />
                 )}
 
                 {roQuantityResult && renderRoQuantityReport()}

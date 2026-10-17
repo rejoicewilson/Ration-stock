@@ -27,11 +27,13 @@ try {
   assert.equal(sessionEnded, 1);
   assert.equal(subscriptionRequired, 1);
 
-  for (const status of [200, 503]) {
+  for (const status of [200]) {
     const response = new Response('{}', { status });
     globalThis.fetch = async () => response;
     assert.equal(await featureFetch('/count'), response);
   }
+  globalThis.fetch = async () => new Response('{}', { status: 503 });
+  await assert.rejects(featureFetch('/count'), error => error.publicFeatureError?.kind === 'service');
   assert.equal(subscriptionRequired, 1);
   assert.equal(sessionEnded, 1);
   console.log('PASS: expiry requests renewal without signing out; expired sessions request sign-in; credentials and uncached requests preserved.');

@@ -1171,10 +1171,10 @@ def get_fps_stock(request: StockRequest):
 
     except requests.RequestException as e:
         logger.exception("fps_stock_upstream_error payload=%s", payload)
-        raise HTTPException(status_code=500, detail=f"Upstream ePoS request failed: {e}")
+        raise HTTPException(status_code=500, detail={"code": "EPOS_UNAVAILABLE", "message": "ePoS data is temporarily unavailable."}) from None
     except Exception as e:
         logger.exception("fps_stock_parse_error payload=%s", payload)
-        raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
+        raise HTTPException(status_code=500, detail={"code": "FEATURE_ERROR", "message": "Unable to load these details. Please try again."}) from None
 
 
 def fetch_transactions(request: TransactionsRequest):
@@ -1273,10 +1273,10 @@ def fetch_transactions(request: TransactionsRequest):
         return result
     except requests.RequestException as e:
         logger.exception("transactions_upstream_error payload=%s", payload)
-        raise HTTPException(status_code=500, detail=f"Upstream ePoS transaction request failed: {e}")
+        raise HTTPException(status_code=500, detail={"code": "EPOS_UNAVAILABLE", "message": "ePoS data is temporarily unavailable."}) from None
     except Exception as e:
         logger.exception("transactions_parse_error payload=%s", payload)
-        raise HTTPException(status_code=500, detail=f"Backend transaction parse error: {e}")
+        raise HTTPException(status_code=500, detail={"code": "FEATURE_ERROR", "message": "Unable to load these details. Please try again."}) from None
 
 
 @app.post("/transactions")
@@ -1337,10 +1337,10 @@ def get_stock_register(request: StockRegisterRequest):
         }
     except requests.RequestException as e:
         logger.exception("stock_register_upstream_error payload=%s", payload)
-        raise HTTPException(status_code=500, detail=f"Upstream ePoS stock register request failed: {e}")
+        raise HTTPException(status_code=500, detail={"code": "EPOS_UNAVAILABLE", "message": "ePoS data is temporarily unavailable."}) from None
     except Exception as e:
         logger.exception("stock_register_parse_error payload=%s", payload)
-        raise HTTPException(status_code=500, detail=f"Backend stock register parse error: {e}")
+        raise HTTPException(status_code=500, detail={"code": "FEATURE_ERROR", "message": "Unable to load these details. Please try again."}) from None
 
 
 @app.post("/ro-details")
@@ -1376,10 +1376,10 @@ def get_ro_details(request: RoDetailsRequest):
         }
     except requests.RequestException as e:
         logger.exception("ro_details_upstream_error payload=%s", params)
-        raise HTTPException(status_code=500, detail=f"Upstream SCM request failed: {e}")
+        raise HTTPException(status_code=500, detail={"code": "SCM_UNAVAILABLE", "message": "Supply service data is temporarily unavailable."}) from None
     except Exception as e:
         logger.exception("ro_details_parse_error payload=%s", params)
-        raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
+        raise HTTPException(status_code=500, detail={"code": "FEATURE_ERROR", "message": "Unable to load these details. Please try again."}) from None
 
 
 @app.post("/ro-quantity-details")
@@ -1440,10 +1440,10 @@ def get_ro_quantity_details(request: RoQuantityDetailsRequest):
         }
     except requests.RequestException as e:
         logger.exception("ro_quantity_details_upstream_error payload=%s", params)
-        raise HTTPException(status_code=500, detail=f"Upstream SCM quantity request failed: {e}")
+        raise HTTPException(status_code=500, detail={"code": "SCM_UNAVAILABLE", "message": "Supply service data is temporarily unavailable."}) from None
     except Exception as e:
         logger.exception("ro_quantity_details_parse_error payload=%s", params)
-        raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
+        raise HTTPException(status_code=500, detail={"code": "FEATURE_ERROR", "message": "Unable to load these details. Please try again."}) from None
 
 
 @app.post("/ration-card-details")
@@ -1483,11 +1483,11 @@ def get_ration_card_details(request: RationCardDetailsRequest):
         logger.exception("ration_card_details_timeout payload=%s", payload)
         raise HTTPException(
             status_code=504,
-            detail="ePoS ration card details server is taking too long to respond. Please try again.",
+            detail={"code": "EPOS_UNAVAILABLE", "message": "ePoS data is temporarily unavailable."},
         )
     except requests.RequestException as e:
         logger.exception("ration_card_details_upstream_error payload=%s", payload)
-        raise HTTPException(status_code=500, detail=f"Upstream ePoS ration card details request failed: {e}")
+        raise HTTPException(status_code=500, detail={"code": "EPOS_UNAVAILABLE", "message": "ePoS data is temporarily unavailable."}) from None
 
 
 # Updated /count endpoint to sum CB Qty for RAW RICE group
@@ -1628,7 +1628,7 @@ def get_raw_rice_cb_sum(request: StockRequest):
         return result
     except requests.RequestException as e:
         logger.exception("count_upstream_error payload=%s", payload)
-        raise HTTPException(status_code=500, detail=f"Upstream ePoS request failed: {e}")
+        raise HTTPException(status_code=500, detail={"code": "EPOS_UNAVAILABLE", "message": "ePoS data is temporarily unavailable."}) from None
     except Exception as e:
         logger.exception("count_parse_error payload=%s", payload)
-        raise HTTPException(status_code=500, detail=f"Backend parse error: {e}")
+        raise HTTPException(status_code=500, detail={"code": "FEATURE_ERROR", "message": "Unable to load these details. Please try again."}) from None

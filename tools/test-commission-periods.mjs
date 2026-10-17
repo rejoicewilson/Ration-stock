@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const source = readFileSync(new URL('../react _frontend/src/App.jsx', import.meta.url), 'utf8');
+const apiSource = readFileSync(new URL('../react _frontend/src/accountApi.js', import.meta.url), 'utf8');
+const { featureErrorMessage } = await import(`data:text/javascript;base64,${Buffer.from(apiSource).toString('base64')}`);
 const dateHelpers = source.slice(source.indexOf('const toEposDate ='), source.indexOf('const calculateCommission ='));
 const submitHandler = source.slice(source.indexOf('  const submitTransactionRequest ='), source.indexOf('  const handleTransactionsSubmit ='));
 class FixedDate extends Date {
@@ -10,12 +12,12 @@ class FixedDate extends Date {
   }
 }
 const requests = [];
-const submit = new Function('Date', 'featureFetch', 'TRANSACTIONS_API_URL', 'console',
+const submit = new Function('Date', 'featureFetch', 'TRANSACTIONS_API_URL', 'console', 'featureErrorMessage',
   `${dateHelpers}\n${submitHandler}\nreturn submitTransactionRequest;`
 )(FixedDate, async (_url, options) => {
   requests.push(JSON.parse(options.body));
   return { ok: true, text: async () => JSON.stringify({ summary: {} }) };
-}, '/transactions', { error() {} });
+}, '/transactions', { error() {} }, featureErrorMessage);
 
 async function check({ year, month, commission = true, from, to, expectedError }) {
   let error = '';
