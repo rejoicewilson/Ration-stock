@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,8 +44,10 @@ const bundle = await build({
       }` }));
   } }],
 });
+const appIcon = await readFile(join(frontend, 'public', 'icon-192.png'));
 const server = createServer((req, res) => {
   if (req.url === '/app.js') { res.setHeader('Content-Type', 'application/javascript'); res.end(bundle.outputFiles[0].contents); }
+  else if (req.url === '/icon-192.png') { res.setHeader('Content-Type', 'image/png'); res.end(appIcon); }
   else { res.setHeader('Content-Type', 'text/html; charset=utf-8'); res.end('<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><div id="root"></div><script src="/app.js"></script>'); }
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -109,6 +111,8 @@ try {
   await until(`!!document.querySelector('[data-testid="open-protected-feature"]') && !!document.querySelector('[data-testid="account-heading"]')`);
   await evaluate(`document.querySelector('[data-testid="open-protected-feature"]').click()`);
   await until(`${cta} && !${cta}.disabled`);
+  assert.equal(await evaluate(`!!document.querySelector('svg image[href="/icon-192.png"]')`), true, 'Hero uses existing app icon');
+  assert.equal(await evaluate(`(async()=>{const img=new Image();img.src='/icon-192.png';await img.decode();return img.naturalWidth===192})()`), true, 'App icon loads as an image');
   assert.equal(await evaluate(`document.body.textContent.includes('സ്വയമേവ പുതുക്കില്ല')`), false, 'Requested text removed');
   assert.equal(await evaluate(`!!document.querySelector('[data-testid="subscription-daily-work-artwork"] svg')`), true, 'Daily-work illustration present');
   assert.equal(await evaluate(`document.querySelector('[aria-label="Change password"]') === null`), true, 'Password hidden only on subscription screen');

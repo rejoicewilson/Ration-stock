@@ -33,7 +33,6 @@ export default function SubscriptionAccess({ accountId, status, loading, error, 
           '@media (max-height: 620px) and (max-width: 599px)': { pt: 1.5, pb: 1.5 },
         }}>
           <Stack direction="row" alignItems="center" justifyContent="center" spacing={0.75} sx={{ mb: 0.5, color: '#e1e9ff' }}>
-            <AccountIcon name="stock" sx={{ fontSize: 16 }} />
             <Typography lang="en" sx={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.4 }}>Ration Stock App</Typography>
           </Stack>
           <SubscriptionHero />

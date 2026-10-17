@@ -22,9 +22,7 @@ export function SubscriptionHero() {
     <path d="M142.5 80v23M127 91.5h31" stroke="#fff" strokeWidth="2" />
     <rect x="29" y="57" width="49" height="43" rx="9" fill="#102a70" opacity=".16" />
     <rect x="25" y="53" width="49" height="43" rx="9" fill="#fff" />
-    <path d="m37 64 12-6 12 6v15l-12 6-12-6V64Z" fill="#e1f6ec" />
-    <path d="m38 65 11 5 11-5M49 70v13" fill="none" stroke="#26a77c" strokeWidth="2.5" strokeLinejoin="round" />
-    <path d="m38 65 11-5 11 5v13l-11 5-11-5V65Z" fill="none" stroke="#26a77c" strokeWidth="2.5" strokeLinejoin="round" />
+    <image href="/icon-192.png" x="32" y="57" width="35" height="35" preserveAspectRatio="xMidYMid meet" />
     <rect x="165" y="72" width="52" height="45" rx="9" fill="#102a70" opacity=".16" />
     <rect x="161" y="68" width="52" height="45" rx="9" fill="#fff" />
     <rect x="171" y="91" width="6" height="12" rx="2" fill="#c5c5ff" />
