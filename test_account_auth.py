@@ -16,6 +16,10 @@ class AccountSecurityTests(unittest.TestCase):
         self.mock = patch('account_auth.rpc')
         self.rpc = self.mock.start()
         self.addCleanup(self.mock.stop)
+        # These tests isolate account security; plan enforcement has its own suite.
+        plan = patch('account_auth.account_plan', return_value={'access_allowed': True})
+        plan.start()
+        self.addCleanup(plan.stop)
 
     def test_all_features_require_session(self):
         for path in auth.PROTECTED_PATHS:
@@ -29,6 +33,21 @@ class AccountSecurityTests(unittest.TestCase):
         response = self.client.post('/auth/login', headers={'origin': 'https://evil.example'}, json={})
         self.assertEqual(response.status_code, 403)
         self.rpc.assert_not_called()
+
+    def test_vercel_trusts_only_exact_server_provided_preview_addresses(self):
+        values = {'VERCEL': '1', 'VERCEL_URL': 'ration-stock-preview.vercel.app',
+                  'VERCEL_BRANCH_URL': 'ration-stock-git-feature-preproduction.vercel.app',
+                  'APP_ALLOWED_ORIGINS': 'https://ration-stock.vercel.app'}
+        with patch.dict('os.environ', values):
+            self.assertEqual(auth.configured_origins(), [
+                'https://ration-stock.vercel.app', 'https://ration-stock-preview.vercel.app',
+                'https://ration-stock-git-feature-preproduction.vercel.app'])
+        for hostname in ('evil.example', 'user@evil.vercel.app', 'evil.vercel.app/path',
+                         'evil.vercel.app.example.com', 'https://evil.vercel.app'):
+            with patch.dict('os.environ', {**values, 'VERCEL_URL': hostname, 'VERCEL_BRANCH_URL': ''}):
+                self.assertEqual(auth.configured_origins(), ['https://ration-stock.vercel.app'])
+        with patch.dict('os.environ', {**values, 'VERCEL': ''}):
+            self.assertEqual(auth.configured_origins(), ['https://ration-stock.vercel.app'])
 
     def test_validation_does_not_echo_password(self):
         response = self.client.post('/auth/register', json={'mobile': 'bad', 'password': 'private-secret', 'fps_id': 'bad'})
@@ -81,7 +100,9 @@ class AccountSecurityTests(unittest.TestCase):
     def test_only_expected_account_routes_registered(self):
         routes = {route.path for route in app.routes if route.path.startswith('/auth/')}
         self.assertEqual(routes, {'/auth/me', '/auth/support', '/auth/register', '/auth/login',
-            '/auth/logout', '/auth/devices', '/auth/change-password', '/auth/admin/dashboard', '/auth/admin/reset-password'})
+            '/auth/logout', '/auth/devices', '/auth/change-password', '/auth/admin/dashboard', '/auth/admin/reset-password',
+            '/auth/subscription/status', '/auth/subscription/order', '/auth/subscription/verify',
+            '/auth/subscription/reconcile', '/auth/subscription/webhook'})
 
     def test_owner_reset_security_and_password_hash(self):
         owner_id = '00000000-0000-0000-0000-000000000001'

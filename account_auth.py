@@ -17,11 +17,24 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, SecretStr, field_validator
 from starlette.concurrency import run_in_threadpool
+from subscription_plans import DEFAULT_FREE_UNTIL, plan_status
+import payment_service as payments
 
 load_dotenv(Path(__file__).resolve().parent / '.env', override=False)
-ALLOWED_ORIGINS = [x.strip().rstrip('/') for x in os.getenv(
-    'APP_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://ration-stock.vercel.app'
-).split(',') if x.strip()]
+def configured_origins():
+    origins = [x.strip().rstrip('/') for x in os.getenv(
+        'APP_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,https://ration-stock.vercel.app'
+    ).split(',') if x.strip()]
+    if os.getenv('VERCEL'):
+        # Exact addresses supplied by this deployment, never browser Host/Origin.
+        for name in ('VERCEL_URL', 'VERCEL_BRANCH_URL'):
+            hostname = os.getenv(name, '')
+            if re.fullmatch(r'[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.vercel\.app', hostname):
+                origins.append(f'https://{hostname}')
+    return list(dict.fromkeys(origins))
+
+
+ALLOWED_ORIGINS = configured_origins()
 SECURE_COOKIES = bool(os.getenv('VERCEL')) or os.getenv('COOKIE_SECURE', 'false').lower() == 'true'
 SESSION_COOKIE = '__Host-ration_session' if SECURE_COOKIES else 'ration_session'
 DEVICE_COOKIE = '__Host-ration_device' if SECURE_COOKIES else 'ration_device'
@@ -45,6 +58,10 @@ def rpc(action, data):
         raise HTTPException(503, 'Account service is not configured yet.')
     try:
         function = 'ration_activity' if action in ('record_activity', 'dashboard') else 'ration_auth'
+        if action == 'subscription_status':
+            function = 'ration_plan_status'
+        elif action.startswith('checkout_'):
+            function = 'ration_checkout'
         response = requests.post(f'{url}/rest/v1/rpc/{function}',
             headers={'apikey': key, 'User-Agent': 'ration-stock-backend/1.0'},
             json={'p_action': action, 'p_data': data}, timeout=(5, 12))
@@ -76,7 +93,7 @@ async def account_gate(request, call_next):
     if request.method == 'OPTIONS':
         return await call_next(request)
     try:
-        if (protected or is_auth) and request.method not in ('GET', 'HEAD'):
+        if (protected or is_auth) and request.method not in ('GET', 'HEAD') and path != '/auth/subscription/webhook':
             # Browser POSTs must carry an exact trusted origin (including the port).
             if request.headers.get('origin', '').rstrip('/') not in ALLOWED_ORIGINS:
                 raise HTTPException(403, 'This request did not come from the app. Please reopen the app.')
@@ -84,6 +101,13 @@ async def account_gate(request, call_next):
             request.state.account = await run_in_threadpool(session_user, request)
             if request.state.account.get('must_change_password'):
                 raise HTTPException(403, 'Please change your temporary password first.')
+            status = await run_in_threadpool(account_plan, request.state.account)
+            if not status['access_allowed']:
+                raise HTTPException(402, {
+                    'code': 'subscription_required',
+                    'message': 'Your plan has expired. Renew to continue.',
+                    'subscription': status,
+                })
         response = await call_next(request)
         if protected and request.method == 'POST' and 200 <= response.status_code < 300:
             try:
@@ -191,6 +215,82 @@ def set_cookies(response, device, token):
 def me(request: Request):
     account = session_user(request)
     return {'account': {**account, 'is_owner': is_owner(account)}}
+
+
+@router.get('/subscription/status')
+def subscription_status(request: Request):
+    return account_plan(session_user(request))
+
+
+def account_plan(account):
+    # Account and payment mode are server-owned, never taken from browser input.
+    mode = payments.billing_mode()
+    result = rpc('subscription_status', {'account_id': account['id'], 'mode': mode})
+    if not isinstance(result, dict) or 'paid_until' not in result or 'free_until' not in result:
+        raise HTTPException(503, 'Plan status is temporarily unavailable. Please try again.')
+    try:
+        free_until = result['free_until']
+        if free_until is None:
+            free_until = os.getenv('SUBSCRIPTION_FREE_UNTIL', DEFAULT_FREE_UNTIL)
+        return {**plan_status(result['paid_until'], free_until, mode=mode), 'payments_enabled': payments.payments_ready()}
+    except (ValueError, TypeError):
+        raise HTTPException(503, 'Plan status is temporarily unavailable. Please try again.') from None
+
+
+class CheckoutVerification(BaseModel):
+    model_config = {'extra': 'forbid'}
+    razorpay_order_id: str = Field(pattern=r'^order_[A-Za-z0-9]{1,80}$')
+    razorpay_payment_id: str = Field(pattern=r'^pay_[A-Za-z0-9]{1,80}$')
+    razorpay_signature: str = Field(pattern=r'^[0-9a-f]{64}$')
+
+
+def checkout_account(request, operation):
+    account = session_user(request)
+    if account.get('must_change_password'):
+        raise HTTPException(403, 'Please change your temporary password first.')
+    limit = 12 if operation == 'order' else 40
+    if not rpc('limit', {'key': digest(f'checkout:{account["id"]}:{operation}'), 'max': limit}).get('allowed'):
+        raise HTTPException(429, 'Too many payment checks. Please wait and try again.')
+    return account
+
+
+@router.post('/subscription/order')
+def create_checkout(request: Request):
+    account = checkout_account(request, 'order')
+    config = payments.settings(enabled=True)
+    # Recover a completed payment before allowing another checkout attempt.
+    checkout = payments.Checkout(rpc, config)
+    checkout.reconcile(account)
+    status = account_plan(account)
+    if status['access_allowed']:
+        return {'already_active': True, 'subscription': status}
+    return checkout.start(account)
+
+
+@router.post('/subscription/verify')
+def verify_checkout(body: CheckoutVerification, request: Request):
+    account = checkout_account(request, 'verify')
+    checkout = payments.Checkout(rpc, payments.settings())
+    result = checkout.verify(account, body.razorpay_order_id, body.razorpay_payment_id, body.razorpay_signature)
+    return {**result, 'subscription': account_plan(account)}
+
+
+@router.post('/subscription/reconcile')
+def reconcile_checkout(request: Request):
+    account = checkout_account(request, 'reconcile')
+    result = payments.Checkout(rpc, payments.settings()).reconcile(account)
+    return {**result, 'subscription': account_plan(account)}
+
+
+@router.post('/subscription/webhook')
+async def payment_webhook(request: Request):
+    chunks = bytearray()
+    async for chunk in request.stream():
+        chunks.extend(chunk)
+        if len(chunks) > 131072:
+            raise HTTPException(413, 'Payment notification is too large.')
+    checkout = payments.Checkout(rpc, payments.settings())
+    return await run_in_threadpool(checkout.webhook, bytes(chunks), request.headers.get('x-razorpay-signature', ''))
 
 
 def is_owner(account):

@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
 import App from './App';
 import AdminDashboard from './AdminDashboard';
+import AccountIcon from './AccountIcon';
+import AccountPlanButton from './AccountPlanButton';
+import SubscriptionAccess from './SubscriptionAccess';
+import useAccountPlan from './useAccountPlan';
 import { accountRequest } from './accountApi';
 
 const supportUrl = 'https://wa.me/919447645196?text=' + encodeURIComponent('Hello, I need help recovering my Ration Stock App account.');
@@ -27,6 +31,7 @@ function broadcastSessionChange() {
 export default function AccountApp() {
   const refreshSequence = useRef(0);
   const [account, setAccount] = useState(null);
+  const plan = useAccountPlan(account?.id);
   const [checking, setChecking] = useState(true);
   const [pendingView, setPendingView] = useState(window.location.pathname.replace(/\/$/, '') === '/admin' ? 'admin' : null);
   const [mode, setMode] = useState(initialAccountMode);
@@ -186,18 +191,19 @@ export default function AccountApp() {
     {account && <Box sx={{ px: 2, py: 1.5, bgcolor: '#e8efff', borderBottom: '1px solid #d8e3f7' }}>
       <Box sx={{ maxWidth: 1100, mx: 'auto', display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1.25 }}>
         <Typography sx={{ fontWeight: 800, fontSize: 14, color: '#183456', textAlign: { xs: 'center', sm: 'left' }, whiteSpace: 'nowrap' }}>FPS {account.fps_id}</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 'auto' }, '& .MuiButton-root': { minWidth: 0, minHeight: 44, px: 1, py: 0.75, borderRadius: 2, textTransform: 'none', fontWeight: 600, fontSize: { xs: 12, sm: 13 }, lineHeight: 1.3, bgcolor: '#fff' } }}>
-          <Button variant="outlined" onClick={() => setShowPasswordForm(true)}>Change password</Button>
-          <Button variant="outlined" color="error" disabled={busy} onClick={signOut}>Sign out</Button>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 330 }, '& .MuiButton-root': { minWidth: 0, minHeight: 56, px: 0.75, py: 0.75, borderRadius: 2, flexDirection: 'column', gap: 0.5, textTransform: 'none', fontWeight: 700, fontSize: { xs: 11, sm: 12 }, lineHeight: 1.3 } }}>
+          <AccountPlanButton key={account.id} {...plan} onRefresh={plan.refresh} />
+          <Button variant="outlined" aria-label="Change password" onClick={() => setShowPasswordForm(true)} sx={{ bgcolor: '#fff' }}><AccountIcon name="password" sx={{ fontSize: 21 }} /><span>Password</span></Button>
+          <Button variant="outlined" color="error" disabled={busy} onClick={signOut} sx={{ bgcolor: '#fff' }}><AccountIcon name="logout" sx={{ fontSize: 21 }} /><span>Sign out</span></Button>
         </Box>
       </Box>
     </Box>}
     {error && <Alert severity="warning" sx={{ m: 2 }}>{error}</Alert>}
     {account?.is_owner && <Box sx={{ textAlign: 'center', py: 1 }}><Button variant="outlined" onClick={() => { window.history.replaceState(null, '', '/admin'); setPendingView('admin'); }}>Owner dashboard</Button></Box>}
-    <App key={account?.id || 'guest'} initialView={account ? pendingView || 'home' : 'home'}
+    {account && pendingView && pendingView !== 'home' && !plan.status?.access_allowed ? <SubscriptionAccess accountId={account.id} {...plan} onRefresh={plan.refresh} onHome={goHome} /> : <App key={account?.id || 'guest'} initialView={account ? pendingView || 'home' : 'home'}
       registeredFpsId={account?.fps_id || ''}
       onHome={() => setPendingView(null)}
-      onProtectedFeature={(view) => { setPendingView(view); setError(''); return !account; }} />
+      onProtectedFeature={(view) => { setPendingView(view); setError(''); return !account || !plan.status?.access_allowed; }} />}
   </>;
 }
 
