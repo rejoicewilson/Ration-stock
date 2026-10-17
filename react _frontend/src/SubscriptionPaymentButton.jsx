@@ -73,9 +73,12 @@ export default function SubscriptionPaymentButton({ accountId, status, onRefresh
     {status?.mode === 'test' && <Alert severity="info" sx={{ fontSize: 12, lineHeight: 1.8 }}>ടെസ്റ്റ് പേയ്‌മെന്റ് — യഥാർത്ഥ പണം ഈടാക്കില്ല.</Alert>}
     <Button data-testid="subscription-checkout-button" variant="contained" fullWidth disabled={busy || pending || !status?.payments_enabled} onClick={pay}
       endIcon={busy ? <CircularProgress size={18} color="inherit" /> : <AccountIcon name="arrow" />}
-      sx={{ minHeight: 52, py: 1.25, px: 1, borderRadius: 2.25, textTransform: 'none', fontSize: 14, fontWeight: 700,
-        background: 'linear-gradient(100deg, #304fbb, #6655cc)', boxShadow: '0 5px 14px #304fbb25',
-        '&:hover': { background: 'linear-gradient(100deg, #2543a8, #5848b8)' },
+      sx={{ minHeight: 56, py: 1.5, px: 1, borderRadius: 2.25, textTransform: 'none', fontSize: 15, fontWeight: 800,
+        background: 'linear-gradient(105deg, #264bc4, #6545c5)', color: '#fff', border: '1px solid #ffffff25',
+        boxShadow: '0 8px 20px #304fbb38, inset 0 1px 0 #ffffff30',
+        transition: 'box-shadow 150ms ease, background 150ms ease',
+        '&:hover': { background: 'linear-gradient(105deg, #203eaa, #5638af)', boxShadow: '0 10px 24px #304fbb48' },
+        '&.Mui-focusVisible': { outline: '3px solid #96b8ff', outlineOffset: 3 },
         '&.Mui-disabled': { background: 'linear-gradient(100deg, #dee7ff, #e4ddff)', color: '#435c96', border: '1px solid #cbd6f9' } }}>
       {busy ? verifying ? 'പേയ്‌മെന്റ് പരിശോധിക്കുന്നു…' : 'പേയ്‌മെന്റ് തുറക്കുന്നു…' : status?.mode === 'test' ? 'ടെസ്റ്റ് പേയ്‌മെന്റ് · ₹99' : '₹99 നൽകി തുടരാം'}
     </Button>

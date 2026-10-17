@@ -125,6 +125,11 @@ try {
     assert.equal(await evaluate(visible), true, 'Inline CTA reachable without obstruction');
     assert.equal(await evaluate(`document.documentElement.scrollWidth <= innerWidth`), true, 'No horizontal overflow');
   }
+  await viewport(390, 844);
+  const tallScreenshot = await command('Page.captureScreenshot', { format: 'png' });
+  const tallScreenshotPath = join(profile, 'subscription-tall-mobile.png');
+  await writeFile(tallScreenshotPath, Buffer.from(tallScreenshot.data, 'base64'));
+  console.log('Tall mobile screenshot:', tallScreenshotPath);
   await viewport(360, 640);
   await evaluate(`${cta}.scrollIntoView({block:'center'})`);
   const screenshot = await command('Page.captureScreenshot', { format: 'png' });
