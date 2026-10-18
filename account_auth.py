@@ -62,6 +62,8 @@ def rpc(action, data):
             function = 'ration_plan_status'
         elif action.startswith('checkout_'):
             function = 'ration_checkout'
+        elif action == 'usage_days':
+            function = 'ration_usage_days'
         response = requests.post(f'{url}/rest/v1/rpc/{function}',
             headers={'apikey': key, 'User-Agent': 'ration-stock-backend/1.0'},
             json={'p_action': action, 'p_data': data}, timeout=(5, 12))
@@ -316,6 +318,21 @@ def dashboard(request: Request, page: int = 1, search: str = ''):
     if query and 'matching_accounts' not in result:
         raise HTTPException(503, 'Run the updated activity dashboard SQL to enable all-member search.')
     return result
+
+
+@router.get('/admin/usage-days')
+def usage_days(request: Request, page: int = 1, search: str = ''):
+    account = session_user(request)
+    if not is_owner(account) or account.get('must_change_password'):
+        raise HTTPException(403, 'Owner access only.')
+    if not 1 <= page <= 100000:
+        raise HTTPException(400, 'Invalid page.')
+    if len(search) > 30:
+        raise HTTPException(400, 'Search is too long.')
+    query = re.sub(r'[\s()+-]', '', search)
+    if query and not re.fullmatch(r'[0-9]{1,20}', query):
+        raise HTTPException(400, 'Search using a shop or mobile number.')
+    return rpc('usage_days', {'offset': (page - 1) * 50, 'search': query})
 
 
 @router.get('/support')
