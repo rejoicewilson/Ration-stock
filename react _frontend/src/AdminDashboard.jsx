@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Box, Button, Checkbox, Chip, CircularProgress, Collapse, Dialog, DialogContent, DialogTitle, FormControlLabel, LinearProgress, Paper, Stack, Tab, Tabs, TextField, Typography } from '@mui/material';
 import { accountRequest } from './accountApi';
 import AccountUsageDaysTable from './AccountUsageDaysTable';
+import RecentAccountUsageTable from './RecentAccountUsageTable';
 
 const names = { '/count': 'Stock summary', '/fps-stock': 'Stock board', '/transactions': 'Sales tools (legacy)', '/stock-register': 'Stock board', '/ro-details': 'RO orders', '/ro-quantity-details': 'RO quantities', '/ration-card-details': 'Ration card details', transactions: 'Transactions', commission: 'Commission', monthComparison: 'Monthly comparison' };
 const date = value => value ? new Date(value).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : 'Not yet active';
@@ -37,6 +38,7 @@ export default function AdminDashboard({ onHome }) {
   const [reload, setReload] = useState(0);
   const [data, setData] = useState(null);
   const [usageData, setUsageData] = useState(null);
+  const [recentData, setRecentData] = useState(null);
   const [view, setView] = useState('members');
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -46,15 +48,15 @@ export default function AdminDashboard({ onHome }) {
     let current = true;
     setLoading(true); setError('');
     const timer = window.setTimeout(() => {
-      const endpoint = view === 'usage' ? 'usage-days' : 'dashboard';
+      const endpoint = view === 'recent' ? 'recent-usage' : view === 'usage' ? 'usage-days' : 'dashboard';
       accountRequest(`admin/${endpoint}?page=${page}&search=${encodeURIComponent(search.trim())}`)
-        .then(value => { if (current) { if (view === 'usage') setUsageData(value); else setData(value); } })
+        .then(value => { if (current) { if (view === 'recent') setRecentData(value); else if (view === 'usage') setUsageData(value); else setData(value); } })
         .catch(err => { if (current) setError(err.message); })
         .finally(() => { if (current) setLoading(false); });
     }, search ? 350 : 0);
     return () => { current = false; window.clearTimeout(timer); };
   }, [page, reload, search, view]);
-  const reportData = view === 'usage' ? usageData : data;
+  const reportData = view === 'recent' ? recentData : view === 'usage' ? usageData : data;
   const accounts = reportData?.accounts || [];
   const matchingCount = reportData?.matching_accounts ?? reportData?.total_accounts ?? 0;
   const maxRequests = Math.max(1, ...(data?.features || []).map(feature => Number(feature.requests)));
@@ -74,9 +76,10 @@ export default function AdminDashboard({ onHome }) {
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' }, gap: 1.5, mb: 3 }}>
           {[['Registered members', data.total_accounts, `${data.new_month} joined this month`, '#245fcd'], ['Used app today', data.active_today, 'Members who used a feature', '#147451'], ['Used app this month', data.active_month, 'Each member counted once', '#7351bd'], ['Joined today', data.new_today, 'New accounts created', '#b05b22']].map(([label, value, caption, color]) => <Paper elevation={0} key={label} sx={{ ...panel, p: { xs: 1.75, sm: 2.5 }, borderTop: `3px solid ${color}` }}><Typography sx={{ fontSize: 14, fontWeight: 600, lineHeight: 1.4, minHeight: { xs: 40, md: 0 } }}>{label}</Typography><Typography sx={{ fontSize: 36, fontWeight: 800, color, my: 0.75 }}>{value}</Typography><Typography sx={{ fontSize: 12, lineHeight: 1.5, color: '#64748b' }}>{caption}</Typography></Paper>)}
         </Box>
-        <Tabs value={view} onChange={(_event, next) => { setView(next); setPage(1); setLoading(true); setError(''); }} aria-label="Owner account reports" sx={{ mb: 2.5, '& .MuiTab-root': { textTransform: 'none', fontWeight: 700, minHeight: 48 } }}>
+        <Tabs value={view} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile onChange={(_event, next) => { setView(next); setPage(1); setLoading(true); setError(''); }} aria-label="Owner account reports" sx={{ mb: 2.5, '& .MuiTab-root': { textTransform: 'none', fontWeight: 700, minHeight: 48 } }}>
           <Tab value="members" label="Member details" id="owner-members-tab" aria-controls="owner-members-panel" />
           <Tab value="usage" label="Days used" id="owner-usage-tab" aria-controls="owner-usage-panel" />
+          <Tab value="recent" label="Recently used" id="owner-recent-tab" aria-controls="owner-recent-panel" />
         </Tabs>
         {view === 'members' && <Paper elevation={0} sx={{ ...panel, mb: 3 }}>
           <Typography variant="h6" fontWeight={800}>Feature usage</Typography><Typography sx={{ fontSize: 13, color: '#64748b' }}>This month · Completed requests</Typography>
@@ -89,13 +92,14 @@ export default function AdminDashboard({ onHome }) {
             {!data.features.length && <Box sx={{ bgcolor: '#f7f9fc', border: '1px dashed #d3dfee', borderRadius: 2, p: 2, gridColumn: '1 / -1' }}><Typography sx={{ fontWeight: 600, fontSize: 15 }}>Waiting for first activity</Typography><Typography sx={{ fontSize: 14, color: '#64748b', mt: 0.5 }}>Feature usage will appear when a member checks stock or uses another feature. Signing in alone does not count.</Typography></Box>}
           </Box>
         </Paper>}
-        <Box role="tabpanel" id={`owner-${view === 'usage' ? 'usage' : 'members'}-panel`} aria-labelledby={`owner-${view === 'usage' ? 'usage' : 'members'}-tab`}>
+        <Box role="tabpanel" id={`owner-${view}-panel`} aria-labelledby={`owner-${view}-tab`}>
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1.5} sx={{ mb: 2 }}>
-          <Box><Typography variant="h6" fontWeight={800}>{view === 'usage' ? 'Days used since registration' : 'Registered members'}</Typography><Typography sx={{ fontSize: 13, color: '#64748b' }}>{view === 'usage' ? 'Each account counts once per day, regardless of how many features it uses.' : 'Select a member’s details to see their activity.'}</Typography></Box>
+          <Box><Typography variant="h6" fontWeight={800}>{view === 'recent' ? 'Recently used accounts' : view === 'usage' ? 'Days used since registration' : 'Registered members'}</Typography><Typography sx={{ fontSize: 13, color: '#64748b' }}>{view === 'recent' ? 'Latest successful feature use, with date and time in IST.' : view === 'usage' ? 'Each account counts once per day, regardless of how many features it uses.' : 'Select a member’s details to see their activity.'}</Typography></Box>
           <TextField size="small" label="Search shop or mobile number" helperText="Searches all registered members" value={search} inputProps={{ maxLength: 30 }} onChange={event => { setSearch(event.target.value); setPage(1); setLoading(true); }} sx={{ width: { xs: '100%', sm: 300 }, '& .MuiOutlinedInput-root': { bgcolor: '#fff', borderRadius: 2, minHeight: 48 }, '& input': { fontSize: 16 } }} />
         </Stack>
         {loading && <LinearProgress aria-label="Searching members" sx={{ mb: 2 }} />}
-        {!loading && !error && <Typography variant="body2" sx={{ mb: 1.5 }}>{matchingCount} {search.trim() ? 'matching' : 'registered'} members</Typography>}
+        {!loading && !error && <Typography variant="body2" sx={{ mb: 1.5 }}>{matchingCount} {view === 'recent' ? 'accounts with recorded feature use' : search.trim() ? 'matching members' : 'registered members'}</Typography>}
+        {!loading && !error && view === 'recent' && <RecentAccountUsageTable accounts={accounts} featureNames={names} />}
         {!loading && !error && view === 'usage' && <AccountUsageDaysTable accounts={accounts} />}
         {!loading && !error && view === 'members' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
           {accounts.map(account => <AccountCard key={account.id} account={account} onReset={setResetAccount} />)}
@@ -103,6 +107,7 @@ export default function AdminDashboard({ onHome }) {
         </Box>}
         {!loading && !error && matchingCount > 50 && <Stack direction="row" justifyContent="center" alignItems="center" sx={{ mt: 2 }}><Button disabled={page === 1} onClick={() => { setLoading(true); setPage(p => p - 1); }}>Previous</Button><Typography variant="body2">Page {page} of {Math.max(1, Math.ceil(matchingCount / 50))}</Typography><Button disabled={page * 50 >= matchingCount} onClick={() => { setLoading(true); setPage(p => p + 1); }}>Next</Button></Stack>}
         {view === 'usage' && <Typography sx={{ mt: 1.5, fontSize: 12, color: '#64748b', lineHeight: 1.8 }}>Includes accounts with zero use. Counts successful feature-use days, not login days. Usage before activity tracking began is not available.</Typography>}
+        {view === 'recent' && <Typography sx={{ mt: 1.5, fontSize: 12, color: '#64748b', lineHeight: 1.8 }}>Shows last recorded successful feature use, not who is currently online. Login alone does not count. Select Refresh data for the latest activity.</Typography>}
         </Box>
         <Box component="details" sx={{ mt: 3, fontSize: 13, color: '#64748b', '& summary': { cursor: 'pointer', py: 1.5 } }}><Box component="summary">How activity is counted</Box><Typography sx={{ fontSize: 13, lineHeight: 1.8 }}>A member counts as active after a successful feature request. Each member counts once per day or month. Feature totals count requests, not button clicks. All dates use India time. e-Treasury is not tracked; older sales-tool records remain grouped.</Typography></Box>
       </>}

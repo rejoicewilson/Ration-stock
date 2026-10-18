@@ -54,6 +54,29 @@ class OwnerUsageDaysTests(unittest.TestCase):
              patch('account_auth.requests.post', return_value=response) as post:
             self.assertEqual(auth.rpc('usage_days', {'offset': 0, 'search': ''}), {'accounts': []})
             self.assertEqual(post.call_args.args[0], 'https://fixture.invalid/rest/v1/rpc/ration_usage_days')
+            auth.rpc('recent_usage', {'offset': 0, 'search': ''})
+            self.assertEqual(post.call_args.args[0], 'https://fixture.invalid/rest/v1/rpc/ration_recent_usage')
+
+    def test_recent_usage_owner_security_search_and_pagination(self):
+        with patch.object(auth, 'rpc') as rpc:
+            self.assertEqual(self.client.get('/auth/admin/recent-usage').status_code, 401)
+            rpc.assert_not_called()
+        for account in ({'id': 'another-account'}, {'id': self.owner, 'must_change_password': True}):
+            with patch.object(auth, 'session_user', return_value=account), \
+                 patch.dict(os.environ, {'OWNER_ACCOUNT_ID': self.owner}), patch.object(auth, 'rpc') as rpc:
+                self.assertEqual(self.client.get('/auth/admin/recent-usage').status_code, 403)
+                rpc.assert_not_called()
+        with patch.object(auth, 'session_user', return_value={'id': self.owner}), \
+             patch.dict(os.environ, {'OWNER_ACCOUNT_ID': self.owner}), \
+             patch.object(auth, 'rpc', return_value={'accounts': [], 'matching_accounts': 0}) as rpc:
+            response = self.client.get('/auth/admin/recent-usage', params={'page': 3, 'search': '+91 99999-99999'})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers['cache-control'], 'no-store')
+            rpc.assert_called_once_with('recent_usage', {'offset': 100, 'search': '919999999999'})
+            for query in ('page=0', 'page=100001', 'search=%25', 'search=' + '1' * 31):
+                rpc.reset_mock()
+                self.assertEqual(self.client.get('/auth/admin/recent-usage?' + query).status_code, 400)
+                rpc.assert_not_called()
 
 
 if __name__ == '__main__':

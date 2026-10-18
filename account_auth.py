@@ -64,6 +64,8 @@ def rpc(action, data):
             function = 'ration_checkout'
         elif action == 'usage_days':
             function = 'ration_usage_days'
+        elif action == 'recent_usage':
+            function = 'ration_recent_usage'
         response = requests.post(f'{url}/rest/v1/rpc/{function}',
             headers={'apikey': key, 'User-Agent': 'ration-stock-backend/1.0'},
             json={'p_action': action, 'p_data': data}, timeout=(5, 12))
@@ -322,6 +324,15 @@ def dashboard(request: Request, page: int = 1, search: str = ''):
 
 @router.get('/admin/usage-days')
 def usage_days(request: Request, page: int = 1, search: str = ''):
+    return owner_usage_report(request, page, search, 'usage_days')
+
+
+@router.get('/admin/recent-usage')
+def recent_usage(request: Request, page: int = 1, search: str = ''):
+    return owner_usage_report(request, page, search, 'recent_usage')
+
+
+def owner_usage_report(request, page, search, action):
     account = session_user(request)
     if not is_owner(account) or account.get('must_change_password'):
         raise HTTPException(403, 'Owner access only.')
@@ -332,7 +343,7 @@ def usage_days(request: Request, page: int = 1, search: str = ''):
     query = re.sub(r'[\s()+-]', '', search)
     if query and not re.fullmatch(r'[0-9]{1,20}', query):
         raise HTTPException(400, 'Search using a shop or mobile number.')
-    return rpc('usage_days', {'offset': (page - 1) * 50, 'search': query})
+    return rpc(action, {'offset': (page - 1) * 50, 'search': query})
 
 
 @router.get('/support')

@@ -100,7 +100,7 @@ class AccountSecurityTests(unittest.TestCase):
     def test_only_expected_account_routes_registered(self):
         routes = {route.path for route in app.routes if route.path.startswith('/auth/')}
         self.assertEqual(routes, {'/auth/me', '/auth/support', '/auth/register', '/auth/login',
-        '/auth/logout', '/auth/devices', '/auth/change-password', '/auth/admin/dashboard', '/auth/admin/reset-password', '/auth/admin/usage-days',
+        '/auth/logout', '/auth/devices', '/auth/change-password', '/auth/admin/dashboard', '/auth/admin/reset-password', '/auth/admin/usage-days', '/auth/admin/recent-usage',
             '/auth/subscription/status', '/auth/subscription/order', '/auth/subscription/verify',
             '/auth/subscription/reconcile', '/auth/subscription/webhook'})
 

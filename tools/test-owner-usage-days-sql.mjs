@@ -63,5 +63,40 @@ try {
   assert.equal((await report()).matching_accounts, 58);
   await db.exec('reset role');
   assert.equal((await db.query('select count(*)::integer n from ration_private.activity_daily')).rows[0].n, 7, 'Report creates no activity');
+  await db.exec(`alter table ration_private.activity_daily add column last_used_at timestamptz not null default now();
+    update ration_private.activity_daily set last_used_at=(activity_date::text||'T10:00:00+00:00')::timestamptz;`);
+  const recentSql = await readFile(new URL('../supabase/migrations/20261018_owner_recent_usage.sql', import.meta.url), 'utf8');
+  await db.exec(recentSql);
+  await db.exec(recentSql);
+  async function recent(search = '', offset = 0) {
+    return (await db.query(`select public.ration_recent_usage('recent_usage',$1::jsonb) as report`, [JSON.stringify({ search, offset })])).rows[0].report;
+  }
+  const latest = await recent();
+  assert.equal(latest.matching_accounts, 2, 'Only accounts with recorded use');
+  assert.deepEqual(latest.accounts.map(a => a.fps_id), ['7654321', '1234567'], 'Newest activity first');
+  assert.equal(new Date(latest.accounts[0].last_used_at).toISOString(), '2026-10-03T10:00:00.000Z');
+  assert.equal(latest.accounts[0].last_feature, '/count');
+  assert.equal((await recent('919999999991')).matching_accounts, 1, 'Mobile search');
+  assert.equal((await recent('919999999992')).matching_accounts, 0, 'Never-used account omitted');
+  assert.deepEqual((await recent('', 50)).accounts, []);
+  await assert.rejects(db.query(`select public.ration_recent_usage('record_activity','{}')`), /Unsupported/);
+  for (const role of ['anon', 'authenticated']) {
+    await db.exec('set role ' + role);
+    await assert.rejects(recent(), /permission denied/);
+    await db.exec('reset role');
+  }
+  await db.exec('set role service_role');
+  assert.equal((await recent()).matching_accounts, 2);
+  await db.exec('reset role');
+  await db.exec(`insert into ration_private.activity_daily(account_id,activity_date,feature,requests,last_used_at)
+    select id,'2026-10-04','transactions',1,'2026-10-04T10:00:00Z'
+    from ration_private.accounts where mobile like '9188888%';`);
+  const recentPage1 = await recent(), recentPage2 = await recent('', 50);
+  assert.equal(recentPage1.matching_accounts, 57);
+  assert.equal(recentPage1.accounts.length, 50);
+  assert.equal(recentPage2.accounts.length, 7);
+  assert.equal(new Set([...recentPage1.accounts,...recentPage2.accounts].map(a=>a.id)).size,57,'Stable pagination with tied timestamps');
+  assert.equal((await db.query('select count(*)::integer n from ration_private.activity_daily')).rows[0].n, 62, 'Recent report creates no activity');
   console.log('PASS: all-time distinct days, IST join dates, zero-use accounts, same-FPS isolation, search, pagination, repeatable migration, private permissions, no report writes.');
+  console.log('PASS: recent-use timestamp/feature, latest-first order, unused account exclusion, search, stable tied-timestamp pagination, private permissions and repeatable read-only migration.');
 } finally { await db.close(); }
