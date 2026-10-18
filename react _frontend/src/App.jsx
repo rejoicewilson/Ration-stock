@@ -22,6 +22,9 @@ import sugarIcon from './assets/sugar-cubes.svg';
 import upiButtonImage from './assets/upi-button.png';
 import { featureFetch, featureErrorMessage } from './accountApi';
 import FeatureError from './FeatureError';
+import FestivalRibbon from './FestivalRibbon';
+import { festivalForHome } from './festivalPreview';
+import { ACTIVE_FESTIVAL } from './festivalConfig';
 
 const PrivateShieldIcon = ({ size = 42 }) => (
   <Box
@@ -286,6 +289,7 @@ const formatNumber = (value, maximumFractionDigits = 2) =>
   Number(value || 0).toLocaleString('en-IN', { maximumFractionDigits });
 
 export default function App({ initialView = 'home', onProtectedFeature, onHome, registeredFpsId = '' }) {
+  const festival = festivalForHome(window.location.search, import.meta.env.DEV, ACTIVE_FESTIVAL);
   const currentYear = new Date().getFullYear();
   const monthOptions = [
     ['01', 'January'],
@@ -4049,7 +4053,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
       <Analytics />
       <SpeedInsights />
       {renderPickerModal()}
-      <Container maxWidth="sm" sx={{ pt: 3, pb: 4 }}>
+      <Container maxWidth="sm" sx={{ pt: activeView === 'home' && festival ? 0.5 : 3, pb: 4 }}>
         {activeView !== 'home' && (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
           <Box>
@@ -4077,6 +4081,9 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
 
         {activeView === 'home' ? (
           <Box component="section" aria-labelledby="services-title">
+            {festival && <Box sx={{ mb: 0.5 }}>
+              <FestivalRibbon festival={festival} />
+            </Box>}
             <Box
               aria-label="റേഷൻ കട"
               sx={{

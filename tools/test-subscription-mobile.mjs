@@ -26,7 +26,7 @@ const bundle = await build({
       throw new Error('Unexpected live request blocked by test: '+url);
     };
     createRoot(document.getElementById('root')).render(<><CssBaseline /><AccountApp /></>);` },
-  bundle: true, write: false, format: 'iife', define: { 'process.env.NODE_ENV': '"production"' },
+  bundle: true, write: false, format: 'iife', define: { 'process.env.NODE_ENV': '"production"', 'import.meta.env': JSON.stringify({ DEV: false }) },
   plugins: [{ name: 'mock-payments', setup(b) {
     // Keep the real account header/navigation; replace only the unrelated feature pages.
     b.onLoad({ filter: /src[\\/]App\.jsx$/ }, () => ({ loader: 'jsx', contents: `
