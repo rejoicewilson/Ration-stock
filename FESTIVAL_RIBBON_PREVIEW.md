@@ -11,10 +11,9 @@ between the account header and shop banner. It has a Malayalam greeting, glowing
 nilavilakku, marigold flowers and drifting petals. There is no Play/Pause control.
 Motion pauses when the page is hidden and respects device reduced-motion settings.
 
-The gear beside FPS opens **Display settings → Reduce
-animations**. This browser-only preference stops festive motion and is saved in
-localStorage when available; it does not change account or payment data. Feature
-forms, payment screens and the owner dashboard are unchanged.
+No Display settings icon is shown beside FPS. Device reduced-motion settings and
+previously saved browser motion preferences remain respected. Feature forms,
+payment screens and the owner dashboard are unchanged.
 
 There is **no automatic scheduling**. After the season, set `ACTIVE_FESTIVAL` to
 `null` and redeploy to hide the ribbon and restore the usual spacing. Set it to

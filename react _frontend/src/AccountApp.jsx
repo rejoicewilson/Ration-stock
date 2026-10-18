@@ -7,9 +7,6 @@ import AccountPlanButton from './AccountPlanButton';
 import SubscriptionAccess from './SubscriptionAccess';
 import useAccountPlan from './useAccountPlan';
 import { accountRequest } from './accountApi';
-import AnimationSettings from './AnimationSettings';
-import { festivalForHome } from './festivalPreview';
-import { ACTIVE_FESTIVAL } from './festivalConfig';
 
 const supportUrl = 'https://wa.me/919447645196?text=' + encodeURIComponent('Hello, I need help recovering my Ration Stock App account.');
 const buttonStyle = { borderRadius: 2, textTransform: 'none', fontWeight: 700, minHeight: 46 };
@@ -191,7 +188,6 @@ export default function AccountApp() {
   }
 
   const showingSubscription = Boolean(account && pendingView && pendingView !== 'home' && !plan.status?.access_allowed);
-  const showAnimationSettings = !pendingView && festivalForHome(window.location.search, import.meta.env.DEV, ACTIVE_FESTIVAL);
 
   return <>
     {account && <Box sx={{ px: 2, py: showingSubscription ? 1 : 1.5, bgcolor: '#e8efff', borderBottom: '1px solid #d8e3f7' }}>
@@ -201,7 +197,6 @@ export default function AccountApp() {
             startIcon={<AccountIcon name="arrow" sx={{ fontSize: 17, transform: 'rotate(180deg)' }} />}
             sx={{ minHeight: 44, borderRadius: 2, px: 1.5, fontSize: 12, fontWeight: 800, textTransform: 'none', bgcolor: '#fff' }}>Home</Button>}
           <Typography sx={{ fontWeight: 800, fontSize: showingSubscription ? 12 : 14, color: '#183456', textAlign: { xs: 'center', sm: 'left' }, whiteSpace: 'nowrap' }}>FPS {account.fps_id}</Typography>
-          {showAnimationSettings && <AnimationSettings />}
         </Box>
         {!showingSubscription && <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 0.75, ml: { sm: 'auto' }, width: { xs: '100%', sm: 330 }, '& .MuiButton-root': { minWidth: 0, minHeight: 56, px: 0.75, py: 0.75, borderRadius: 2, flexDirection: 'column', gap: 0.5, textTransform: 'none', fontWeight: 700, fontSize: { xs: 11, sm: 12 }, lineHeight: 1.3 } }}>
           <AccountPlanButton key={account.id} {...plan} onRefresh={plan.refresh} />
