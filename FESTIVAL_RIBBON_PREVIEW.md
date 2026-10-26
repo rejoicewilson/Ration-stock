@@ -3,10 +3,13 @@
 The manual choice in `react _frontend/src/festivalConfig.js` is currently:
 
 ```js
-export const ACTIVE_FESTIVAL = 'navratri';
+export const ACTIVE_FESTIVAL = null;
 ```
 
-After deployment, Navratri/Pooja appears only on Home, in the same 40px space
+The greeting is currently disabled. After deployment, Home uses its normal spacing
+with no festival ribbon. Seasonal designs remain available for manual activation.
+
+When enabled, Navratri/Pooja appears only on Home, in the same 40px space
 between the account header and shop banner. It has a Malayalam greeting, glowing
 nilavilakku, marigold flowers and drifting petals. There is no Play/Pause control.
 Motion pauses when the page is hidden and respects device reduced-motion settings.

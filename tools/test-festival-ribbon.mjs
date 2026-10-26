@@ -97,8 +97,8 @@ await browserFixture(bundle.outputFiles[0].contents, async ({ command, evaluate,
   await until(`!!document.querySelector('[aria-label="റേഷൻ കട"]')`);
   assert.equal(await evaluate(`!!${ribbon}`), false, 'Manual-off preview hides ribbon');
   await evaluate(`window.__render('')`);
-  await until(`!!${ribbon}`);
-  assert.equal(await evaluate(`${ribbon}.textContent`), 'നവരാത്രി ആശംസകൾ', 'Normal Home follows manual festival');
+  await until(`!!document.querySelector('[aria-label="റേഷൻ കട"]')`);
+  assert.equal(await evaluate(`!!${ribbon}`), false, 'Normal Home has no seasonal greeting after manual disable');
   await evaluate(`window.__render('?festival-preview=christmas')`);
   await until(`!!${ribbon} && ${ribbon}.textContent.includes('ക്രിസ്മസ്')`);
   assert.equal(await evaluate(`!!${ribbon}.querySelector('[data-festival-star]')`), true, 'Christmas sample preserved');
