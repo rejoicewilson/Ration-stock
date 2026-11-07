@@ -23,6 +23,7 @@ import upiButtonImage from './assets/upi-button.png';
 import { featureFetch, featureErrorMessage } from './accountApi';
 import FeatureError from './FeatureError';
 import FestivalRibbon from './FestivalRibbon';
+import InstallAppCard from './InstallAppCard';
 import { festivalForHome } from './festivalPreview';
 import { ACTIVE_FESTIVAL } from './festivalConfig';
 
@@ -4132,6 +4133,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
                 റേഷൻ കട
               </Typography>
             </Box>
+            <InstallAppCard />
             <Typography id="services-title" sx={{ mb: 1.5, color: '#31415f', fontSize: 14, fontWeight: 800 }}>
               Services
             </Typography>

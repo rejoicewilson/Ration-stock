@@ -2,6 +2,7 @@ import React from 'react';
 import { SvgIcon } from '@mui/material';
 
 const paths = {
+  download: 'M11 3h2v9l3.5-3.5 1.4 1.4L12 15.8l-5.9-5.9 1.4-1.4L11 12V3zM4 17h2v3h12v-3h2v5H4v-5z',
   home: 'm12 3 10 9h-3v9h-5v-6h-4v6H5v-9H2l10-9z',
   stock: 'M12 2 2 7v10l10 5 10-5V7L12 2zm0 2.2L18.6 7 12 10.3 5.4 7 12 4.2zM4 8.6l7 3.5v7.3l-7-3.5V8.6zm9 10.8v-7.3l7-3.5v7.3l-7 3.5z',
   chart: 'M3 3h2v16h16v2H3V3zm5 9 4-4 4 3 5-6 1.5 1.3-6.2 7.4-4.1-3.1-2.8 2.8L8 12z',
