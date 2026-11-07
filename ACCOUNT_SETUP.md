@@ -7,6 +7,9 @@ All existing features require login; no paid-access checks are included.
 1. Run `supabase/migrations/20261005_python_accounts.sql`, then
    `supabase/migrations/20261005_activity_dashboard.sql` in Supabase SQL Editor.
    They preserve existing records when rerun. No cleanup script runs on deployment.
+   For the current session-renewal backend, also run
+   `supabase/migrations/20261107_session_renewal.sql` BEFORE deployment.
+   See [SESSION_RENEWAL_SETUP.md](SESSION_RENEWAL_SETUP.md) for rollout and expiry behaviour.
 2. Configure backend variables in `.env.example`. Use the new owner's account UUID
    as `OWNER_ACCOUNT_ID`; the deleted test owner's UUID will not work.
 3. `pip install -r requirements.txt`, then `uvicorn main:app --reload --port 8000`.

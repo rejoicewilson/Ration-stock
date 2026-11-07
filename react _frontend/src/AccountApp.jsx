@@ -11,18 +11,6 @@ import { accountRequest } from './accountApi';
 const supportUrl = 'https://wa.me/919447645196?text=' + encodeURIComponent('Hello, I need help recovering my Ration Stock App account.');
 const buttonStyle = { borderRadius: 2, textTransform: 'none', fontWeight: 700, minHeight: 46 };
 
-const RETURNING_USER_KEY = 'ration-returning-user';
-function initialAccountMode() {
-  try {
-    return localStorage.getItem(RETURNING_USER_KEY) === 'yes' ? 'login' : 'register';
-  } catch {
-    return 'register';
-  }
-}
-function rememberReturningUser() {
-  try { localStorage.setItem(RETURNING_USER_KEY, 'yes'); } catch { /* Storage may be disabled. */ }
-}
-
 function broadcastSessionChange() {
   // Notification only; no passwords, session IDs or account data enter localStorage.
   try { localStorage.setItem('ration-session-change', String(Date.now())); } catch { /* Storage can be disabled. */ }
@@ -34,7 +22,8 @@ export default function AccountApp() {
   const plan = useAccountPlan(account?.id);
   const [checking, setChecking] = useState(true);
   const [pendingView, setPendingView] = useState(window.location.pathname.replace(/\/$/, '') === '/admin' ? 'admin' : null);
-  const [mode, setMode] = useState(initialAccountMode);
+  // Always lead with sign-in, even on a new browser or after storage is cleared.
+  const [mode, setMode] = useState('login');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [form, setForm] = useState({ fps_id: '', mobile: '', password: '' });
   const [busy, setBusy] = useState(false);
@@ -44,6 +33,7 @@ export default function AccountApp() {
   function goHome() {
     window.history.replaceState(null, '', '/');
     setPendingView(null);
+    setMode('login');
   }
 
   async function refreshAccount() {
@@ -53,7 +43,6 @@ export default function AccountApp() {
       if (sequence !== refreshSequence.current) return null;
       setAccount(data.account);
       if (data.account) {
-        rememberReturningUser();
         setMode('login');
       }
       setError('');
@@ -96,7 +85,6 @@ export default function AccountApp() {
       const body = { mobile: form.mobile, password: form.password };
       if (mode === 'register') body.fps_id = form.fps_id;
       await accountRequest(mode, body);
-      rememberReturningUser();
       setMode('login');
       setPasswordVisible(false);
       setForm((previous) => ({ ...previous, password: '' }));
@@ -152,7 +140,7 @@ export default function AccountApp() {
   }
 
   if (!account && pendingView) {
-    return <AccountCard branded title={mode === 'register' ? 'Create your account' : 'Welcome back'}>
+    return <AccountCard branded title={mode === 'register' ? 'Create your account' : 'Sign in'}>
       <Typography lang="ml" sx={{ color: '#435778', mb: 3, p: 2, bgcolor: '#f1f6ff', borderLeft: '3px solid #739bea', borderRadius: '0 12px 12px 0', fontSize: 14, lineHeight: 1.85 }}>
         {mode === 'register' ? 'ആപ്പിൽ പുതുതായി അക്കൗണ്ട് സംവിധാനം ചേർത്തിരിക്കുന്നു. സേവനങ്ങൾ തുടർന്നും ഉപയോഗിക്കാൻ ആദ്യം ഒരു അക്കൗണ്ട് സൃഷ്ടിക്കുക. നിങ്ങളുടെ റേഷൻ കട നമ്പറും മൊബൈൽ നമ്പറും നൽകി ഒരു പാസ്‌വേഡ് സജ്ജമാക്കുക.' : 'അക്കൗണ്ട് സൃഷ്ടിച്ചപ്പോൾ നൽകിയ മൊബൈൽ നമ്പറും പാസ്‌വേഡും ഉപയോഗിക്കുക.'}
       </Typography>
@@ -165,15 +153,10 @@ export default function AccountApp() {
             helperText={mode === 'register' ? 'At least 12 characters' : undefined} />
           {error && <Alert severity="error">{error}</Alert>}
           <Button type="submit" variant="contained" disabled={busy} sx={{ ...buttonStyle, minHeight: 52, fontSize: 16, bgcolor: '#2563eb', boxShadow: '0 5px 14px #2563eb25', '&:hover': { bgcolor: '#1d4ed8', boxShadow: '0 6px 18px #2563eb30' } }}>{busy ? 'Please wait…' : mode === 'register' ? 'Create account' : 'Sign in'}</Button>
-          <Stack spacing={1}>
-            <Typography sx={{ textAlign: 'center', color: '#52647f', fontSize: 14 }}>
-              {mode === 'register' ? 'Already have an account?' : 'New to the app?'}
-            </Typography>
-            <Button type="button" variant="outlined" fullWidth disabled={busy} onClick={() => { setMode(mode === 'register' ? 'login' : 'register'); setPasswordVisible(false); setError(''); setForm({ ...form, password: '' }); }} sx={{ minHeight: 52, borderRadius: 2.5, textTransform: 'none', fontSize: 16, fontWeight: 700, color: '#2563eb', borderColor: '#2563eb', bgcolor: '#f1f6ff', '&:hover': { bgcolor: '#e5eeff', borderColor: '#1d4ed8' } }}>
-              {mode === 'register' ? 'Sign in' : 'Create account'}
-            </Button>
-          </Stack>
           {mode === 'login' && <Button component="a" href={supportUrl} target="_blank" rel="noopener noreferrer" sx={{ textTransform: 'none' }}>Forgot password? Contact support</Button>}
+          <Button type="button" variant="text" disabled={busy} onClick={() => { setMode(mode === 'register' ? 'login' : 'register'); setPasswordVisible(false); setError(''); setForm({ ...form, password: '' }); }} sx={{ minHeight: 44, textTransform: 'none', fontSize: 13, color: '#64748b' }}>
+            {mode === 'register' ? 'Already registered? Sign in' : 'New user only? Create an account'}
+          </Button>
           <Box sx={{ borderTop: '1px solid #edf1f7', pt: 1.5, display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 0.5 }}>
             <Button disabled={busy} onClick={() => { goHome(); setPasswordVisible(false); setError(''); setForm({ ...form, password: '' }); }} sx={{ textTransform: 'none', color: '#64748b', px: 0.5, minHeight: 44, fontSize: 12 }}>← Back to home</Button>
             <Typography component="a" href="tel:9447645196" sx={{ color: '#64748b', textDecoration: 'none', fontSize: 12, py: 1.5, '&:hover': { textDecoration: 'underline' } }}>Support: 9447645196</Typography>

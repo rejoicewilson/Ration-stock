@@ -1,10 +1,12 @@
 """Python-owned accounts. Supabase is storage; Supabase Auth is not used."""
 import hashlib
+import hmac
 import ipaddress
 import logging
 import os
 import re
 import secrets
+import time
 from pathlib import Path
 from uuid import UUID
 from typing import Literal
@@ -38,7 +40,8 @@ ALLOWED_ORIGINS = configured_origins()
 SECURE_COOKIES = bool(os.getenv('VERCEL')) or os.getenv('COOKIE_SECURE', 'false').lower() == 'true'
 SESSION_COOKIE = '__Host-ration_session' if SECURE_COOKIES else 'ration_session'
 DEVICE_COOKIE = '__Host-ration_device' if SECURE_COOKIES else 'ration_device'
-SESSION_DAYS = 30
+SESSION_DAYS = 60
+RENEWAL_COOKIE = '__Host-ration_renewed' if SECURE_COOKIES else 'ration_renewed'
 SUPPORT_NUMBER = os.getenv('SUPPORT_WHATSAPP', '919447645196')
 PROTECTED_PATHS = {'/count', '/fps-stock', '/transactions', '/stock-register', '/ro-details',
                    '/ro-quantity-details', '/ration-card-details'}
@@ -58,6 +61,8 @@ def rpc(action, data):
         raise HTTPException(503, 'Account service is not configured yet.')
     try:
         function = 'ration_activity' if action in ('record_activity', 'dashboard') else 'ration_auth'
+        if action == 'session':
+            function = 'ration_session'
         if action == 'subscription_status':
             function = 'ration_plan_status'
         elif action.startswith('checkout_'):
@@ -87,7 +92,39 @@ def session_user(request):
     account = rpc('session', {'session_hash': digest(token)})
     if not account or not account.get('id'):
         raise HTTPException(401, 'Your session has ended. Please sign in again.')
+    account = dict(account)
+    expires_at = account.pop('session_expires_at', None)
+    if isinstance(expires_at, (int, float)):
+        request.state.session_renewal = (token, expires_at)
     return account
+
+
+def renewal_stamp(token, issued):
+    signature = hmac.new(token.encode(), str(issued).encode(), hashlib.sha256).hexdigest()
+    return f'{issued}.{signature}'
+
+
+def renew_cookie(request, response):
+    renewal = getattr(request.state, 'session_renewal', None)
+    # Login/password changes/logout own their cookies; never overwrite them.
+    if not renewal or request.url.path.rstrip('/') in ('/auth/logout', '/auth/login', '/auth/register', '/auth/change-password'):
+        return
+    token, expires_at = renewal
+    now = int(time.time())
+    stamp = request.cookies.get(RENEWAL_COOKIE, '')
+    try:
+        issued = int(stamp.split('.')[0])
+        if 0 <= now - issued < 86400 and hmac.compare_digest(stamp.encode(), renewal_stamp(token, issued).encode()):
+            return
+    except ValueError:
+        pass
+    remaining = min(SESSION_DAYS * 86400, int(expires_at - time.time()))
+    if remaining <= 0:
+        return
+    response.set_cookie(SESSION_COOKIE, token, max_age=remaining,
+        httponly=True, secure=SECURE_COOKIES, samesite='lax', path='/')
+    response.set_cookie(RENEWAL_COOKIE, renewal_stamp(token, now), max_age=remaining,
+        httponly=True, secure=SECURE_COOKIES, samesite='lax', path='/')
 
 
 async def account_gate(request, call_next):
@@ -123,6 +160,7 @@ async def account_gate(request, call_next):
     except HTTPException as exc:
         response = JSONResponse({'detail': exc.detail}, status_code=exc.status_code)
     if protected or is_auth:
+        renew_cookie(request, response)
         response.headers['Cache-Control'] = 'no-store'
     return response
 

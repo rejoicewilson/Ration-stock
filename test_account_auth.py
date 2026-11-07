@@ -76,6 +76,76 @@ class AccountSecurityTests(unittest.TestCase):
         self.rpc.return_value = None
         self.assertEqual(self.client.get('/auth/me').status_code, 401)
 
+    def test_session_cookie_renews_daily_without_exposing_metadata(self):
+        self.client.cookies.set(auth.SESSION_COOKIE, 'A' * 43)
+        self.rpc.return_value = {'id': 'test', 'session_expires_at': 1000 + 60 * 86400}
+        with patch('account_auth.time.time', return_value=1000):
+            response = self.client.get('/auth/me')
+            self.assertEqual(response.status_code, 200)
+            self.assertNotIn('session_expires_at', response.json()['account'])
+            self.assertIn('Max-Age=5184000', response.headers['set-cookie'])
+            self.assertIn('HttpOnly', response.headers['set-cookie'])
+            self.assertNotIn('set-cookie', self.client.get('/auth/me').headers)
+        with patch('account_auth.time.time', return_value=87400):
+            self.assertIn('set-cookie', self.client.get('/auth/me').headers)
+
+    def test_tampered_or_other_session_marker_cannot_suppress_renewal(self):
+        for marker in ('bad', '1000.bad', auth.renewal_stamp('B' * 43, 1000),
+                       auth.renewal_stamp('A' * 43, 2000)):
+            self.client.cookies.clear()
+            self.client.cookies.set(auth.SESSION_COOKIE, 'A' * 43)
+            self.client.cookies.set(auth.RENEWAL_COOKIE, marker)
+            self.rpc.return_value = {'id': 'test', 'session_expires_at': 100000}
+            with patch('account_auth.time.time', return_value=1000):
+                self.assertIn('set-cookie', self.client.get('/auth/me').headers)
+
+    def test_expired_and_unavailable_sessions_do_not_renew(self):
+        self.client.cookies.set(auth.SESSION_COOKIE, 'A' * 43)
+        for result in (None, HTTPException(503, 'Unavailable')):
+            self.rpc.side_effect = result if isinstance(result, Exception) else None
+            self.rpc.return_value = result
+            response = self.client.get('/auth/me')
+            self.assertIn(response.status_code, (401, 503))
+            self.assertNotIn('set-cookie', response.headers)
+
+    def test_subscription_expiry_does_not_end_login_or_grant_feature_access(self):
+        self.client.cookies.set(auth.SESSION_COOKIE, 'A' * 43)
+        self.rpc.return_value = {'id': 'test', 'session_expires_at': 1000 + 60 * 86400}
+        with patch('account_auth.time.time', return_value=1000), patch('account_auth.account_plan', return_value={'access_allowed': False}):
+            response = self.client.post('/count', json={})
+        self.assertEqual(response.status_code, 402)
+        self.assertIn('set-cookie', response.headers)
+        self.assertEqual(response.json()['detail']['code'], 'subscription_required')
+
+    def test_renewal_never_overwrites_cookie_changing_endpoints(self):
+        for path in ('/auth/logout', '/auth/change-password', '/auth/login', '/auth/register'):
+            request = Request({'type': 'http', 'path': path, 'headers': []})
+            request.state.session_renewal = ('A' * 43, 9999999999)
+            response = Response()
+            auth.renew_cookie(request, response)
+            self.assertNotIn('set-cookie', response.headers)
+
+    def test_new_sessions_use_sixty_days(self):
+        request = Request({'type': 'http', 'headers': []})
+        device, token, data = auth.new_session(request)
+        self.assertEqual(data['session_days'], 60)
+        response = Response()
+        auth.set_cookies(response, device, token)
+        self.assertIn('Max-Age=5184000', response.headers['set-cookie'])
+
+    def test_session_rpc_uses_new_function_and_preserves_service_errors(self):
+        self.mock.stop()
+        with patch.dict('os.environ', {'SUPABASE_URL': 'https://fixture.example', 'SUPABASE_SECRET_KEY': 'fixture-only'}), patch('account_auth.requests.post') as post:
+            post.return_value.json.return_value = None
+            self.assertIsNone(auth.rpc('session', {'session_hash': 'fixture'}))
+            self.assertTrue(post.call_args.args[0].endswith('/rpc/ration_session'))
+            auth.rpc('logout', {'session_hash': 'fixture'})
+            self.assertTrue(post.call_args.args[0].endswith('/rpc/ration_auth'))
+            post.side_effect = auth.requests.RequestException('fixture failure')
+            with self.assertRaises(HTTPException) as error:
+                auth.rpc('session', {'session_hash': 'fixture'})
+            self.assertEqual(error.exception.status_code, 503)
+
     def test_temporary_password_blocks_features(self):
         self.client.cookies.set(auth.SESSION_COOKIE, 'A' * 43)
         self.rpc.return_value = {'id': 'test', 'must_change_password': True}
