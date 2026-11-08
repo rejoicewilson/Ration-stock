@@ -21,7 +21,7 @@ self.addEventListener('fetch', (event) => {
 
   const apiPaths = ['/count', '/fps-stock', '/transactions', '/ro-details', '/ro-quantity-details'];
 
-  if (request.method !== 'GET' || url.pathname.startsWith('/auth/') || apiPaths.includes(url.pathname)) {
+  if (request.method !== 'GET' || url.pathname.startsWith('/auth/') || url.pathname.startsWith('/ledger/') || apiPaths.includes(url.pathname)) {
     return;
   }
 

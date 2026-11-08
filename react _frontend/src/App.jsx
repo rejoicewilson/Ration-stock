@@ -24,6 +24,7 @@ import { featureFetch, featureErrorMessage } from './accountApi';
 import FeatureError from './FeatureError';
 import FestivalRibbon from './FestivalRibbon';
 import InstallAppCard from './InstallAppCard';
+import CustomerBalanceLedger from './CustomerBalanceLedger';
 import { festivalForHome } from './festivalPreview';
 import { ACTIVE_FESTIVAL } from './festivalConfig';
 
@@ -699,6 +700,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
     { key: 'KOIL', label: 'KOIL', icon: '🛢️', color: '#8a6bff' },
   ];
   const featurePages = [
+    { title: 'Balance Book', category: 'പറ്റ് ബുക്ക്', view: 'balanceLedger', mark: 'BK', color: '#365d4d', background: '#f8f1df' },
     { title: 'Monthly Sales Comparison', category: 'മാസ വിൽപ്പന താരതമ്യം ചെയ്യാൻ', view: 'monthComparison', mark: 'MC', color: '#0369a1', background: '#f0f9ff' },
     { title: 'Stock Summary', category: 'കടയിലെ സ്റ്റോക്ക് നോക്കാൻ', view: 'stock', mark: 'ST', color: '#2563eb', background: '#eff6ff' },
     { title: 'Ration Stock Board', category: 'സ്റ്റോക്ക് ബോർഡ് എഴുതാൻ', view: 'stockBoard', mark: 'RB', color: '#b42318', background: '#fff4e5' },
@@ -718,6 +720,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
   const activeViewTitle = featurePages.find((page) => page.view === activeView)?.title || 'Ration Stock';
   const gaPagePaths = {
     home: '/home',
+    balanceLedger: '/customer-balance-ledger',
     stock: '/stock-summary',
     stockBoard: '/stock-board',
     transactions: '/transactions',
@@ -4206,6 +4209,8 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
               ))}
             </Grid>
           </Box>
+        ) : activeView === 'balanceLedger' ? (
+          <CustomerBalanceLedger fpsId={registeredFpsId} />
         ) : activeView === 'stock' ? (
           <>
         <Paper
@@ -5705,8 +5710,8 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
               },
               {
                 icon: <OfficialDataIcon size={34} />,
-                line1: 'Data from Official',
-                line2: 'Government Portals',
+                line1: activeView === 'balanceLedger' ? 'Manually Entered' : 'Data from Official',
+                line2: activeView === 'balanceLedger' ? 'Customer Balances' : 'Government Portals',
               },
               {
                 icon: <SecureReliableIcon size={34} />,

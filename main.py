@@ -17,17 +17,21 @@ from pydantic import BaseModel, Field, field_validator
 import requests
 from bs4 import BeautifulSoup
 from account_auth import ALLOWED_ORIGINS, account_gate, router as account_router
+from balance_ledger import router as ledger_router
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse
 
 app = FastAPI()
 app.include_router(account_router)
+app.include_router(ledger_router)
 app.middleware('http')(account_gate)
 
 
 @app.exception_handler(RequestValidationError)
 async def safe_validation_error(request, exc):
+    if request.url.path.startswith('/ledger/'):
+        return JSONResponse(status_code=422, content={'detail': 'Check the 10-digit card number, amount and notebook entry details.'})
     if request.url.path.startswith('/auth/'):
         # FastAPI's default errors echo invalid input, including passwords.
         return JSONResponse(status_code=422, content={'detail': 'Check your details. Use a 7-digit shop number, a valid Indian mobile number, and at least 12 characters for a new password.'})
@@ -1075,6 +1079,7 @@ def favicon():
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     request_id = str(int(time.time() * 1000))
+    request.state.request_id = request_id
     start_time = time.perf_counter()
     logger.info(
         "request_start request_id=%s method=%s path=%s client=%s",

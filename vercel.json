@@ -15,6 +15,10 @@
   ],
   "routes": [
     {
+      "src": "/ledger/(.*)",
+      "dest": "api/index.py"
+    },
+    {
       "src": "/auth/(.*)",
       "dest": "api/index.py"
     },

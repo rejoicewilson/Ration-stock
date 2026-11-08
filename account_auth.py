@@ -44,7 +44,8 @@ SESSION_DAYS = 60
 RENEWAL_COOKIE = '__Host-ration_renewed' if SECURE_COOKIES else 'ration_renewed'
 SUPPORT_NUMBER = os.getenv('SUPPORT_WHATSAPP', '919447645196')
 PROTECTED_PATHS = {'/count', '/fps-stock', '/transactions', '/stock-register', '/ro-details',
-                   '/ro-quantity-details', '/ration-card-details'}
+                   '/ro-quantity-details', '/ration-card-details', '/ledger/customers',
+                   '/ledger/customer', '/ledger/entries', '/ledger/reverse'}
 hasher = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
 _dummy_hash = hasher.hash(secrets.token_urlsafe(32))
 router = APIRouter(prefix='/auth')
@@ -59,6 +60,8 @@ def rpc(action, data):
     key = os.getenv('SUPABASE_SECRET_KEY', '')
     if not url.startswith('https://') or not key or 'REPLACE' in key:
         raise HTTPException(503, 'Account service is not configured yet.')
+    response = None
+    started = time.perf_counter()
     try:
         function = 'ration_activity' if action in ('record_activity', 'dashboard') else 'ration_auth'
         if action == 'session':
@@ -71,12 +74,31 @@ def rpc(action, data):
             function = 'ration_usage_days'
         elif action == 'recent_usage':
             function = 'ration_recent_usage'
+        elif action.startswith('ledger_'):
+            function = 'ration_balance_ledger'
         response = requests.post(f'{url}/rest/v1/rpc/{function}',
             headers={'apikey': key, 'User-Agent': 'ration-stock-backend/1.0'},
             json={'p_action': action, 'p_data': data}, timeout=(5, 12))
         response.raise_for_status()
         return response.json()
-    except (requests.RequestException, ValueError):
+    except (requests.RequestException, ValueError) as exc:
+        # Only infrastructure metadata. Never log payloads, account/card IDs,
+        # database messages, response bodies, credentials or exception strings.
+        status = getattr(response, 'status_code', None)
+        status = status if isinstance(status, int) else None
+        db_code = None
+        if response is not None:
+            try:
+                error_body = response.json()
+                code = error_body.get('code') if isinstance(error_body, dict) else None
+                if isinstance(code, str) and re.fullmatch(r'(?:[0-9A-Z]{5}|PGRST[0-9]{3})', code):
+                    db_code = code
+            except ValueError:
+                pass
+        logging.getLogger('ration-backend').warning(
+            'account_rpc_unavailable action=%s function=%s error_type=%s upstream_status=%s db_code=%s duration_ms=%.2f',
+            action, function, type(exc).__name__, status, db_code,
+            (time.perf_counter() - started) * 1000)
         # Never expose upstream response bodies, passwords, tokens, or database details.
         raise HTTPException(503, 'Account service is temporarily unavailable. Please try again.') from None
 
@@ -133,15 +155,18 @@ async def account_gate(request, call_next):
     is_auth = path.startswith('/auth/')
     if request.method == 'OPTIONS':
         return await call_next(request)
+    stage = 'origin'
     try:
         if (protected or is_auth) and request.method not in ('GET', 'HEAD') and path != '/auth/subscription/webhook':
             # Browser POSTs must carry an exact trusted origin (including the port).
             if request.headers.get('origin', '').rstrip('/') not in ALLOWED_ORIGINS:
                 raise HTTPException(403, 'This request did not come from the app. Please reopen the app.')
         if protected:
+            stage = 'session'
             request.state.account = await run_in_threadpool(session_user, request)
             if request.state.account.get('must_change_password'):
                 raise HTTPException(403, 'Please change your temporary password first.')
+            stage = 'plan'
             status = await run_in_threadpool(account_plan, request.state.account)
             if not status['access_allowed']:
                 raise HTTPException(402, {
@@ -149,6 +174,7 @@ async def account_gate(request, call_next):
                     'message': 'Your plan has expired. Renew to continue.',
                     'subscription': status,
                 })
+        stage = 'handler'
         response = await call_next(request)
         if protected and request.method == 'POST' and 200 <= response.status_code < 300:
             try:
@@ -158,6 +184,10 @@ async def account_gate(request, call_next):
                 # Analytics failure must not break a successful feature request.
                 logging.getLogger(__name__).warning('Activity recording unavailable')
     except HTTPException as exc:
+        if path.startswith('/ledger/') and exc.status_code >= 500:
+            logging.getLogger('ration-backend').warning(
+                'ledger_gate_unavailable request_id=%s stage=%s status=%s',
+                getattr(request.state, 'request_id', 'unknown'), stage, exc.status_code)
         response = JSONResponse({'detail': exc.detail}, status_code=exc.status_code)
     if protected or is_auth:
         renew_cookie(request, response)
