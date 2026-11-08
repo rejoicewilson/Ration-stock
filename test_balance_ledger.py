@@ -79,6 +79,15 @@ class LedgerTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual([c.args[0] for c in self.rpc.call_args_list if c.args[0].startswith('ledger_')], [action])
 
+    def test_list_status_is_validated_and_forwarded(self):
+        for status in ('open', 'closed', 'all'):
+            self.rpc.reset_mock()
+            self.assertEqual(self.client.post('/ledger/customers', json={'status': status}).status_code, 200)
+            data = [c.args[1] for c in self.rpc.call_args_list if c.args[0] == 'ledger_list'][0]
+            self.assertEqual(data['status'], status)
+            self.assertEqual(data['account_id'], self.owner)
+        self.assertEqual(self.client.post('/ledger/customers', json={'status': 'invalid'}).status_code, 422)
+
     def test_service_failure_and_conflict_do_not_claim_saved(self):
         def reply(action, data):
             if action == 'session': return {'id': self.owner}

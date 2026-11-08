@@ -25,6 +25,7 @@ try {
   await db.exec('create role anon; create role authenticated; create role service_role;');
   await db.exec(await readFile(new URL('../supabase/migrations/20261005_python_accounts.sql', import.meta.url), 'utf8'));
   const sql = await readFile(new URL('../supabase/migrations/20261108_customer_balance_ledger.sql', import.meta.url), 'utf8');
+  const filterSql = await readFile(new URL('../supabase/migrations/20261108_customer_balance_ledger_status_filter.sql', import.meta.url), 'utf8');
   await db.exec(sql);
   await db.exec(sql);
   await db.query(`insert into ration_private.accounts(id,mobile,fps_id,password_hash) values
@@ -98,5 +99,33 @@ try {
   await db.exec('set role service_role');
   assert.equal((await call('list')).total, 1);
   await db.exec('reset role');
+  await db.exec(filterSql);
+  const historyBeforeFilter = (await detail()).total;
+  assert.equal((await call('list', { status: 'open' })).total, 1);
+  assert.equal((await call('list', { status: 'closed' })).total, 0);
+  assert.equal((await call('list', { status: 'invalid' })).error, 'invalid');
+  // Enough closed rows to prove filtering occurs before LIMIT/OFFSET.
+  for (let i = 0; i < 23; i++) {
+    const number = String(7000000000 + i);
+    await add(100, 'owed_to_shop', { card_number: number });
+    await add(100, 'received', { card_number: number });
+  }
+  const open = await call('list', { status: 'open' });
+  assert.equal(open.total, 1);
+  assert.equal(open.customers[0].card_number, card);
+  assert.equal(open.status, 'open');
+  const closed = await call('list', { status: 'closed' });
+  const closedTwo = await call('list', { status: 'closed', page: 2 });
+  assert.equal(closed.total, 23);
+  assert.equal(closed.customers.length, 20);
+  assert.equal(closedTwo.customers.length, 3);
+  assert.equal(new Set([...closed.customers, ...closedTwo.customers].map(c => c.id)).size, 23);
+  assert.equal((await call('list', { status: 'all', search: '7000000000' })).total, 1);
+  assert.equal((await call('list', { status: 'open' }, other)).total, 1);
+  assert.equal((await call('list', { status: 'closed' }, other)).total, 0);
+  await add(1, 'owed_to_shop', { card_number: '7000000000' });
+  assert.equal((await call('list', { status: 'open' })).total, 2, 'Reopened card is active again');
+  await db.exec(filterSql);
+  assert.equal((await detail()).total, historyBeforeFilter, 'Filter migration rerun preserves history');
   console.log('Ledger SQL passed: balances, partial payments, corrections, retries, account isolation, history, permissions and safe rerun.');
 } finally { await db.close(); }

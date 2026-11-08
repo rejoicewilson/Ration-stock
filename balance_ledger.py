@@ -18,6 +18,7 @@ class LedgerBody(BaseModel):
 class ListBody(LedgerBody):
     search: str = Field(default='', max_length=80)
     page: int = Field(default=1, ge=1, le=10000, strict=True)
+    status: Literal['open', 'closed', 'all'] = 'all'
 
 
 class CardBody(LedgerBody):

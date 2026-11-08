@@ -37,6 +37,8 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
   const card = /^[0-9]{10}$/.test(input) ? input : '';
   const [search, setSearch] = useState('');
   const query = search.trim();
+  const [showClosed, setShowClosed] = useState(false);
+  const listStatus = query ? 'all' : showClosed ? 'closed' : 'open';
   const [listPage, setListPage] = useState(1);
   const [listResult, setListResult] = useState(null);
   const [listLoading, setListLoading] = useState(true);
@@ -64,7 +66,7 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
   const savingRef = useRef(false);
   const needsRead = useRef(true);
   const amountInput = useRef(null);
-  const listKey = JSON.stringify([query, listPage]);
+  const listKey = JSON.stringify([query, listPage, listStatus]);
   const detailKey = JSON.stringify([card, selection, historyPage, revision]);
   const list = listResult?.key === listKey ? listResult.data : null;
   const detail = card && detailResult?.key === detailKey ? detailResult.data : null;
@@ -86,15 +88,16 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
     setListLoading(true); setListError(''); setListRetry(0);
     const timer = window.setTimeout(async () => {
       try {
-        const data = await api('customers', { search: query, page: listPage }, {
+        const data = await api('customers', { search: query, page: listPage, status: listStatus }, {
           signal: controller.signal, onRetry: n => { if (!cancelled) setListRetry(n); },
         });
-        if (!cancelled) setListResult({ key: JSON.stringify([query, listPage]), data });
+        if (data?.status !== listStatus) throw new Error('Balance list update is not ready. Please contact support.');
+        if (!cancelled) setListResult({ key: JSON.stringify([query, listPage, listStatus]), data });
       } catch (err) { if (!cancelled) setListError(publicError(err)); }
       finally { if (!cancelled) setListLoading(false); }
     }, 250);
     return () => { cancelled = true; window.clearTimeout(timer); controller.abort(); };
-  }, [query, listPage, revision]);
+  }, [query, listPage, listStatus, revision]);
 
   useEffect(() => {
     setDetailError(''); needsRead.current = true;
@@ -135,7 +138,7 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
       pending.current = null; setCorrection(null); setReason(''); setAmount('');
       setDirection('owed_to_shop'); setEntryMode('balance');
       setSuccess('രേഖപ്പെടുത്തി · …' + payload.card_number.slice(-4));
-      setHistoryPage(1); setRevision(v => v + 1);
+      setHistoryPage(1); setListPage(1); setRevision(v => v + 1);
     } catch (err) {
       setSaveError({ scope, message: publicError(err) + ' If the connection failed, retry here with the same details. Before starting another entry, refresh and check history.' });
     } finally { savingRef.current = false; setSaving(false); }
@@ -219,6 +222,7 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
       setSettlement(null);
       needsRead.current = true;
       setSuccess('രേഖപ്പെടുത്തി · …' + settlement.card.slice(-4));
+      setListPage(1);
       setRevision(v => v + 1);
     } catch (err) {
       setSettlement(s => ({ ...s, error: publicError(err) + ' Retry here. If unsure, cancel and refresh the balance before trying again.' }));
@@ -293,9 +297,13 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
       </Box>}
 
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2, pt: 1.25, borderTop: `1px solid ${divider}`, gap: 1 }}>
-        <Typography component="h3" sx={{ fontSize: 14, fontWeight: 800 }}>മുൻ കാർഡുകൾ</Typography>
+        <Typography component="h3" sx={{ fontSize: 14, fontWeight: 800 }}>{query ? 'തിരച്ചിൽ ഫലങ്ങൾ' : showClosed ? 'തീർന്ന കാർഡുകൾ' : 'ബാക്കിയുള്ള കാർഡുകൾ'}</Typography>
         <Button type="button" disabled={saving || listLoading} onClick={() => { needsRead.current = true; setRevision(v => v + 1); }} sx={{ ...buttonSx, color: ink, fontSize: 11 }}>Refresh</Button>
       </Stack>
+      {!query && <Button type="button" data-testid="toggle-closed" disabled={saving}
+        onClick={() => { setShowClosed(v => !v); setListPage(1); }} sx={{ ...buttonSx, fontSize: 12 }}>
+        {showClosed ? 'ബാക്കിയുള്ളവ കാണുക' : 'തീർന്നവ കാണുക'}
+      </Button>}
       <TextField fullWidth name="ledger-search" label="കാർഡ് തിരയുക" value={search}
         onChange={e => { setSearch(e.target.value); setListPage(1); selectCard(''); }} disabled={saving}
         size="small" inputProps={{ maxLength: 80 }} sx={{ bgcolor: '#fff', mt: 1, mb: 1.5 }} />
@@ -323,7 +331,7 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
             disabled={saving || listLoading || !!listError} onClick={() => openSettlement(customer.card_number)}
             sx={{ ...buttonSx, flexShrink: 0, minWidth: 0, px: 1, fontSize: 11 }}>തീർക്കുക</Button>}
         </Box>)}
-        {!list.customers?.length && !listLoading && !listError && <Typography component="li" sx={{ py: 2, fontSize: 12, color: muted }}>{query ? 'ഇവിടെ കാർഡുകൾ കണ്ടെത്തിയില്ല.' : 'ആദ്യ ബാക്കി രേഖപ്പെടുത്തുമ്പോൾ കാർഡ് ഇവിടെ കാണാം.'}</Typography>}
+        {!list.customers?.length && !listLoading && !listError && <Typography component="li" sx={{ py: 2, fontSize: 12, color: muted }}>{query ? 'ഇവിടെ കാർഡുകൾ കണ്ടെത്തിയില്ല.' : showClosed ? 'തീർന്ന കാർഡുകൾ ഇല്ല.' : 'ബാക്കിയുള്ള കാർഡുകൾ ഇല്ല.'}</Typography>}
       </Box>}
       {list && <Pager page={listPage} total={list.total || 0} size={20} busy={listLoading || saving} change={setListPage} />}
     </Box>

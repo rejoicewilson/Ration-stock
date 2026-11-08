@@ -24,8 +24,8 @@ const bundle = await build({
       if(url==='/ledger/customers'){
         if(window.__listFailures>0){window.__listFailures--;return reply({detail:'Fixture temporary unavailable'},503);}
         const all=Object.values(window.__records);
-        const filtered=all.filter(c=>c.card_number.includes(body.search)||c.customer_name.includes(body.search));
-        return reply({customers:filtered.map(c=>({...c,id:c.card_number,entries:undefined})),total:filtered.length,page_size:20,
+        const filtered=all.filter(c=>(body.status==='all'||(body.status==='closed'?c.balance_paise===0:c.balance_paise!==0))&&(c.card_number.includes(body.search)||c.customer_name.includes(body.search)));
+        return reply({customers:filtered.map(c=>({...c,id:c.card_number,entries:undefined})),total:filtered.length,page_size:20,status:body.status,
           totals:{customers:all.length,to_receive_paise:all.reduce((s,c)=>s+Math.max(c.balance_paise,0),0),to_return_paise:all.reduce((s,c)=>s+Math.max(-c.balance_paise,0),0)}});
       }
       let customer=window.__records[body.card_number];
@@ -213,6 +213,22 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   assert.equal(await evaluate('window.__records["5555555555"].balance_paise'), 0);
   assert.equal(await evaluate('window.__records["5555555555"].entries.at(-1).kind'), 'returned');
   assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'), true, 'Recent-card close buttons fit a narrow phone');
+  await until('!document.querySelector("[data-testid=customer-row-1234567890]")&&!document.querySelector("[data-testid=customer-row-5555555555]")');
+  await evaluate('document.querySelector("[data-testid=toggle-closed]").click()');
+  await until('!!document.querySelector("[data-testid=customer-row-1234567890]")&&!document.querySelector("[data-testid=customer-row-0987654321]")');
+  assert.equal(await evaluate('!!document.querySelector("[data-testid=settle-1234567890]")'), false);
+  await evaluate('document.querySelector("[data-testid=toggle-closed]").click()');
+  await until('!!document.querySelector("[data-testid=customer-row-0987654321]")&&!document.querySelector("[data-testid=customer-row-1234567890]")');
+  await set('ledger-search', '1234567890');
+  await until('!!document.querySelector("[data-testid=customer-row-1234567890]")');
+  await evaluate('document.querySelector("[data-testid=customer-row-1234567890] button").click()');
+  await until('document.querySelector("[data-testid=customer-balance]")?.textContent.includes("₹0")');
+  await set('ledger-amount', '1');
+  await save();
+  await until('document.querySelector("[data-testid=customer-balance]")?.textContent.includes("₹1.00")');
+  await set('ledger-search', '');
+  await until('!!document.querySelector("[data-testid=customer-row-1234567890]")');
+  assert.equal(await evaluate('window.__records["1234567890"].entries.length>1'), true, 'Reopening preserves previous history');
   await snapshot('ration-balance-ledger-quick-close.png');
 });
 console.log('Simple notebook UI passed: separate search, card/amount/direction/Save, both directions, repayments, idempotent retry, corrections and narrow layout.');

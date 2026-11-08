@@ -1,5 +1,7 @@
 # Balance Book — setup and verification
 
+Closed-card visibility update: apply `supabase/migrations/20261108_customer_balance_ledger_status_filter.sql` after the original ledger migration and before deploying the updated app. This replaces only the RPC function; it does not delete or alter balances/history. Default list shows nonzero balances under “ബാക്കിയുള്ള കാർഡുകൾ”; “തീർന്നവ കാണുക” switches to zero-balance cards. A nonempty search spans both statuses. Filtering happens before pagination, and cards with new balances automatically reappear in the active list. Older clients remain compatible (`status` defaults to `all`); the updated UI checks the returned status so a missing migration cannot silently show an unfiltered list.
+
 Layout update: the search field now sits below “മുൻ കാർഡുകൾ”, immediately before the saved-card list, labelled “കാർഡ് തിരയുക”. The new-balance form appears first.
 
 Recent-card settlement: each nonzero balance has a “തീർക്കുക” action. It fetches the current card balance, asks for received/returned confirmation, and rechecks before the first write. A changed amount needs confirmation again. Settlement appends a normal payment entry without deleting history; ambiguous retries reuse the exact payload and UUID. Stale list actions are disabled. Amounts above the per-entry limit must use partial payments through the existing form.
