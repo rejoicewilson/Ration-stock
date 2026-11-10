@@ -692,6 +692,20 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
   }, [form, activeView]);
   const [transactionsResult, setTransactionsResult] = useState(null);
   const [commissionResult, setCommissionResult] = useState(null);
+  const transactionRequest = useRef({ version: 0, controller: null });
+  const commissionRequest = useRef({ version: 0, controller: null });
+  useEffect(() => {
+    const request = transactionRequest.current;
+    request.version += 1; request.controller?.abort();
+    setTransactionsResult(null); setTransactionsError(''); setTransactionsLoading(false);
+    return () => { request.version += 1; request.controller?.abort(); };
+  }, [transactionForm, activeView]);
+  useEffect(() => {
+    const request = commissionRequest.current;
+    request.version += 1; request.controller?.abort();
+    setCommissionResult(null); setCommissionError(''); setCommissionLoading(false);
+    return () => { request.version += 1; request.controller?.abort(); };
+  }, [commissionForm, activeView]);
   const [monthComparisonResult, setMonthComparisonResult] = useState(null);
   const [stockBoardResult, setStockBoardResult] = useState(null);
   const stockBoardRequest = useRef(null);
@@ -907,6 +921,13 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
     { isCommission = false, setLoading, setError, setResult }
   ) => {
     e.preventDefault();
+    const request = (isCommission ? commissionRequest : transactionRequest).current;
+    request.controller?.abort();
+    const controller = new AbortController();
+    request.controller = controller;
+    const version = ++request.version;
+    const isCurrent = () => request.version === version && !controller.signal.aborted;
+    setResult(null); setError(''); setLoading(false);
     if (
       isCommission
       && Number(requestForm.year) < 2026
@@ -931,7 +952,9 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
       };
       const res = await featureFetch(TRANSACTIONS_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-App-Feature': isCommission ? 'commission' : 'transactions' },
+        signal: controller.signal,
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store', Pragma: 'no-cache', 'X-App-Feature': isCommission ? 'commission' : 'transactions' },
         body: JSON.stringify({
           ...requestedPeriod,
           dist_code: Number(requestForm.dist_code),
@@ -954,12 +977,24 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
         const suffix = requestId ? ` Request ID: ${requestId}` : '';
         throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
       }
-      setResult({ ...data, requested_period: requestedPeriod });
+      if (!isCurrent()) return;
+      const returned = data.requested_period;
+      if (!data.fetched_at || !Number.isFinite(Date.parse(data.fetched_at)) || !returned
+        || String(returned.fps_id) !== String(Number(requestForm.fps_id))
+        || Number(returned.dist_code) !== Number(requestForm.dist_code)
+        || Number(returned.afso) !== Number(requestForm.afso)
+        || Number(returned.month) !== Number(requestForm.month)
+        || Number(returned.year) !== Number(requestForm.year)
+        || returned.from_date !== requestedPeriod.from_date || returned.to_date !== requestedPeriod.to_date) {
+        throw new Error('Unable to verify the requested transaction report. Please try again.');
+      }
+      setResult(data);
     } catch (err) {
+      if (!isCurrent()) return;
       console.error(`${isCommission ? 'Commission' : 'Transactions'} fetch failed:`, err);
       setError(featureErrorMessage(err));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   };
 
@@ -4928,7 +4963,10 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
             )}
 
             {serviceResult && (
-              <Box>
+              <Box data-testid="transactions-result">
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Fetched from ePoS: {new Date(serviceResult.fetched_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST
+                </Typography>
                 {activeView === 'commission' && (
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                     <Box>

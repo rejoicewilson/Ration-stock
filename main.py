@@ -816,7 +816,7 @@ def parse_transaction_report(html: str):
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table")
     if not table:
-        return {"title": "", "headers": TRANSACTION_HEADERS, "transactions": []}
+        raise ValueError("Transaction report table is missing")
 
     rows = table.find_all("tr")
     title = rows[0].get_text(" ", strip=True) if rows else ""
@@ -842,7 +842,7 @@ def parse_fps_transaction_details(html: str):
     soup = BeautifulSoup(html, "html.parser")
     table = soup.find("table", id="Report")
     if not table:
-        return {"title": "", "transactions": []}
+        raise ValueError("Transaction details report table is missing")
 
     title_cell = table.find("th", colspan=True)
     title = title_cell.get_text(" ", strip=True) if title_cell else ""
@@ -1192,7 +1192,9 @@ def fetch_transactions(request: TransactionsRequest):
 
     try:
         start_time = time.perf_counter()
-        response = EPOS_SESSION.post(url, data=payload, timeout=EPOS_TIMEOUT)
+        # requests.post creates and closes an independent session for each read.
+        fresh_headers = {**EPOS_HEADERS, "Cache-Control": "no-cache, no-store", "Pragma": "no-cache"}
+        response = requests.post(url, data=payload, timeout=EPOS_TIMEOUT, headers=fresh_headers)
         upstream_duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
         logger.info(
             "transactions_upstream_response status_code=%s content_length=%s duration_ms=%s",
@@ -1213,8 +1215,8 @@ def fetch_transactions(request: TransactionsRequest):
             "year": request.year,
         }
         details_start_time = time.perf_counter()
-        details_response = EPOS_DETAILS_SESSION.post(
-            details_url, data=details_payload, timeout=EPOS_TIMEOUT
+        details_response = requests.post(
+            details_url, data=details_payload, timeout=EPOS_TIMEOUT, headers=fresh_headers
         )
         details_duration_ms = round((time.perf_counter() - details_start_time) * 1000, 2)
         logger.info(
@@ -1233,6 +1235,7 @@ def fetch_transactions(request: TransactionsRequest):
             **details_summary,
             "total_amount": amount_summary["total_amount"],
         }
+        metadata = {"fetched_at": datetime.now(timezone.utc).isoformat(), "requested_period": payload}
 
         parse_duration_ms = round((time.perf_counter() - parse_start_time) * 1000, 2)
         total_duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
@@ -1243,6 +1246,7 @@ def fetch_transactions(request: TransactionsRequest):
                 response.text[:500],
             )
             result = {
+                **metadata,
                 "remote_status_code": response.status_code,
                 "upstream_duration_ms": upstream_duration_ms,
                 "details_duration_ms": details_duration_ms,
@@ -1251,7 +1255,6 @@ def fetch_transactions(request: TransactionsRequest):
                 "title": details_report["title"] or transaction_report["title"],
                 "summary": summary,
                 "transactions": [],
-                "content_preview": response.text[:1000],
             }
             return result
 
@@ -1264,6 +1267,7 @@ def fetch_transactions(request: TransactionsRequest):
             total_duration_ms,
         )
         result = {
+            **metadata,
             "remote_status_code": response.status_code,
             "upstream_duration_ms": upstream_duration_ms,
             "details_duration_ms": details_duration_ms,

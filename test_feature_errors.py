@@ -14,7 +14,7 @@ class FeatureErrorTests(unittest.TestCase):
             (main.get_fps_stock, stock, 'main.requests.post', 'EPOS_UNAVAILABLE'),
             (main.get_raw_rice_cb_sum, stock, 'main.requests.post', 'EPOS_UNAVAILABLE'),
             (main.fetch_transactions, main.TransactionsRequest(from_date='01/10/2026', to_date='10/10/2026',
-                dist_code=18, afso='42', fps_id=1842187, month=10, year=2026), 'main.EPOS_SESSION.post', 'EPOS_UNAVAILABLE'),
+                dist_code=18, afso='42', fps_id=1842187, month=10, year=2026), 'main.requests.post', 'EPOS_UNAVAILABLE'),
             (main.get_stock_register, main.StockRegisterRequest(dist_code=18, office_code=42,
                 fps_id=1842187, month=10, year=2026), 'main.requests.Session', 'EPOS_UNAVAILABLE'),
             (main.get_ro_details, main.RoDetailsRequest(month=10, year=2026, shop_no=1842187,
@@ -41,7 +41,7 @@ class FeatureErrorTests(unittest.TestCase):
 
     def test_unexpected_parse_error_is_not_mislabeled_as_epos_outage(self):
         response = Mock(text='<html></html>', status_code=200)
-        with patch('main.EPOS_SESSION.post', return_value=response), \
+        with patch('main.requests.post', return_value=response), \
              patch('main.parse_transaction_report', side_effect=ValueError('PRIVATE_PARSE_DETAIL')), \
              patch.object(main.logger, 'exception') as log:
             transaction_case = self.cases()[2]
