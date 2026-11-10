@@ -27,13 +27,12 @@ export default function FeatureError({ error, onRetry, loading = false, sx }) {
   return <Box role="alert" lang="ml" sx={{ border: '1px solid #f9dfe3', borderRadius: 3, background: 'linear-gradient(145deg, #fff5f5, #fff9fb)', p: { xs: 2, sm: 3 }, textAlign: 'center', ...sx }}>
     <ServiceArtwork epos={epos || inconsistentStock} />
     <Typography component="h3" sx={{ color: '#b42318', fontWeight: 800, fontSize: { xs: 18, sm: 20 }, mt: 0.5, mb: 1 }}>{inconsistentStock ? 'നിലവിലെ സ്റ്റോക്ക് സ്ഥിരീകരിക്കാനായില്ല' : 'വിവരങ്ങൾ ലഭ്യമായില്ല'}</Typography>
-    <Typography sx={{ color: '#34445c', fontSize: 13, lineHeight: 1.9, maxWidth: 420, mx: 'auto' }}>
-      {inconsistentStock ? 'ePoS സേവനത്തിൽ നിന്ന് വ്യത്യസ്ത സ്റ്റോക്ക് കണക്കുകൾ ലഭിച്ചു. തെറ്റായ കണക്ക് കാണിക്കാതിരിക്കാൻ ഫലം പ്രദർശിപ്പിക്കുന്നില്ല.'
-        : epos ? 'സർക്കാർ ePoS സേവനത്തിൽ നിന്ന് വിവരങ്ങൾ ലഭിക്കുന്നതിൽ താൽക്കാലിക തടസ്സം നേരിടുന്നു.'
+    {!inconsistentStock && <Typography sx={{ color: '#34445c', fontSize: 13, lineHeight: 1.9, maxWidth: 420, mx: 'auto' }}>
+      {epos ? 'സർക്കാർ ePoS സേവനത്തിൽ നിന്ന് വിവരങ്ങൾ ലഭിക്കുന്നതിൽ താൽക്കാലിക തടസ്സം നേരിടുന്നു.'
         : network ? 'ഇന്റർനെറ്റ് കണക്ഷൻ പരിശോധിച്ച ശേഷം വീണ്ടും ശ്രമിക്കുക.'
           : 'വിവരങ്ങൾ ലഭിക്കുന്നതിൽ താൽക്കാലിക തടസ്സം നേരിടുന്നു.'}
       {!network && ' ദയവായി കുറച്ച് സമയത്തിന് ശേഷം വീണ്ടും ശ്രമിക്കുക.'}
-    </Typography>
+    </Typography>}
     {onRetry && <Button type="button" variant="outlined" disabled={loading} onClick={onRetry}
       startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <span aria-hidden="true">↻</span>}
       sx={{ mt: 2, minHeight: 42, borderRadius: 2, bgcolor: '#fff', textTransform: 'none', fontSize: 13, fontWeight: 700 }}>
