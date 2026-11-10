@@ -343,8 +343,7 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
         {list.customers?.map(customer => <Box component="li" key={customer.id} data-testid={'customer-row-' + customer.card_number}
           sx={{ border: '1px solid', borderColor: card === customer.card_number ? '#90bdf0' : '#dce5f3', borderRadius: 2,
             bgcolor: card === customer.card_number ? '#edf5ff' : '#fff', mb: 1, p: 0.75, display: 'grid',
-            gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: customer.balance_paise !== 0 ? 'minmax(0, 1fr) 112px' : 'minmax(0, 1fr)' },
-            alignItems: 'center', gap: 0.75 }}>
+            gridTemplateColumns: 'minmax(0, 1fr)', alignItems: 'center', gap: 0.25 }}>
           <Box component="button" type="button" disabled={saving} onClick={() => selectCard(customer.card_number, true)}
             aria-label={'Select card ' + customer.card_number} aria-pressed={card === customer.card_number}
             sx={{ display: 'flex', flexWrap: 'wrap', width: '100%', minWidth: 0, alignItems: 'center', justifyContent: 'space-between', gap: 1, minHeight: 58,
@@ -362,7 +361,7 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
           </Box>
           {customer.balance_paise !== 0 && <Button type="button" variant="outlined" data-testid={'settle-' + customer.card_number}
             disabled={saving || listLoading || !!listError} onClick={() => openSettlement(customer.card_number)}
-            sx={{ ...buttonSx, justifySelf: 'end', width: 112, minWidth: 112, height: 48, minHeight: 48, px: 0.75,
+            sx={{ ...buttonSx, justifySelf: 'center', width: 100, minWidth: 100, height: 44, minHeight: 44, px: 0.75,
               fontSize: 11, lineHeight: 1.4, whiteSpace: 'normal', textAlign: 'center', overflowWrap: 'anywhere',
               borderColor: '#90bdf0', bgcolor: '#fff', '&:hover': { borderColor: primary, bgcolor: '#f0f6ff' } }}>{customer.balance_paise < 0 ? 'തിരികെ നൽകി' : 'പണം ലഭിച്ചു'}</Button>}
         </Box>)}

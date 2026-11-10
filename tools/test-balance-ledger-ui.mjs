@@ -206,7 +206,8 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   await snapshot('ration-balance-ledger-task-narrow.png');
   // Close directly from recent cards: no form entry, cancellation never writes.
   assert.equal(await evaluate('new Set([...document.querySelectorAll("button[data-testid^=settle-]")].map(b=>{const r=b.getBoundingClientRect();return r.width+":"+r.height})).size'), 1, 'Received and returned buttons have identical dimensions');
-  assert.equal(await evaluate('[...document.querySelectorAll("button[data-testid^=settle-]")].every(b=>{const r=b.getBoundingClientRect();return r.width===112&&r.height===48})'), true, 'Payment buttons keep a consistent 112 by 48 size on narrow phones');
+  assert.equal(await evaluate('[...document.querySelectorAll("button[data-testid^=settle-]")].every(b=>{const r=b.getBoundingClientRect();return r.width===100&&r.height===44})'), true, 'Payment buttons keep a consistent 100 by 44 size on narrow phones');
+  assert.equal(await evaluate('[...document.querySelectorAll("button[data-testid^=settle-]")].every(b=>{const r=b.getBoundingClientRect(),p=b.parentElement.getBoundingClientRect();return Math.abs((r.left+r.right)-(p.left+p.right))<2})'), true, 'Payment buttons are centred inside their customer cards');
   const settle = number => evaluate('document.querySelector("[data-testid=settle-' + number + ']").click()');
   await settle('1234567890');
   await until('document.querySelector("[data-testid=settlement-question]")?.textContent.includes("₹1.00")');
