@@ -34,6 +34,8 @@ try {
   }
   globalThis.fetch = async () => new Response('{}', { status: 503 });
   await assert.rejects(featureFetch('/count'), error => error.publicFeatureError?.kind === 'service');
+  globalThis.fetch = async () => new Response(JSON.stringify({detail:{code:'STOCK_INCONSISTENT'}}), { status: 503 });
+  await assert.rejects(featureFetch('/stock-register'), error => error.publicFeatureError?.kind === 'stock-inconsistent');
   assert.equal(subscriptionRequired, 1);
   assert.equal(sessionEnded, 1);
   console.log('PASS: expiry requests renewal without signing out; expired sessions request sign-in; credentials and uncached requests preserved.');

@@ -16,7 +16,7 @@ class FeatureErrorTests(unittest.TestCase):
             (main.fetch_transactions, main.TransactionsRequest(from_date='01/10/2026', to_date='10/10/2026',
                 dist_code=18, afso='42', fps_id=1842187, month=10, year=2026), 'main.EPOS_SESSION.post', 'EPOS_UNAVAILABLE'),
             (main.get_stock_register, main.StockRegisterRequest(dist_code=18, office_code=42,
-                fps_id=1842187, month=10, year=2026), 'main.EPOS_SESSION.post', 'EPOS_UNAVAILABLE'),
+                fps_id=1842187, month=10, year=2026), 'main.requests.Session', 'EPOS_UNAVAILABLE'),
             (main.get_ro_details, main.RoDetailsRequest(month=10, year=2026, shop_no=1842187,
                 dist_code=18, depot_id='1'), 'main.EPOS_SESSION.get', 'SCM_UNAVAILABLE'),
             (main.get_ro_quantity_details, main.RoQuantityDetailsRequest(ro_no='RO-1',

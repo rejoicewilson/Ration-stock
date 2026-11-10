@@ -22,7 +22,7 @@ const bundle = await build({
     window.__reply=(index,qty,status=200,extra={})=>{
       const r=window.__requests[index];
       r.resolve(new Response(JSON.stringify({RAW_RICE_cb_sum:qty+' kg',RAW_RICE_bag_count:1,RAW_RICE_remaining_kg:'0 kg',
-        fetched_at:new Date().toISOString(),requested_period:{fps_id:String(r.body.fps_id),month:r.body.month,year:r.body.year},...extra}),{status}));
+        consistency_checked:true,fetched_at:new Date().toISOString(),requested_period:{fps_id:String(r.body.fps_id),month:r.body.month,year:r.body.year},...extra}),{status}));
     };
     createRoot(document.getElementById('root')).render(<><CssBaseline/><App initialView="stock" registeredFpsId="1234567"/></>);
   ` }, bundle: true, write: false, format: 'iife', loader: { '.svg': 'dataurl', '.png': 'dataurl' },
@@ -72,5 +72,10 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until}) =
   await evaluate('window.__reply(6,88,200,{fetched_at:null})');
   await until('!!document.querySelector("[role=alert]")');
   assert.equal(await evaluate('!!'+result), false, 'Unverified legacy response is not shown');
+  await submit();
+  await until('window.__requests.length===8');
+  await evaluate('window.__reply(7,0,503,{detail:{code:"STOCK_INCONSISTENT"}})');
+  await until('document.querySelector("[role=alert]")?.textContent.includes("നിലവിലെ സ്റ്റോക്ക് സ്ഥിരീകരിക്കാനായില്ല")');
+  assert.equal(await evaluate('!!'+result), false, 'Conflicting source data shows a verification error, not any old stock');
 });
 console.log('Stock freshness UI passed: new fetch on every click, cleared results, no-store, failure handling, cancelled stale responses and period validation.');

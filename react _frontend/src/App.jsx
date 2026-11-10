@@ -884,7 +884,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
         const suffix = requestId ? ` Request ID: ${requestId}` : '';
         throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
       }
-      if (!data?.fetched_at || Number.isNaN(Date.parse(data.fetched_at))
+      if (data?.consistency_checked !== true || !data?.fetched_at || Number.isNaN(Date.parse(data.fetched_at))
           || Number(data?.requested_period?.fps_id) !== Number(form.fps_id)
           || Number(data?.requested_period?.month) !== Number(form.month)
           || Number(data?.requested_period?.year) !== Number(form.year)
@@ -1113,7 +1113,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
         const suffix = requestId ? ` Request ID: ${requestId}` : '';
         throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
       }
-      if (!data?.fetched_at || Number.isNaN(Date.parse(data.fetched_at))
+      if (data?.consistency_checked !== true || !data?.fetched_at || Number.isNaN(Date.parse(data.fetched_at))
           || Number(data?.requested_period?.fps_id) !== Number(stockBoardForm.fps_id)
           || Number(data?.requested_period?.month) !== Number(stockBoardForm.month)
           || Number(data?.requested_period?.year) !== Number(stockBoardForm.year)

@@ -1292,6 +1292,31 @@ def get_transactions(request: TransactionsRequest):
 
 @app.post("/stock-register")
 def get_stock_register(request: StockRegisterRequest):
+    result = consistent_stock_read(lambda: fetch_stock_register_once(request), 'board')
+    try:
+        result['licensee_name'] = get_fps_dealer_name(request.dist_code, request.fps_id)
+    except Exception:
+        logger.warning('fps_dealer_lookup_failed dist_code=%s fps_id=%s', request.dist_code, request.fps_id)
+    return result
+
+
+def consistent_stock_read(fetch_report, source):
+    # Separate, uncached requests; never vote for, select, or keep a conflicting snapshot.
+    first = fetch_report()
+    second = fetch_report()
+    first_snapshot = first.pop('_stock_fingerprint')
+    second_snapshot = second.pop('_stock_fingerprint')
+    if first_snapshot != second_snapshot:
+        logger.warning('stock_report_inconsistent source=%s', source)
+        raise HTTPException(status_code=503, detail={
+            'code': 'STOCK_INCONSISTENT',
+            'message': 'Unable to verify current stock. ePoS returned conflicting reports. Please try again later.',
+        })
+    second['consistency_checked'] = True
+    return second
+
+
+def fetch_stock_register_once(request: StockRegisterRequest):
     fps_id = str(request.fps_id)
     if len(fps_id) != 7 or not fps_id.isdigit():
         raise HTTPException(status_code=400, detail="FPS ID must contain exactly 7 digits")
@@ -1313,8 +1338,13 @@ def get_stock_register(request: StockRegisterRequest):
     start_time = time.perf_counter()
     logger.info("stock_register_start payload=%s", payload)
     try:
-        response = EPOS_SESSION.post(url, data=payload, timeout=EPOS_TIMEOUT,
-                                     headers={'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache'})
+        # ePoS keeps report state in its session. Reusing cookies across shops/months
+        # can return an older report body even when its heading names the new period.
+        # Each stock-board fetch must start with a new, request-local cookie jar.
+        with requests.Session() as report_session:
+            report_session.headers.update(EPOS_HEADERS)
+            response = report_session.post(url, data=payload, timeout=EPOS_TIMEOUT,
+                                           headers={'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache'})
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
         logger.info(
             "stock_register_upstream_response status_code=%s content_length=%s duration_ms=%s",
@@ -1331,17 +1361,9 @@ def get_stock_register(request: StockRegisterRequest):
                 for column in STOCK_REGISTER_HEADERS[4:]:
                     if not isfinite(float(record[column].replace(',', ''))):
                         raise ValueError('Stock register contains an invalid quantity')
-        licensee_name = ""
-        try:
-            licensee_name = get_fps_dealer_name(request.dist_code, request.fps_id)
-        except Exception:
-            logger.warning(
-                "fps_dealer_lookup_failed dist_code=%s fps_id=%s",
-                request.dist_code,
-                request.fps_id,
-                exc_info=True,
-            )
         return {
+            '_stock_fingerprint': tuple(sorted(tuple(str(cell).strip() for cell in row[1:])
+                                              for table in tables for row in table['rows'])),
             'fetched_at': datetime.now(timezone.utc).isoformat(),
             'requested_period': {'fps_id': fps_id, 'dist_code': request.dist_code,
                                  'office_code': request.office_code, 'month': request.month, 'year': request.year},
@@ -1349,7 +1371,7 @@ def get_stock_register(request: StockRegisterRequest):
             "duration_ms": duration_ms,
             "table_count": len(tables),
             "tables": tables,
-            "licensee_name": licensee_name,
+            "licensee_name": '',
             "response_preview": response.text[:800] if not tables else "",
         }
     except requests.RequestException as e:
@@ -1510,6 +1532,10 @@ def get_ration_card_details(request: RationCardDetailsRequest):
 # Updated /count endpoint to sum CB Qty for RAW RICE group
 @app.post("/count")
 def get_raw_rice_cb_sum(request: StockRequest):
+    return consistent_stock_read(lambda: fetch_stock_summary_once(request), 'summary')
+
+
+def fetch_stock_summary_once(request: StockRequest):
     url = "https://epos.kerala.gov.in/fps_stock.action"
     payload = {
         "fps_id": request.fps_id,
@@ -1537,6 +1563,7 @@ def get_raw_rice_cb_sum(request: StockRequest):
             raise ValueError('Stock report table is missing')
         rows = table.find_all('tr')[2:]  # Skip header rows
         valid_rows = 0
+        stock_rows = []
         raw_cb_sum = 0
         br_cb_sum = 0
         matta_cmr_cb_sum = 0
@@ -1557,6 +1584,7 @@ def get_raw_rice_cb_sum(request: StockRequest):
                 if not isfinite(cb_qty):
                     raise ValueError('Stock report contains an invalid quantity')
                 valid_rows += 1
+                stock_rows.append(tuple(cell.get_text(' ', strip=True) for cell in cols[1:]))
 
                 if group == "raw_rice":
                     raw_cb_sum += cb_qty
@@ -1605,6 +1633,7 @@ def get_raw_rice_cb_sum(request: StockRequest):
         atta_bag_count = int(atta_cb_sum // atta_bag_weight)
         atta_remaining_kg = atta_cb_sum % atta_bag_weight
         result = {
+            '_stock_fingerprint': tuple(sorted(stock_rows)),
             'fetched_at': datetime.now(timezone.utc).isoformat(),
             'requested_period': {'fps_id': str(request.fps_id), 'month': request.month, 'year': request.year},
             "bag_weights": {

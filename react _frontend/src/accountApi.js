@@ -39,7 +39,8 @@ export async function featureFetch(url, options = {}) {
     // render the upstream exception, response HTML, or infrastructure details.
     const legacyEpos = typeof detail === 'string'
       && /(?:upstream epos .*request failed|epos .*taking too long)/i.test(detail);
-    const kind = detail?.code === 'EPOS_UNAVAILABLE' || legacyEpos ? 'epos' : 'service';
+    const kind = detail?.code === 'STOCK_INCONSISTENT' ? 'stock-inconsistent'
+      : detail?.code === 'EPOS_UNAVAILABLE' || legacyEpos ? 'epos' : 'service';
     throw featureFailure(kind);
   }
   return response;

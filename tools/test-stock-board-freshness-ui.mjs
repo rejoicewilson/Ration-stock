@@ -25,7 +25,7 @@ const bundle = await build({
         tables:[{headers:['Sl.No','Scheme','Commodity','Units','Alloted Regular','Alloted Extra','OB Qty','Received Regular','Received Extra','Received Moved','Issued Qty','CB Qty'],
           rows:[['1','NPS','RAW RICE','KG','0','0','0','0','0','0','0',String(qty)]],
           records:[{'Sl.No':'1',Scheme:'NPS',Commodity:'RAW RICE',Units:'KG','CB Qty':String(qty)}]}],
-        fetched_at:new Date().toISOString(),requested_period:{fps_id:String(r.body.fps_id),month:r.body.month,year:r.body.year,dist_code:r.body.dist_code,office_code:r.body.office_code},...extra}),{status}));
+        consistency_checked:true,fetched_at:new Date().toISOString(),requested_period:{fps_id:String(r.body.fps_id),month:r.body.month,year:r.body.year,dist_code:r.body.dist_code,office_code:r.body.office_code},...extra}),{status}));
     };
     createRoot(document.getElementById('root')).render(<><CssBaseline/><App initialView="stockBoard" registeredFpsId="1842187"/></>);
   ` }, bundle: true, write: false, format: 'iife', loader: { '.svg': 'dataurl', '.png': 'dataurl' },
@@ -75,5 +75,10 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until}) =
   await evaluate('window.__reply(6,88,200,{fetched_at:null})');
   await until('!!document.querySelector("[role=alert]")');
   assert.equal(await evaluate('!!'+result), false, 'Unverified legacy response is not shown');
+  await submit();
+  await until('window.__requests.length===8');
+  await evaluate('window.__reply(7,0,503,{detail:{code:"STOCK_INCONSISTENT"}})');
+  await until('document.querySelector("[role=alert]")?.textContent.includes("നിലവിലെ സ്റ്റോക്ക് സ്ഥിരീകരിക്കാനായില്ല")');
+  assert.equal(await evaluate('!!'+result), false, 'Conflicting source data never displays a stock board');
 });
 console.log('Stock Board freshness UI passed: new fetch on every click, cleared results, no-store, failure handling, cancelled stale responses and period validation.');
