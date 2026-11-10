@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import {
@@ -682,10 +682,26 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
   const [supportUpiCopied, setSupportUpiCopied] = useState(false);
   const [supportGpayCopied, setSupportGpayCopied] = useState(false);
   const [result, setResult] = useState(null);
+  const stockRequest = useRef(null);
+  const stockRequestVersion = useRef(0);
+  useEffect(() => {
+    stockRequestVersion.current += 1;
+    stockRequest.current?.abort();
+    setResult(null); setError(''); setLoading(false);
+    return () => { stockRequestVersion.current += 1; stockRequest.current?.abort(); };
+  }, [form, activeView]);
   const [transactionsResult, setTransactionsResult] = useState(null);
   const [commissionResult, setCommissionResult] = useState(null);
   const [monthComparisonResult, setMonthComparisonResult] = useState(null);
   const [stockBoardResult, setStockBoardResult] = useState(null);
+  const stockBoardRequest = useRef(null);
+  const stockBoardRequestVersion = useRef(0);
+  useEffect(() => {
+    stockBoardRequestVersion.current += 1;
+    stockBoardRequest.current?.abort();
+    setStockBoardResult(null); setStockBoardError(''); setStockBoardLoading(false);
+    return () => { stockBoardRequestVersion.current += 1; stockBoardRequest.current?.abort(); };
+  }, [stockBoardForm, activeView]);
   const [settingsResult, setSettingsResult] = useState(null);
   const [roQuantityResult, setRoQuantityResult] = useState(null);
   const [rationCardResult, setRationCardResult] = useState(null);
@@ -824,7 +840,13 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    stockRequest.current?.abort();
+    const controller = new AbortController();
+    stockRequest.current = controller;
+    const version = ++stockRequestVersion.current;
+    setResult(null);
     if (!form.month || !form.year) {
+      setLoading(false);
       setError('Please select month and year.');
       return;
     }
@@ -834,7 +856,9 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
     try {
       const res = await featureFetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store', Pragma: 'no-cache' },
         body: JSON.stringify({
           fps_id: Number(form.fps_id),
           month: Number(form.month),
@@ -860,12 +884,20 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
         const suffix = requestId ? ` Request ID: ${requestId}` : '';
         throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
       }
-      setResult(data);
+      if (!data?.fetched_at || Number.isNaN(Date.parse(data.fetched_at))
+          || Number(data?.requested_period?.fps_id) !== Number(form.fps_id)
+          || Number(data?.requested_period?.month) !== Number(form.month)
+          || Number(data?.requested_period?.year) !== Number(form.year)
+          || !Object.prototype.hasOwnProperty.call(data, 'RAW_RICE_cb_sum')) {
+        throw new Error('Stock response could not be verified. Please try again.');
+      }
+      if (version === stockRequestVersion.current && !controller.signal.aborted) setResult(data);
     } catch (err) {
+      if (version !== stockRequestVersion.current || controller.signal.aborted) return;
       console.error('Stock fetch failed:', err);
       setError(featureErrorMessage(err));
     } finally {
-      setLoading(false);
+      if (version === stockRequestVersion.current) setLoading(false);
     }
   };
 
@@ -1027,6 +1059,11 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
 
   const handleStockBoardSubmit = async (e) => {
     e.preventDefault();
+    stockBoardRequest.current?.abort();
+    const controller = new AbortController();
+    stockBoardRequest.current = controller;
+    const version = ++stockBoardRequestVersion.current;
+    setStockBoardResult(null); setStockBoardLoading(false);
     if (!stockBoardForm.office_code) {
       setStockBoardError('Office list is not added for the selected district yet. Please select the correct district.');
       return;
@@ -1052,7 +1089,9 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
     try {
       const res = await featureFetch(STOCK_REGISTER_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store', Pragma: 'no-cache' },
         body: JSON.stringify({
           dist_code: Number(stockBoardForm.dist_code),
           fps_id: Number(stockBoardForm.fps_id),
@@ -1074,12 +1113,22 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
         const suffix = requestId ? ` Request ID: ${requestId}` : '';
         throw new Error(`Backend error ${res.status}: ${detail}.${suffix}`);
       }
-      setStockBoardResult(data);
+      if (!data?.fetched_at || Number.isNaN(Date.parse(data.fetched_at))
+          || Number(data?.requested_period?.fps_id) !== Number(stockBoardForm.fps_id)
+          || Number(data?.requested_period?.month) !== Number(stockBoardForm.month)
+          || Number(data?.requested_period?.year) !== Number(stockBoardForm.year)
+          || Number(data?.requested_period?.dist_code) !== Number(stockBoardForm.dist_code)
+          || Number(data?.requested_period?.office_code) !== Number(stockBoardForm.office_code)
+          || !Array.isArray(data?.tables) || !data.tables.length) {
+        throw new Error('Stock board response could not be verified. Please try again.');
+      }
+      if (version === stockBoardRequestVersion.current && !controller.signal.aborted) setStockBoardResult(data);
     } catch (err) {
+      if (version !== stockBoardRequestVersion.current || controller.signal.aborted) return;
       console.error('Stock board register fetch failed:', err);
       setStockBoardError(featureErrorMessage(err));
     } finally {
-      setStockBoardLoading(false);
+      if (version === stockBoardRequestVersion.current) setStockBoardLoading(false);
     }
   };
 
@@ -3036,7 +3085,10 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
 
         {stockBoardResult && (
           <>
-        <Box sx={{ background: '#2f3192', color: '#ffffff', textAlign: 'center', py: 1.2, px: 1 }}>
+        <Typography sx={{ p: 1, fontSize: 11, color: '#64748b' }}>
+          Fetched from ePoS: {new Date(stockBoardResult.fetched_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST
+        </Typography>
+        <Box data-testid="stock-board-result" sx={{ background: '#2f3192', color: '#ffffff', textAlign: 'center', py: 1.2, px: 1 }}>
           <Typography sx={{ fontSize: { xs: 24, sm: 34 }, fontWeight: 1000, lineHeight: 1.1 }}>
             പൊതുവിതരണ കേന്ദ്രം
           </Typography>
@@ -4377,7 +4429,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
         )}
 
         {result && (
-          <Box>
+          <Box data-testid="stock-summary-result">
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
               <Typography variant="h6" sx={{ fontWeight: 800 }}>
                 Summary
@@ -4386,6 +4438,10 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
                 {monthYearLabel()}
               </Typography>
             </Box>
+
+            {result.fetched_at && <Typography sx={{ mb: 2, fontSize: 11, color: '#64748b' }}>
+              Fetched from ePoS: {new Date(result.fetched_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST
+            </Typography>}
 
             <Stack spacing={2.5}>
               {summarySections.map((section) => {

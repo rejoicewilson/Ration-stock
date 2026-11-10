@@ -2,7 +2,8 @@ import logging
 import os
 import re
 import time
-from datetime import datetime
+from math import isfinite
+from datetime import datetime, timezone
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
 from urllib.parse import parse_qs, urlparse
@@ -1312,7 +1313,8 @@ def get_stock_register(request: StockRegisterRequest):
     start_time = time.perf_counter()
     logger.info("stock_register_start payload=%s", payload)
     try:
-        response = EPOS_SESSION.post(url, data=payload, timeout=EPOS_TIMEOUT)
+        response = EPOS_SESSION.post(url, data=payload, timeout=EPOS_TIMEOUT,
+                                     headers={'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache'})
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
         logger.info(
             "stock_register_upstream_response status_code=%s content_length=%s duration_ms=%s",
@@ -1322,6 +1324,13 @@ def get_stock_register(request: StockRegisterRequest):
         )
         response.raise_for_status()
         tables = parse_stock_register_tables(response.text)
+        if not tables:
+            raise ValueError('Stock register has no valid commodity rows')
+        for table in tables:
+            for record in table['records']:
+                for column in STOCK_REGISTER_HEADERS[4:]:
+                    if not isfinite(float(record[column].replace(',', ''))):
+                        raise ValueError('Stock register contains an invalid quantity')
         licensee_name = ""
         try:
             licensee_name = get_fps_dealer_name(request.dist_code, request.fps_id)
@@ -1333,6 +1342,9 @@ def get_stock_register(request: StockRegisterRequest):
                 exc_info=True,
             )
         return {
+            'fetched_at': datetime.now(timezone.utc).isoformat(),
+            'requested_period': {'fps_id': fps_id, 'dist_code': request.dist_code,
+                                 'office_code': request.office_code, 'month': request.month, 'year': request.year},
             "remote_status_code": response.status_code,
             "duration_ms": duration_ms,
             "table_count": len(tables),
@@ -1506,7 +1518,8 @@ def get_raw_rice_cb_sum(request: StockRequest):
     }
     logger.info("count_start payload=%s", payload)
     try:
-        response = requests.post(url, data=payload, timeout=30)
+        response = requests.post(url, data=payload, timeout=30,
+                                 headers={'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache'})
         logger.info(
             "count_upstream_response status_code=%s content_length=%s",
             response.status_code,
@@ -1521,8 +1534,9 @@ def get_raw_rice_cb_sum(request: StockRequest):
                 response.status_code,
                 response.text[:500],
             )
-            return {"remote_status_code": response.status_code, "RAW_RICE_cb_sum": 0}
+            raise ValueError('Stock report table is missing')
         rows = table.find_all('tr')[2:]  # Skip header rows
+        valid_rows = 0
         raw_cb_sum = 0
         br_cb_sum = 0
         matta_cmr_cb_sum = 0
@@ -1539,7 +1553,10 @@ def get_raw_rice_cb_sum(request: StockRequest):
                 try:
                     cb_qty = float(cols[10].text.strip())
                 except ValueError:
-                    continue
+                    raise ValueError('Stock report contains an invalid quantity') from None
+                if not isfinite(cb_qty):
+                    raise ValueError('Stock report contains an invalid quantity')
+                valid_rows += 1
 
                 if group == "raw_rice":
                     raw_cb_sum += cb_qty
@@ -1557,6 +1574,8 @@ def get_raw_rice_cb_sum(request: StockRequest):
                     koil_cb_sum += cb_qty
                 if commodity_has_token(commodity, "OMSS"):
                     omss_rice_cb_sum += cb_qty
+        if not valid_rows:
+            raise ValueError('Stock report has no valid commodity rows')
         raw_rice_bag_weight = request.raw_rice_bag_weight or request.rice_bag_weight
         boiled_rice_bag_weight = request.boiled_rice_bag_weight or request.rice_bag_weight
         matta_cmr_bag_weight = request.matta_cmr_bag_weight or request.rice_bag_weight
@@ -1586,6 +1605,8 @@ def get_raw_rice_cb_sum(request: StockRequest):
         atta_bag_count = int(atta_cb_sum // atta_bag_weight)
         atta_remaining_kg = atta_cb_sum % atta_bag_weight
         result = {
+            'fetched_at': datetime.now(timezone.utc).isoformat(),
+            'requested_period': {'fps_id': str(request.fps_id), 'month': request.month, 'year': request.year},
             "bag_weights": {
                 "rice": f"{request.rice_bag_weight} kg",
                 "raw_rice": f"{raw_rice_bag_weight} kg",
