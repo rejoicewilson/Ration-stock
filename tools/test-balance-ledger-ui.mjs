@@ -196,6 +196,13 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   await command('Emulation.setDeviceMetricsOverride', { width: 320, height: 740, deviceScaleFactor: 1, mobile: true });
   assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'), true, 'Direct action buttons fit a narrow phone');
   assert.equal(await evaluate('[...document.querySelectorAll(".MuiFormControlLabel-label")].every(e=>e.getBoundingClientRect().right<=e.closest("label").getBoundingClientRect().right+1)'), true, 'Direction labels fit inside both choices');
+  for (const width of [320, 360, 390]) {
+    await command('Emulation.setDeviceMetricsOverride', { width, height: 740, deviceScaleFactor: 1, mobile: true });
+    assert.equal(await evaluate('[...document.querySelectorAll("[data-testid=customer-detail-card] > span")].every(e=>{const range=document.createRange();range.selectNodeContents(e);return range.getClientRects().length===1})'), true, 'Card numbers stay on one line at '+width+'px');
+    assert.equal(await evaluate('[...document.querySelectorAll("button[data-testid^=settle-]")].every(b=>b.getBoundingClientRect().top>=b.previousElementSibling.getBoundingClientRect().bottom-1)'), true, 'Mobile payment button sits below customer details at '+width+'px');
+    assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'), true);
+  }
+  await command('Emulation.setDeviceMetricsOverride', { width: 320, height: 740, deviceScaleFactor: 1, mobile: true });
   await snapshot('ration-balance-ledger-task-narrow.png');
   // Close directly from recent cards: no form entry, cancellation never writes.
   assert.equal(await evaluate('new Set([...document.querySelectorAll("button[data-testid^=settle-]")].map(b=>{const r=b.getBoundingClientRect();return r.width+":"+r.height})).size'), 1, 'Received and returned buttons have identical dimensions');

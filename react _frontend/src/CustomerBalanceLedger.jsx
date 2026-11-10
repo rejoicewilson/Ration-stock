@@ -342,13 +342,14 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
       {list && <Box component="ul" aria-label="Recent customers" sx={{ p: 0, m: 0, listStyle: 'none' }}>
         {list.customers?.map(customer => <Box component="li" key={customer.id} data-testid={'customer-row-' + customer.card_number}
           sx={{ border: '1px solid', borderColor: card === customer.card_number ? '#90bdf0' : '#dce5f3', borderRadius: 2,
-            bgcolor: card === customer.card_number ? '#edf5ff' : '#fff', mb: 1, p: 0.75, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            bgcolor: card === customer.card_number ? '#edf5ff' : '#fff', mb: 1, p: 0.75, display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: customer.balance_paise !== 0 ? 'minmax(0, 1fr) 112px' : 'minmax(0, 1fr)' },
+            alignItems: 'center', gap: 0.75 }}>
           <Box component="button" type="button" disabled={saving} onClick={() => selectCard(customer.card_number, true)}
             aria-label={'Select card ' + customer.card_number} aria-pressed={card === customer.card_number}
-            sx={{ display: 'flex', flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'space-between', gap: 1, minHeight: 58,
-              '@media (max-width: 360px)': { flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 },
+            sx={{ display: 'flex', flexWrap: 'wrap', width: '100%', minWidth: 0, alignItems: 'center', justifyContent: 'space-between', gap: 1, minHeight: 58,
               textAlign: 'left', border: 0, background: card === customer.card_number ? '#edf5ff' : 'none', borderRadius: 2, '&:hover': { bgcolor: '#f4f8ff' }, color: ink, px: 1, py: 1.25, cursor: 'pointer', '&:focus-visible': { outline: `2px solid ${primary}` } }}>
-            <Box component="span" sx={{ minWidth: 0 }}>
+            <Box component="span" sx={{ minWidth: 0, flex: '1 1 120px' }}>
               {customer.customer_name && <CustomerDetail type="name" value={customer.customer_name} prominent />}
               <CustomerDetail type="card" value={customer.card_number} prominent={!customer.customer_name} />
               {customer.customer_mobile && <CustomerDetail type="mobile" value={customer.customer_mobile} />}
@@ -361,7 +362,7 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
           </Box>
           {customer.balance_paise !== 0 && <Button type="button" variant="outlined" data-testid={'settle-' + customer.card_number}
             disabled={saving || listLoading || !!listError} onClick={() => openSettlement(customer.card_number)}
-            sx={{ ...buttonSx, flex: '0 0 112px', width: 112, minWidth: 112, height: 48, minHeight: 48, px: 0.75,
+            sx={{ ...buttonSx, justifySelf: 'end', width: 112, minWidth: 112, height: 48, minHeight: 48, px: 0.75,
               fontSize: 11, lineHeight: 1.4, whiteSpace: 'normal', textAlign: 'center', overflowWrap: 'anywhere',
               borderColor: '#90bdf0', bgcolor: '#fff', '&:hover': { borderColor: primary, bgcolor: '#f0f6ff' } }}>{customer.balance_paise < 0 ? 'തിരികെ നൽകി' : 'പണം ലഭിച്ചു'}</Button>}
         </Box>)}
