@@ -1,11 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Radio, RadioGroup, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Radio, RadioGroup, Stack, SvgIcon, TextField, Typography } from '@mui/material';
 import { ledgerRequest as api } from './ledgerApi';
 
 const ink = '#17233c';
 const primary = '#1976d2';
 const muted = '#64748b';
 const divider = '#e8edf7';
+function parseAmount(value) {
+  if (!/^\d{1,6}(\.\d{1,2})?$/.test(value || '')) return null;
+  const [rupees, paise = ''] = value.split('.');
+  const parsed = Number(rupees) * 100 + Number(paise.padEnd(2, '0'));
+  return parsed >= 1 && parsed <= 10000000 ? parsed : null;
+}
 const money = value => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(Math.abs(value) / 100);
 const balanceText = value => value > 0 ? `കിട്ടാനുണ്ട് ${money(value)}` : value < 0 ? `കൊടുക്കാനുണ്ട് ${money(value)}` : 'ബാക്കി ഇല്ല · ₹0';
 const date = value => new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }).format(new Date(value));
@@ -22,6 +28,18 @@ const pageSx = {
 };
 function publicError(error) {
   return error?.publicFeatureError ? 'Notebook unavailable. Check your connection and try again.' : error.message || 'Unable to load balances.';
+}
+const contactIcons = {
+  name: { title: 'Customer name', path: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z' },
+  card: { title: 'Ration card number', path: 'M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-8h16v8zm0-12v2H4V6h16zM6 12h6v2H6z' },
+  mobile: { title: 'Mobile number', path: 'M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.61 21 3 13.39 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z' },
+};
+function CustomerDetail({ type, value, prominent = false }) {
+  const icon = contactIcons[type];
+  return <Box component="span" data-testid={'customer-detail-' + type} sx={{ display: 'grid', gridTemplateColumns: '14px minmax(0, 1fr)', alignItems: 'center', columnGap: 0.75, mt: 0.25 }}>
+    <SvgIcon titleAccess={icon.title} sx={{ fontSize: 14, color: muted }}><path d={icon.path} /></SvgIcon>
+    <Typography component="span" sx={{ minWidth: 0, fontSize: prominent ? 13 : 11, fontWeight: prominent ? 800 : 400, color: prominent ? ink : muted, overflowWrap: 'anywhere' }}>{value}</Typography>
+  </Box>;
 }
 function Pager({ page, total, size, busy, change }) {
   if (total <= size) return null;
@@ -53,6 +71,8 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
   const [direction, setDirection] = useState('owed_to_shop');
   const [entryMode, setEntryMode] = useState('balance');
   const [amount, setAmount] = useState('');
+  const [name, setName] = useState('');
+  const [mobile, setMobile] = useState('');
   const [correction, setCorrection] = useState(null);
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -74,12 +94,9 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
   const balance = detail?.customer?.balance_paise || 0;
   const addKind = direction;
   useEffect(() => () => settlementRead.current?.abort(), []);
-  let value = null;
-  if (/^\d{1,6}(\.\d{1,2})?$/.test(amount)) {
-    const [rupees, paise = ''] = amount.split('.');
-    const parsed = Number(rupees) * 100 + Number(paise.padEnd(2, '0'));
-    if (parsed >= 1 && parsed <= 10000000) value = parsed;
-  }
+  const value = parseAmount(amount);
+  const settlementAmount = parseAmount(settlement?.amount);
+  const validSettlement = settlementAmount !== null && !!settlement?.balance && settlementAmount <= Math.abs(settlement.balance);
 
 
   useEffect(() => {
@@ -111,6 +128,8 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
         throw new Error('Could not verify this balance. Please refresh and try again.');
       }
       setDetailResult({ key: JSON.stringify([card, selection, historyPage, revision]), data });
+      setName(data.customer?.customer_name || '');
+      setMobile(data.customer?.customer_mobile || '');
       needsRead.current = false;
     }).catch(err => { if (!cancelled) setDetailError(publicError(err)); });
     return () => { cancelled = true; controller.abort(); };
@@ -121,7 +140,7 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
     const next = number.replace(/[^0-9]/g, '').slice(0, 10);
     setInput(next); setSelection(v => v + 1); setHistoryPage(1); setShowHistory(false);
     setDetailResult(null); setDetailError(''); needsRead.current = true;
-    setAmount(''); setDirection('owed_to_shop'); setEntryMode('balance');
+    setAmount(''); setName(''); setMobile(''); setDirection('owed_to_shop'); setEntryMode('balance');
     setCorrection(null); setReason(''); setSaveError(null); setSuccess('');
     pending.current = null;
     if (focusAmount) window.requestAnimationFrame(() => amountInput.current?.focus());
@@ -147,11 +166,12 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
     if (savingRef.current || needsRead.current) return;
     const fail = message => setSaveError({ scope: 'entry', message });
     if (!card || !ready) { fail('Wait until the card balance is verified.'); return; }
+    if (mobile && !/^[6-9][0-9]{9}$/.test(mobile)) { fail('Enter a valid 10-digit mobile number, or leave it blank.'); return; }
     if (value === null) { fail('Enter an amount between ₹0.01 and ₹1,00,000, with up to two decimal places.'); return; }
     if (payment && (balance === 0 || value > Math.abs(balance))) {
       fail('The payment cannot exceed the remaining balance.'); return;
     }
-    commit('entries', { card_number: card, customer_name: '',
+    commit('entries', { card_number: card, customer_name: name.trim(), customer_mobile: mobile,
       kind: payment ? (balance < 0 ? 'returned' : 'received') : addKind,
       amount_paise: value, note: '' }, 'entry');
   }
@@ -193,16 +213,16 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
     if (savingRef.current) return;
     const version = ++settlementVersion.current;
     settlementRequest.current = null;
-    setSettlement({ card: number, balance: null, loading: true, error: '' });
+    setSettlement({ card: number, balance: null, amount: '', loading: true, error: '' });
     try {
       const current = await readSettlement(number);
-      if (version === settlementVersion.current) setSettlement({ card: number, balance: current, loading: false, error: '' });
+      if (version === settlementVersion.current) setSettlement({ card: number, balance: current, amount: (Math.abs(current) / 100).toFixed(2), loading: false, error: '' });
     } catch (err) {
       if (version === settlementVersion.current && !settlementRead.current?.signal.aborted) setSettlement({ card: number, balance: null, loading: false, error: publicError(err) });
     }
   }
   async function confirmSettlement() {
-    if (savingRef.current || !settlement || settlement.loading || !settlement.balance || Math.abs(settlement.balance) > 10000000) return;
+    if (savingRef.current || !settlement || settlement.loading || !validSettlement) return;
     savingRef.current = true; setSaving(true);
     setSettlement(s => ({ ...s, error: '' }));
     try {
@@ -210,11 +230,11 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
       if (!settlementRequest.current) {
         const current = await readSettlement(settlement.card);
         if (current !== settlement.balance) {
-          setSettlement(s => ({ ...s, balance: current, error: 'ബാക്കി മാറിയിട്ടുണ്ട്. പുതിയ തുക പരിശോധിച്ച് വീണ്ടും ഉറപ്പാക്കുക.' }));
+          setSettlement(s => ({ ...s, balance: current, amount: (Math.abs(current) / 100).toFixed(2), error: 'ബാക്കി മാറിയിട്ടുണ്ട്. പുതിയ തുക പരിശോധിച്ച് വീണ്ടും ഉറപ്പാക്കുക.' }));
           return;
         }
         settlementRequest.current = { card_number: settlement.card, customer_name: '', note: '',
-          kind: current < 0 ? 'returned' : 'received', amount_paise: Math.abs(current), request_id: crypto.randomUUID() };
+          kind: current < 0 ? 'returned' : 'received', amount_paise: settlementAmount, request_id: crypto.randomUUID() };
       }
       const result = await api('entries', settlementRequest.current);
       if (!result?.ok || !Number.isSafeInteger(result.balance_paise)) throw new Error('Could not confirm this save. Retry here with the same details.');
@@ -235,11 +255,16 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
       <Stack component="form" onSubmit={event => { event.preventDefault(); record(entryMode === 'payment'); }} spacing={1.5} data-testid="ledger-task-form">
         <TextField name="ledger-card" label="റേഷൻ കാർഡ് നമ്പർ" value={input} onChange={e => selectCard(e.target.value)}
           required disabled={saving} inputProps={{ inputMode: 'numeric', pattern: '[0-9]{10}', maxLength: 10 }} size="small" sx={{ bgcolor: '#fff' }} />
+        <TextField name="ledger-name" label="പേര് (വേണമെങ്കിൽ)" value={name}
+          onChange={e => setName(e.target.value)} disabled={saving || !ready} size="small"
+          inputProps={{ maxLength: 80, readOnly: !!detail?.customer?.customer_name }} />
+        <TextField name="ledger-mobile" label="മൊബൈൽ നമ്പർ (വേണമെങ്കിൽ)" value={mobile}
+          onChange={e => setMobile(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))} disabled={saving || !ready}
+          size="small" type="tel" inputProps={{ maxLength: 10, inputMode: 'tel', pattern: '[6-9][0-9]{9}', readOnly: !!detail?.customer?.customer_mobile }} />
         {card && <Box>
           {!ready && !detailError && <Typography role="status" sx={{ fontSize: 12 }}>ബാക്കി പരിശോധിക്കുന്നു…</Typography>}
           {detailError && <Alert severity="warning" action={<Button type="button" disabled={saving} onClick={() => setRevision(v => v + 1)}>Retry</Button>}>{detailError}</Alert>}
           {ready && <>
-            {detail.customer?.customer_name && <Typography sx={{ fontSize: 14, fontWeight: 800 }}>{detail.customer.customer_name}</Typography>}
             <Typography data-testid="customer-balance" sx={{ fontSize: 20, fontWeight: 800 }}>{balanceText(balance)}</Typography>
             {!detail.customer && <Typography sx={{ fontSize: 11, color: muted }}>പുതിയ കണക്ക്</Typography>}
           </>}
@@ -296,15 +321,17 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
         <Pager page={historyPage} total={detail.total} size={30} busy={saving} change={page => { needsRead.current = true; setHistoryPage(page); setCorrection(null); }} />
       </Box>}
 
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 2, pt: 1.25, borderTop: `1px solid ${divider}`, gap: 1 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'center', columnGap: 1,
+        mt: 2, pt: 1.25, borderTop: `1px solid ${divider}` }}>
         <Typography component="h3" sx={{ fontSize: 14, fontWeight: 800 }}>{query ? 'തിരച്ചിൽ ഫലങ്ങൾ' : showClosed ? 'തീർന്ന കാർഡുകൾ' : 'ബാക്കിയുള്ള കാർഡുകൾ'}</Typography>
-        <Button type="button" disabled={saving || listLoading} onClick={() => { needsRead.current = true; setRevision(v => v + 1); }} sx={{ ...buttonSx, color: ink, fontSize: 11 }}>Refresh</Button>
-      </Stack>
-      {!query && <Button type="button" data-testid="toggle-closed" disabled={saving}
-        onClick={() => { setShowClosed(v => !v); setListPage(1); }} sx={{ ...buttonSx, fontSize: 12 }}>
-        {showClosed ? 'ബാക്കിയുള്ളവ കാണുക' : 'തീർന്നവ കാണുക'}
-      </Button>}
-      <TextField fullWidth name="ledger-search" label="കാർഡ് തിരയുക" value={search}
+        <Button type="button" disabled={saving || listLoading} onClick={() => { needsRead.current = true; setRevision(v => v + 1); }} sx={{ ...buttonSx, minWidth: 0, px: 0.5, color: ink, fontSize: 11 }}>Refresh</Button>
+        {!query && <Button type="button" data-testid="toggle-closed" disabled={saving}
+          onClick={() => { setShowClosed(v => !v); setListPage(1); }}
+          sx={{ ...buttonSx, gridColumn: '1 / -1', justifySelf: 'start', justifyContent: 'flex-start', textAlign: 'left', minWidth: 0, px: 0, fontSize: 12 }}>
+          {showClosed ? 'ബാക്കിയുള്ളവ കാണുക' : 'തീർന്നവ കാണുക'}
+        </Button>}
+      </Box>
+      <TextField fullWidth name="ledger-search" label="കാർഡ് / പേര് / മൊബൈൽ തിരയുക" value={search}
         onChange={e => { setSearch(e.target.value); setListPage(1); selectCard(''); }} disabled={saving}
         size="small" inputProps={{ maxLength: 80 }} sx={{ bgcolor: '#fff', mt: 1, mb: 1.5 }} />
       {listLoading && <Typography role="status" sx={{ fontSize: 11, color: muted }}>{listRetry ? 'വീണ്ടും ശ്രമിക്കുന്നു… (' + listRetry + '/2)' : 'കാർഡുകൾ പുതുക്കുന്നു…'}</Typography>}
@@ -313,45 +340,60 @@ export default function CustomerBalanceLedger({ fpsId = '' }) {
       </Alert>}
       {listLoading && !list && <CircularProgress size={22} aria-label="Loading notebook" />}
       {list && <Box component="ul" aria-label="Recent customers" sx={{ p: 0, m: 0, listStyle: 'none' }}>
-        {list.customers?.map(customer => <Box component="li" key={customer.id} data-testid={'customer-row-' + customer.card_number} sx={{ borderBottom: `1px solid ${divider}`, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        {list.customers?.map(customer => <Box component="li" key={customer.id} data-testid={'customer-row-' + customer.card_number}
+          sx={{ border: '1px solid', borderColor: card === customer.card_number ? '#90bdf0' : '#dce5f3', borderRadius: 2,
+            bgcolor: card === customer.card_number ? '#edf5ff' : '#fff', mb: 1, p: 0.75, display: 'flex', alignItems: 'center', gap: 0.75 }}>
           <Box component="button" type="button" disabled={saving} onClick={() => selectCard(customer.card_number, true)}
             aria-label={'Select card ' + customer.card_number} aria-pressed={card === customer.card_number}
             sx={{ display: 'flex', flex: 1, minWidth: 0, alignItems: 'center', justifyContent: 'space-between', gap: 1, minHeight: 58,
               '@media (max-width: 360px)': { flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 },
               textAlign: 'left', border: 0, background: card === customer.card_number ? '#edf5ff' : 'none', borderRadius: 2, '&:hover': { bgcolor: '#f4f8ff' }, color: ink, px: 1, py: 1.25, cursor: 'pointer', '&:focus-visible': { outline: `2px solid ${primary}` } }}>
-            <Box component="span" sx={{ minWidth: 0 }}><Typography component="span" sx={{ display: 'block', fontSize: 13, fontWeight: 800, overflowWrap: 'anywhere' }}>{customer.customer_name || customer.card_number}</Typography>
-              {customer.customer_name && <Typography component="span" sx={{ display: 'block', fontSize: 10, color: muted }}>…{customer.card_number.slice(-4)}</Typography>}</Box>
+            <Box component="span" sx={{ minWidth: 0 }}>
+              {customer.customer_name && <CustomerDetail type="name" value={customer.customer_name} prominent />}
+              <CustomerDetail type="card" value={customer.card_number} prominent={!customer.customer_name} />
+              {customer.customer_mobile && <CustomerDetail type="mobile" value={customer.customer_mobile} />}
+            </Box>
             <Box component="span" sx={{ textAlign: 'right', flexShrink: 0 }}>
               <Typography component="span" sx={{ display: 'block', fontSize: 14, fontWeight: 800 }}>{money(customer.balance_paise)}</Typography>
               <Typography component="span" sx={{ display: 'block', fontSize: 10 }}>{customer.balance_paise > 0 ? 'കിട്ടാനുണ്ട്' : customer.balance_paise < 0 ? 'കൊടുക്കാനുണ്ട്' : 'തീർന്നു'}</Typography>
               {(listLoading || listError) && <Typography component="span" sx={{ display: 'block', fontSize: 9 }}>Last loaded</Typography>}
             </Box>
           </Box>
-          {customer.balance_paise !== 0 && <Button type="button" data-testid={'settle-' + customer.card_number}
+          {customer.balance_paise !== 0 && <Button type="button" variant="outlined" data-testid={'settle-' + customer.card_number}
             disabled={saving || listLoading || !!listError} onClick={() => openSettlement(customer.card_number)}
-            sx={{ ...buttonSx, flexShrink: 0, minWidth: 0, px: 1, fontSize: 11 }}>തീർക്കുക</Button>}
+            sx={{ ...buttonSx, flex: '0 0 112px', width: 112, minWidth: 112, height: 48, minHeight: 48, px: 0.75,
+              fontSize: 11, lineHeight: 1.4, whiteSpace: 'normal', textAlign: 'center', overflowWrap: 'anywhere',
+              borderColor: '#90bdf0', bgcolor: '#fff', '&:hover': { borderColor: primary, bgcolor: '#f0f6ff' } }}>{customer.balance_paise < 0 ? 'തിരികെ നൽകി' : 'പണം ലഭിച്ചു'}</Button>}
         </Box>)}
         {!list.customers?.length && !listLoading && !listError && <Typography component="li" sx={{ py: 2, fontSize: 12, color: muted }}>{query ? 'ഇവിടെ കാർഡുകൾ കണ്ടെത്തിയില്ല.' : showClosed ? 'തീർന്ന കാർഡുകൾ ഇല്ല.' : 'ബാക്കിയുള്ള കാർഡുകൾ ഇല്ല.'}</Typography>}
       </Box>}
       {list && <Pager page={listPage} total={list.total || 0} size={20} busy={listLoading || saving} change={setListPage} />}
     </Box>
     <Dialog open={!!settlement} onClose={closeSettlement} fullWidth maxWidth="xs" aria-labelledby="settlement-title">
-      <DialogTitle id="settlement-title" sx={{ fontSize: 18, fontWeight: 700 }}>ബാക്കി തീർക്കുക</DialogTitle>
+      <DialogTitle id="settlement-title" sx={{ fontSize: 18, fontWeight: 700 }}>{settlement?.balance < 0 ? 'പണം തിരികെ നൽകിയത്' : 'പണം ലഭിച്ചത്'}</DialogTitle>
       <DialogContent>
         <Typography sx={{ mb: 1, fontSize: 13 }}>കാർഡ്: {settlement?.card}</Typography>
         {settlement?.loading ? <Typography role="status">ബാക്കി പരിശോധിക്കുന്നു…</Typography> : settlement?.balance === 0 ?
-          <Typography>ബാക്കി ഇല്ല · തീർന്നു</Typography> : settlement?.balance != null && <Typography data-testid="settlement-question">
-            {money(settlement.balance)} {settlement.balance < 0 ? 'മുഴുവൻ തിരികെ നൽകിയോ?' : 'മുഴുവൻ ലഭിച്ചോ?'}
-          </Typography>}
-        {Math.abs(settlement?.balance || 0) > 10000000 && <Alert severity="warning">Use the amount field to record payments up to ₹1,00,000 at a time.</Alert>}
+          <Typography>ബാക്കി ഇല്ല · തീർന്നു</Typography> : settlement?.balance != null && <>
+            <Typography data-testid="settlement-question" sx={{ fontWeight: 700 }}>{balanceText(settlement.balance)}</Typography>
+            <TextField fullWidth name="settlement-amount" label={settlement.balance < 0 ? 'തിരികെ നൽകിയ തുക ₹' : 'ലഭിച്ച തുക ₹'}
+              value={settlement.amount || ''} disabled={saving || !!settlementRequest.current}
+              onChange={event => setSettlement(s => ({ ...s, amount: event.target.value, error: '' }))}
+              inputProps={{ inputMode: 'decimal', maxLength: 9 }} sx={{ mt: 2, mb: 1.5 }}
+              error={!!settlement.amount && !validSettlement}
+              helperText={!!settlement.amount && !validSettlement ? 'ബാക്കിയേക്കാൾ കൂടാത്ത തുക നൽകുക (₹0.01–₹1,00,000).' : ''} />
+            <Typography data-testid="settlement-remaining" sx={{ fontWeight: 700 }}>
+              ശേഷിക്കുന്ന ബാക്കി: {validSettlement ? money(Math.abs(settlement.balance) - settlementAmount) : '—'}
+            </Typography>
+          </>}
         {settlement?.error && <Alert severity="warning" sx={{ mt: 1 }}>{settlement.error}</Alert>}
       </DialogContent>
       <DialogActions sx={{ p: 2, flexWrap: 'wrap' }}>
         <Button disabled={saving} onClick={closeSettlement} sx={buttonSx}>വേണ്ട</Button>
         {settlement?.balance == null && !settlement?.loading ? <Button onClick={() => openSettlement(settlement.card)} sx={buttonSx}>Retry</Button> :
           <Button data-testid="confirm-settlement" variant="contained" onClick={confirmSettlement}
-            disabled={saving || settlement?.loading || !settlement?.balance || Math.abs(settlement.balance) > 10000000} sx={buttonSx}>
-            {saving ? 'രേഖപ്പെടുത്തുന്നു…' : settlement?.balance < 0 ? 'തിരികെ നൽകി' : 'ലഭിച്ചു'}
+            disabled={saving || settlement?.loading || !validSettlement} sx={buttonSx}>
+            {saving ? 'രേഖപ്പെടുത്തുന്നു…' : 'രേഖപ്പെടുത്തുക'}
           </Button>}
       </DialogActions>
     </Dialog>

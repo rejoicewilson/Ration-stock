@@ -88,6 +88,15 @@ class LedgerTests(unittest.TestCase):
             self.assertEqual(data['account_id'], self.owner)
         self.assertEqual(self.client.post('/ledger/customers', json={'status': 'invalid'}).status_code, 422)
 
+    def test_optional_mobile_validation_and_forwarding(self):
+        for mobile in ('', '9000000001'):
+            self.rpc.reset_mock()
+            self.assertEqual(self.client.post('/ledger/entries', json={**self.entry, 'customer_mobile': mobile}).status_code, 200)
+            data = [c.args[1] for c in self.rpc.call_args_list if c.args[0] == 'ledger_add'][0]
+            self.assertEqual(data['customer_mobile'], mobile)
+        for mobile in ('123', '90000000001', '1000000000', '+919000000001', 'abcdefghij', 9000000001):
+            self.assertEqual(self.client.post('/ledger/entries', json={**self.entry, 'customer_mobile': mobile}).status_code, 422)
+
     def test_service_failure_and_conflict_do_not_claim_saved(self):
         def reply(action, data):
             if action == 'session': return {'id': self.owner}

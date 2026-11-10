@@ -24,7 +24,7 @@ const bundle = await build({
       if(url==='/ledger/customers'){
         if(window.__listFailures>0){window.__listFailures--;return reply({detail:'Fixture temporary unavailable'},503);}
         const all=Object.values(window.__records);
-        const filtered=all.filter(c=>(body.status==='all'||(body.status==='closed'?c.balance_paise===0:c.balance_paise!==0))&&(c.card_number.includes(body.search)||c.customer_name.includes(body.search)));
+        const filtered=all.filter(c=>(body.status==='all'||(body.status==='closed'?c.balance_paise===0:c.balance_paise!==0))&&(c.card_number.includes(body.search)||c.customer_name.toLowerCase().includes(body.search.toLowerCase())||(c.customer_mobile||'').includes(body.search)));
         return reply({customers:filtered.map(c=>({...c,id:c.card_number,entries:undefined})),total:filtered.length,page_size:20,status:body.status,
           totals:{customers:all.length,to_receive_paise:all.reduce((s,c)=>s+Math.max(c.balance_paise,0),0),to_return_paise:all.reduce((s,c)=>s+Math.max(-c.balance_paise,0),0)}});
       }
@@ -32,7 +32,8 @@ const bundle = await build({
       if(url==='/ledger/customer'&&window.__detailFailures>0){window.__detailFailures--;return reply({detail:'Fixture detail unavailable'},503);}
       if(url==='/ledger/customer')return reply({customer:customer?{...customer,entries:undefined}:null,entries:customer?[...customer.entries].reverse():[],total:customer?.entries.length||0,page_size:30});
       if(window.__keys[body.request_id])return reply(window.__keys[body.request_id]);
-      if(!customer)customer=window.__records[body.card_number]={card_number:body.card_number,customer_name:body.customer_name||'',balance_paise:0,entries:[]};
+      if(!customer)customer=window.__records[body.card_number]={card_number:body.card_number,customer_name:body.customer_name||'',customer_mobile:body.customer_mobile||'',balance_paise:0,entries:[]};
+      if(!customer.customer_mobile&&body.customer_mobile)customer.customer_mobile=body.customer_mobile;
       let kind=body.kind,delta=0,amount=body.amount_paise,original=null;
       if(url==='/ledger/reverse'){
         original=customer.entries.find(e=>e.id===body.entry_id);original.reversed=true;
@@ -70,12 +71,18 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   assert.equal(await evaluate('!!document.querySelector("[role=dialog]")'), false);
   assert.deepEqual(await evaluate('[...document.querySelectorAll("input")].filter(i=>["ledger-search","ledger-card","ledger-amount"].includes(i.name)).map(i=>i.name)'), ['ledger-card','ledger-amount','ledger-search'], 'Entry fields appear before saved-card search');
   assert.equal(await evaluate('!!(document.querySelector("h3").compareDocumentPosition(document.querySelector("[name=ledger-search]")) & Node.DOCUMENT_POSITION_FOLLOWING)'), true, 'Search follows the recent-card heading');
+  assert.equal(await evaluate('Math.abs(document.querySelector("h3").getBoundingClientRect().left-document.querySelector("[data-testid=toggle-closed]").getBoundingClientRect().left)<1'), true, 'Closed-view link aligns with the list heading');
   assert.equal(await evaluate('document.querySelectorAll("[data-testid=ledger-task-form] button[type=submit]").length'), 1, 'One Save button');
-  assert.equal(await evaluate('!!document.querySelector("[name=ledger-name]")'), false);
+  assert.equal(await evaluate('!!document.querySelector("[name=ledger-name]")'), true);
+  assert.equal(await evaluate('document.querySelector("[name=ledger-name]").required'), false);
+  assert.deepEqual(await evaluate('[...document.querySelectorAll("[data-testid=ledger-task-form] input")].slice(0,4).map(i=>i.name)'), ['ledger-card','ledger-name','ledger-mobile','ledger-amount']);
+  assert.equal(await evaluate('document.querySelector("[name=ledger-mobile]").required'), false);
   await snapshot('ration-balance-ledger-simple.png');
   await set('ledger-card', '1234567890');
   await until('!!document.querySelector("[data-testid=customer-balance]")&&!document.querySelector("[data-testid=record-save]").disabled');
   assert.equal(await evaluate('!!document.querySelector("[data-testid=open-payment]")'), false, 'New card has no repayment action');
+  await set('ledger-name', 'Test customer');
+  await set('ledger-mobile', '9000000001');
   assert.equal(await evaluate('!!document.querySelector("[name=ledger-note]")'), false);
   assert.equal(await evaluate('[...document.querySelectorAll("button")].some(b=>b.textContent.includes("+ പേര് / കുറിപ്പ്"))'), false);
   await set('ledger-amount', '2');
@@ -95,6 +102,9 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   const keys = await evaluate('window.__calls.filter(c=>c.url==="/ledger/entries").map(c=>c.body.request_id)');
   assert.equal(keys[0], keys[1]);
   assert.equal(await evaluate('document.querySelector("[name=ledger-amount]").value'), '');
+  assert.equal(await evaluate('document.querySelector("[name=ledger-name]").value'), 'Test customer', 'Saved name automatically fills');
+  assert.equal(await evaluate('window.__records["1234567890"].customer_name'), 'Test customer');
+  assert.equal(await evaluate('document.querySelector("[name=ledger-mobile]").value'), '9000000001', 'Saved contact automatically fills');
   assert.equal(await evaluate('!!document.querySelector("[data-testid=inline-history]")'), false, 'History hidden after routine entry');
   await evaluate('document.querySelector("[data-testid=open-payment]").click()');
   assert.equal(await evaluate('document.querySelector("[name=ledger-amount]").value'), '2.00', 'Repayment prefills full balance');
@@ -131,6 +141,8 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   await snapshot('ration-balance-ledger-mobile.png');
   await click('അടുത്ത കാർഡ്');
   assert.equal(await evaluate('document.querySelector("[name=ledger-card]").value'), '');
+  assert.equal(await evaluate('document.querySelector("[name=ledger-name]").value'), '', 'Names never carry across cards');
+  assert.equal(await evaluate('document.querySelector("[name=ledger-mobile]").value'), '', 'Contact never carries across cards');
   assert.equal(await evaluate('!!document.querySelector("[data-testid=inline-history]")'), false);
   assert.equal(await evaluate('document.querySelector("[data-testid=record-save]").disabled'), true);
   await set('ledger-card', '0987654321');
@@ -139,6 +151,8 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   await save();
   await until('document.querySelector("[data-testid=customer-balance]")?.textContent.includes("₹2.25")&&!!' + rowTwo);
   assert.equal(await evaluate('window.__records["0987654321"].entries[0].kind'), 'owed_to_shop');
+  assert.equal(await evaluate('window.__records["0987654321"].customer_name'), '', 'Name is optional');
+  assert.equal(await evaluate('window.__records["0987654321"].customer_mobile'), '', 'Mobile is optional');
   await until('!![...document.querySelectorAll("button")].find(b=>b.textContent==="Refresh"&&!b.disabled)');
   await set('ledger-card', '5555555555');
   await until('!!document.querySelector("[data-testid=customer-balance]")&&!document.querySelector("[data-testid=record-save]").disabled');
@@ -184,6 +198,8 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   assert.equal(await evaluate('[...document.querySelectorAll(".MuiFormControlLabel-label")].every(e=>e.getBoundingClientRect().right<=e.closest("label").getBoundingClientRect().right+1)'), true, 'Direction labels fit inside both choices');
   await snapshot('ration-balance-ledger-task-narrow.png');
   // Close directly from recent cards: no form entry, cancellation never writes.
+  assert.equal(await evaluate('new Set([...document.querySelectorAll("button[data-testid^=settle-]")].map(b=>{const r=b.getBoundingClientRect();return r.width+":"+r.height})).size'), 1, 'Received and returned buttons have identical dimensions');
+  assert.equal(await evaluate('[...document.querySelectorAll("button[data-testid^=settle-]")].every(b=>{const r=b.getBoundingClientRect();return r.width===112&&r.height===48})'), true, 'Payment buttons keep a consistent 112 by 48 size on narrow phones');
   const settle = number => evaluate('document.querySelector("[data-testid=settle-' + number + ']").click()');
   await settle('1234567890');
   await until('document.querySelector("[data-testid=settlement-question]")?.textContent.includes("₹1.00")');
@@ -199,6 +215,7 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   assert.equal(await evaluate('window.__calls.filter(c=>c.url==="/ledger/entries").length'), beforeClose, 'Changed balance requires another confirmation');
   await evaluate('window.__failAfterSave=true;document.querySelector("[data-testid=confirm-settlement]").click();document.querySelector("[data-testid=confirm-settlement]").click()');
   await until('document.querySelector("[role=dialog]")?.textContent.includes("Retry here")');
+  assert.equal(await evaluate('document.querySelector("[name=settlement-amount]").disabled'), true, 'Uncertain save keeps amount locked for identical retry');
   assert.equal(await evaluate('window.__calls.filter(c=>c.url==="/ledger/entries").length'), beforeClose + 1, 'Double click closes only once');
   await evaluate('document.querySelector("[data-testid=confirm-settlement]").click()');
   await until('!document.querySelector("[role=dialog]")&&!document.querySelector("[data-testid=settle-1234567890]")');
@@ -207,7 +224,14 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   assert.equal(closeKeys[0], closeKeys[1], 'Lost close response retries the same idempotency key');
   await until('!document.querySelector("[data-testid=settle-5555555555]").disabled');
   await settle('5555555555');
-  await until('document.querySelector("[data-testid=settlement-question]")?.textContent.includes("തിരികെ നൽകിയോ")');
+  await until('document.querySelector("[data-testid=settlement-question]")?.textContent.includes("കൊടുക്കാനുണ്ട്")');
+  await set('settlement-amount', '0.50');
+  assert.equal(await evaluate('document.querySelector("[data-testid=settlement-remaining]").textContent.includes("₹1.50")'), true);
+  await evaluate('document.querySelector("[data-testid=confirm-settlement]").click()');
+  await until('!document.querySelector("[role=dialog]")&&!document.querySelector("[data-testid=settle-5555555555]").disabled');
+  assert.equal(await evaluate('window.__records["5555555555"].balance_paise'), -150, 'Partial refund leaves remaining customer credit');
+  await settle('5555555555');
+  await until('document.querySelector("[name=settlement-amount]")?.value==="1.50"');
   await evaluate('document.querySelector("[data-testid=confirm-settlement]").click()');
   await until('!document.querySelector("[role=dialog]")&&!document.querySelector("[data-testid=settle-5555555555]")');
   assert.equal(await evaluate('window.__records["5555555555"].balance_paise'), 0);
@@ -229,6 +253,37 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate, until, co
   await set('ledger-search', '');
   await until('!!document.querySelector("[data-testid=customer-row-1234567890]")');
   assert.equal(await evaluate('window.__records["1234567890"].entries.length>1'), true, 'Reopening preserves previous history');
+  await set('ledger-card', '6666666666');
+  await until('!document.querySelector("[data-testid=record-save]").disabled');
+  await set('ledger-amount', '70');
+  await save();
+  await until('!!document.querySelector("[data-testid=settle-6666666666]")&&!document.querySelector("[data-testid=settle-6666666666]").disabled');
+  await settle('6666666666');
+  await until('document.querySelector("[name=settlement-amount]")?.value==="70.00"');
+  for (const invalid of ['', '0', '-1', '70.01', '100001', '1.001']) {
+    await set('settlement-amount', invalid);
+    assert.equal(await evaluate('document.querySelector("[data-testid=confirm-settlement]").disabled'), true, 'Invalid payment disabled: '+invalid);
+  }
+  await set('settlement-amount', '50');
+  assert.equal(await evaluate('document.querySelector("[data-testid=settlement-remaining]").textContent.includes("₹20.00")'), true);
+  await snapshot('ration-balance-ledger-partial-payment.png');
+  await evaluate('document.querySelector("[data-testid=confirm-settlement]").click()');
+  await until('!document.querySelector("[role=dialog]")&&!document.querySelector("[data-testid=settle-6666666666]").disabled');
+  assert.equal(await evaluate('window.__records["6666666666"].balance_paise'), 2000, '₹70 balance paid ₹50 leaves ₹20');
+  await settle('6666666666');
+  await until('document.querySelector("[name=settlement-amount]")?.value==="20.00"');
+  await evaluate('document.querySelector("[data-testid=confirm-settlement]").click()');
+  await until('!document.querySelector("[role=dialog]")&&!document.querySelector("[data-testid=customer-row-6666666666]")');
+  assert.equal(await evaluate('window.__records["6666666666"].balance_paise'), 0, 'Final payment closes card');
+  await set('ledger-search', 'TEST CUSTOMER');
+  await until('!!document.querySelector("[data-testid=customer-row-1234567890]")&&!document.querySelector("[data-testid=customer-row-0987654321]")');
+  assert.equal(await evaluate('document.querySelector("[data-testid=customer-row-1234567890]").textContent.includes("Test customer")'), true);
+  assert.equal(await evaluate('document.querySelector("[data-testid=customer-row-1234567890]").textContent.includes("1234567890")'), true);
+  assert.equal(await evaluate('document.querySelector("[data-testid=customer-row-1234567890]").textContent.includes("9000000001")'), true);
+  assert.equal(await evaluate('document.querySelectorAll("[data-testid=customer-row-1234567890] [data-testid^=customer-detail-] svg").length'), 3, 'Name, card and mobile each have a labelled icon');
+  assert.equal(await evaluate('document.querySelectorAll("[data-testid=customer-row-1234567890] svg title").length'), 3, 'Icons retain accessible labels');
+  await set('ledger-search', '9000000001');
+  await until('window.__calls.some(c=>c.url==="/ledger/customers"&&c.body.search==="9000000001")&&!!document.querySelector("[data-testid=customer-row-1234567890]")');
   await snapshot('ration-balance-ledger-quick-close.png');
 });
 console.log('Simple notebook UI passed: separate search, card/amount/direction/Save, both directions, repayments, idempotent retry, corrections and narrow layout.');

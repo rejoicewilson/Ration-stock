@@ -29,6 +29,7 @@ class CardBody(LedgerBody):
 class EntryBody(LedgerBody):
     card_number: str = Field(pattern=r'^[0-9]{10}$')
     customer_name: str = Field(default='', max_length=80)
+    customer_mobile: str = Field(default='', pattern=r'^(?:[6-9][0-9]{9})?$')
     kind: Literal['owed_to_shop', 'owed_to_customer', 'received', 'returned']
     amount_paise: int = Field(ge=1, le=10000000, strict=True)
     note: str = Field(default='', max_length=200)

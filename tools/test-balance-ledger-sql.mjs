@@ -127,5 +127,27 @@ try {
   assert.equal((await call('list', { status: 'open' })).total, 2, 'Reopened card is active again');
   await db.exec(filterSql);
   assert.equal((await detail()).total, historyBeforeFilter, 'Filter migration rerun preserves history');
+  const mobileSql = await readFile(new URL('../supabase/migrations/20261110_customer_balance_ledger_mobile.sql', import.meta.url), 'utf8');
+  await db.exec(mobileSql);
+  assert.equal((await detail()).customer.customer_mobile, '', 'Old customers remain valid without contact');
+  assert.equal((await detail()).total, historyBeforeFilter);
+  const mobileRequest = { customer_mobile: '9000000001', request_id: randomUUID() };
+  await add(1, 'owed_to_shop', mobileRequest);
+  const afterMobile = await detail();
+  assert.equal(afterMobile.customer.customer_mobile, '9000000001');
+  assert.equal((await call('list', { search: '9000000001' })).customers[0].customer_mobile, '9000000001');
+  assert.equal((await call('list', { search: '9000000001' }, other)).total, 0, 'Contact search is account-private');
+  assert.equal((await add(1, 'owed_to_shop', mobileRequest)).replayed, true);
+  assert.equal((await detail()).total, afterMobile.total, 'Contact save retries do not duplicate money entries');
+  for (const phone of ['123', '1000000000', '+919000000001']) assert.equal((await add(1, 'owed_to_shop', {customer_mobile: phone})).error, 'invalid');
+  await db.exec(mobileSql);
+  assert.equal((await detail()).customer.customer_mobile, '9000000001');
+  assert.equal((await detail()).total, afterMobile.total, 'Mobile migration rerun retains history');
+  for (const role of ['anon', 'authenticated']) {
+    await db.exec('set role ' + role);
+    await assert.rejects(call('list'), /permission denied/);
+    await assert.rejects(db.query('select customer_mobile from ration_private.ledger_customers'), /permission denied/);
+    await db.exec('reset role');
+  }
   console.log('Ledger SQL passed: balances, partial payments, corrections, retries, account isolation, history, permissions and safe rerun.');
 } finally { await db.close(); }
