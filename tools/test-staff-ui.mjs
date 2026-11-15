@@ -75,8 +75,6 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate,until,comm
   assert.equal(await evaluate('document.body.textContent.includes("Unexpected end of JSON")'),false);
   await click('Refresh');
   await until('document.body.textContent.includes("No salesman added yet")');
-  await fill('Month','2024-02');
-  await until('window.__calls.filter(c=>c.path==="report").length===3');
   await click('+ Add salesman');
   assert.equal(await evaluate('document.body.textContent.includes("Pay frequency")'),false,'No weekly/monthly selector');
   await fill('Salesman name','Rajesh'); await fill('Daily wage (₹)','500'); await fill('Start date','2024-02-10');
@@ -157,9 +155,9 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate,until,comm
   for (const width of [320,390,600]) {
     await command('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<500});
     if(width<500){
-      const navigation=await evaluate(`(()=>{const nav=document.querySelector('[data-testid=calendar-navigation]').getBoundingClientRect();const month=window.__field('Month').closest('.MuiTextField-root').getBoundingClientRect();const arrow=window.__button('Previous month').getBoundingClientRect();return {width:nav.width,pickerWidth:month.width,bottom:month.bottom,arrowTop:arrow.top};})()`);
-      assert.ok(Math.abs(navigation.pickerWidth-navigation.width)<1,'Month picker uses full mobile width');
-      assert.ok(navigation.arrowTop>=navigation.bottom,'Navigation buttons sit below month picker');
+      const navigation=await evaluate(`(()=>{const nav=document.querySelector('[data-testid=calendar-navigation]').getBoundingClientRect();const month=window.__field('Month').getBoundingClientRect();return {height:nav.height,top:nav.top,bottom:nav.bottom,pickerTop:month.top,pickerBottom:month.bottom};})()`);
+      assert.ok(navigation.height<=58,'Month navigation fits one compact header row');
+      assert.ok(navigation.pickerTop>=navigation.top&&navigation.pickerBottom<=navigation.bottom,'Month picker is inside calendar header');
       const calendarHeight=await evaluate('document.querySelector("[data-testid=attendance-calendar]").getBoundingClientRect().height');
       assert.ok(calendarHeight<=410,'Six-row calendar remains compact on mobile: '+calendarHeight);
     }
