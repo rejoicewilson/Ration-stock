@@ -105,21 +105,22 @@ export default function StaffTracker() {
   const sunday = new Date(day + 'T12:00:00Z').getUTCDay() === 0;
   const field = { size: 'small', fullWidth: true };
   const activeStaff = staff.find(person => person.id === selectedStaff) || staff[0];
-  return <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid #e4eaf4', borderRadius: 3,
+  return <Paper elevation={0} sx={{ p: { xs: 1.5, sm: 3 }, border: '1px solid #e4eaf4', borderRadius: 3,
     '& .MuiButton-root': { textTransform: 'none' } }}>
     <Stack direction="row" justifyContent="flex-end" alignItems="center" gap={1}>
       <Button variant="outlined" size="small" aria-label="+ Add salesman" sx={{ flexShrink: 0, borderRadius: 2, minHeight: 44 }} disabled={blocked} onClick={() => setAdding(v => !v)}>+ Add salesman</Button>
     </Stack>
     <Typography lang="ml" sx={{ mt: 0.75, color: '#536780', fontSize: 13 }}>ഹാജർ ചേർക്കാനോ തിരുത്താനോ കലണ്ടറിലെ തീയതി അമർത്തുക.</Typography>
-    <Stack direction="row" gap={1} alignItems="center" sx={{ mt: 2 }}>
-      <Button aria-label="Previous month" disabled={blocked || day.slice(0,7) <= '2020-01'} onClick={() => setDay(monthShift(day, -1))} sx={{ minWidth: 36, fontSize: 24 }}>‹</Button>
+    <Box data-testid="calendar-navigation" sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: '44px 44px minmax(0,1fr) 44px', sm: '44px minmax(0,1fr) 44px auto 44px' }, gap: 1, alignItems: 'center' }}>
+      <Button aria-label="Previous month" disabled={blocked || day.slice(0,7) <= '2020-01'} onClick={() => setDay(monthShift(day, -1))} sx={{ gridColumn: 1, gridRow: { xs: 2, sm: 1 }, minWidth: 44, minHeight: 44, fontSize: 24 }}>‹</Button>
       <TextField {...field} label="Month" type="month" value={day.slice(0,7)} disabled={blocked} InputLabelProps={{ shrink: true }}
+        sx={{ gridColumn: { xs: '1 / -1', sm: 2 }, gridRow: 1, minWidth: 0, '& input': { minWidth: 0, minHeight: 24, fontSize: 16 } }}
         inputProps={{ min: '2020-01', max: today.slice(0,7), 'aria-label': 'Month' }}
         onChange={e => { if (/^\d{4}-\d{2}$/.test(e.target.value) && e.target.value >= '2020-01' && e.target.value <= today.slice(0,7)) setDay(e.target.value + '-01'); }} />
-      <Button aria-label="Next month" disabled={blocked || day.slice(0,7) >= today.slice(0,7)} onClick={() => setDay(monthShift(day, 1))} sx={{ minWidth: 36, fontSize: 24 }}>›</Button>
-      <Button size="small" disabled={blocked} onClick={() => setDay(today)}>Today</Button>
-      <Button aria-label="Refresh" title="Refresh" sx={{ minWidth: 32 }} disabled={blocked} onClick={() => setRefresh(v => v + 1)}>↻</Button>
-    </Stack>
+      <Button aria-label="Next month" disabled={blocked || day.slice(0,7) >= today.slice(0,7)} onClick={() => setDay(monthShift(day, 1))} sx={{ gridColumn: { xs: 2, sm: 3 }, gridRow: { xs: 2, sm: 1 }, minWidth: 44, minHeight: 44, fontSize: 24 }}>›</Button>
+      <Button size="small" sx={{ gridColumn: { xs: 3, sm: 4 }, gridRow: { xs: 2, sm: 1 }, minHeight: 44 }} disabled={blocked} onClick={() => setDay(today)}>Today</Button>
+      <Button aria-label="Refresh" title="Refresh" sx={{ gridColumn: { xs: 4, sm: 5 }, gridRow: { xs: 2, sm: 1 }, minWidth: 44, minHeight: 44 }} disabled={blocked} onClick={() => setRefresh(v => v + 1)}>↻</Button>
+    </Box>
     {!!staff.length && <TextField {...field} select label="Salesman" value={activeStaff?.id || ''} disabled={blocked} sx={{ mt: 2 }}
       SelectProps={{ native: true }} onChange={e => { setSelectedStaff(e.target.value); setPayment(null); setExpanded(null); setEditingAttendance(null); setMoreAttendance(null); setHoliday(null); }}>
       {staff.map(person => <option key={person.id} value={person.id}>{person.name} · {money(person.rate_paise)} / {cycleLabel[person.pay_cycle]}</option>)}
@@ -164,11 +165,11 @@ export default function StaffTracker() {
         const events = [...s.attendance.map(a => ({ type: 'attendance', date: a.work_date, entry: a })),
           ...s.payments.map(p => ({ type: 'payment', date: p.paid_on, entry: p }))]
           .sort((a, b) => b.date.localeCompare(a.date) || a.type.localeCompare(b.type));
-        return <Box key={person.id} data-testid="staff-card" sx={{ border: '1px solid #dce6f5', borderRadius: 3, p: { xs: 1.5, sm: 2 }, minWidth: 0, boxShadow: '0 4px 18px rgba(23,44,71,.04)' }}>
+        return <Box key={person.id} data-testid="staff-card" sx={{ border: '1px solid #dce6f5', borderRadius: 3, p: { xs: 0.75, sm: 2 }, minWidth: 0, boxShadow: '0 4px 18px rgba(23,44,71,.04)' }}>
           <Box aria-label="Attendance calendar" data-testid="attendance-calendar" sx={{ border: '1px solid #e5ebf4', borderRadius: 2.5, overflow: 'hidden', bgcolor: '#fff' }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1} sx={{ px: 1.5, py: 1.5, background: 'linear-gradient(110deg,#f0f5ff,#fafcff)', borderBottom: '1px solid #e5ebf4' }}>
+            <Stack direction="row" flexWrap="wrap" justifyContent="space-between" alignItems="center" gap={1} sx={{ px: { xs: 1, sm: 1.5 }, py: 1.5, background: 'linear-gradient(110deg,#f0f5ff,#fafcff)', borderBottom: '1px solid #e5ebf4' }}>
               <Box><Typography sx={{ fontSize: 10, color: '#687d98', letterSpacing: 1, textTransform: 'uppercase' }}>Monthly attendance</Typography>
-                <Typography fontSize={18} fontWeight={800} sx={{ color: '#233e60', mt: 0.25 }}>{historyMonth}</Typography></Box>
+                <Typography fontWeight={800} sx={{ fontSize: { xs: 16, sm: 18 }, color: '#233e60', mt: 0.25 }}>{historyMonth}</Typography></Box>
               <Box sx={{ border: '1px solid #d5e3f8', borderRadius: 1.5, px: 1, py: 0.5, bgcolor: '#fff' }}><Typography sx={{ fontSize: 10, color: '#64748b' }}>Selected</Typography><Typography sx={{ fontSize: 12, fontWeight: 700, color: '#2563a7' }}>{dateLabel(day)}</Typography></Box>
             </Stack>
             <Box sx={{ p: { xs: 0.75, sm: 1.5 }, display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: { xs: 0.5, sm: 0.75 } }}>
