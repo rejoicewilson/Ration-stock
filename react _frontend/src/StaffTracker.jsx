@@ -167,13 +167,13 @@ export default function StaffTracker() {
           .sort((a, b) => b.date.localeCompare(a.date) || a.type.localeCompare(b.type));
         return <Box key={person.id} data-testid="staff-card" sx={{ border: '1px solid #dce6f5', borderRadius: 3, p: { xs: 0.75, sm: 2 }, minWidth: 0, boxShadow: '0 4px 18px rgba(23,44,71,.04)' }}>
           <Box aria-label="Attendance calendar" data-testid="attendance-calendar" sx={{ border: '1px solid #e5ebf4', borderRadius: 2.5, overflow: 'hidden', bgcolor: '#fff' }}>
-            <Stack direction="row" flexWrap="wrap" justifyContent="space-between" alignItems="center" gap={1} sx={{ px: { xs: 1, sm: 1.5 }, py: 1.5, background: 'linear-gradient(110deg,#f0f5ff,#fafcff)', borderBottom: '1px solid #e5ebf4' }}>
-              <Box><Typography sx={{ fontSize: 10, color: '#687d98', letterSpacing: 1, textTransform: 'uppercase' }}>Monthly attendance</Typography>
+            <Stack direction="row" flexWrap="wrap" justifyContent="space-between" alignItems="center" gap={0.5} sx={{ px: { xs: 1, sm: 1.5 }, py: { xs: 0.75, sm: 1.5 }, background: 'linear-gradient(110deg,#f0f5ff,#fafcff)', borderBottom: '1px solid #e5ebf4' }}>
+              <Box><Typography sx={{ display: { xs: 'none', sm: 'block' }, fontSize: 10, color: '#687d98', letterSpacing: 1, textTransform: 'uppercase' }}>Monthly attendance</Typography>
                 <Typography fontWeight={800} sx={{ fontSize: { xs: 16, sm: 18 }, color: '#233e60', mt: 0.25 }}>{historyMonth}</Typography></Box>
-              <Box sx={{ border: '1px solid #d5e3f8', borderRadius: 1.5, px: 1, py: 0.5, bgcolor: '#fff' }}><Typography sx={{ fontSize: 10, color: '#64748b' }}>Selected</Typography><Typography sx={{ fontSize: 12, fontWeight: 700, color: '#2563a7' }}>{dateLabel(day)}</Typography></Box>
+              <Box sx={{ border: '1px solid #d5e3f8', borderRadius: 1.5, px: 0.75, py: 0.5, bgcolor: '#fff' }}><Typography sx={{ display: { xs: 'none', sm: 'block' }, fontSize: 10, color: '#64748b' }}>Selected</Typography><Typography sx={{ fontSize: { xs: 10, sm: 12 }, fontWeight: 700, color: '#2563a7' }}>{dateLabel(day)}</Typography></Box>
             </Stack>
-            <Box sx={{ p: { xs: 0.75, sm: 1.5 }, display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: { xs: 0.5, sm: 0.75 } }}>
-              {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(label => <Typography key={label} sx={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: label === 'Sun' ? '#a88477' : '#8190a5', py: 0.75 }}>{label}</Typography>)}
+            <Box sx={{ p: { xs: 0.5, sm: 1.5 }, display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: { xs: 0.25, sm: 0.75 } }}>
+              {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(label => <Typography key={label} sx={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: label === 'Sun' ? '#a88477' : '#8190a5', py: { xs: 0.25, sm: 0.75 } }}>{label}</Typography>)}
               {Array.from({ length: (first.getUTCDay() + 6) % 7 }, (_, index) => <Box key={'blank-' + index} />)}
               {Array.from({ length: monthDays }, (_, index) => {
                 const value = day.slice(0,7) + '-' + String(index+1).padStart(2,'0');
@@ -185,23 +185,23 @@ export default function StaffTracker() {
                 const label = future ? 'Future date' : notStarted ? 'Not started' : status?.label || (off ? 'Sunday holiday' : 'Not marked');
                 return <Button key={value} data-date={value} aria-label={dateLabel(value) + ': ' + label} aria-pressed={value === day} aria-current={value === today ? 'date' : undefined}
                   disabled={blocked || future || notStarted} onClick={() => { setDay(value); setEditingAttendance(null); setMoreAttendance(null); setHoliday(null); }}
-                  sx={{ minWidth: 0, minHeight: { xs: 54, sm: 64 }, p: 0.25, borderRadius: 2,
+                  sx={{ minWidth: 0, minHeight: { xs: 40, sm: 54 }, p: { xs: 0, sm: 0.25 }, borderRadius: { xs: 1.25, sm: 2 },
                     border: value === day ? '2px solid #3b82d6' : '2px solid transparent',
                     boxShadow: value === day ? '0 2px 7px rgba(36,100,175,.15)' : undefined,
                     bgcolor: status?.bg || (off ? '#f4f1ef' : '#f8fafd'), color: status?.color || '#334155',
                     transition: 'background-color .15s, box-shadow .15s',
                     '&:focus-visible': { outline: '2px solid #194c89', outlineOffset: 1 },
                     '&:hover': { bgcolor: status?.bg || '#edf4ff', boxShadow: '0 2px 7px rgba(36,100,175,.12)' }, '&.Mui-disabled': { color: '#b9c2ce', bgcolor: '#fafbfc' } }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
-                    <Typography component="span" sx={{ display: 'grid', placeItems: 'center', width: 24, height: 24, borderRadius: '50%', fontSize: 13, fontWeight: 700, bgcolor: value === today ? '#285fa5' : undefined, color: value === today ? '#fff' : undefined }}>{index+1}</Typography>
-                    <Typography component="span" sx={{ display: 'block', fontSize: 10, minHeight: 14, fontWeight: 800, color: status?.color || (off ? '#a18e83' : '#b2bdcb') }}>{status?.code || (off ? 'Off' : '·')}</Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+                    <Typography component="span" sx={{ display: 'grid', placeItems: 'center', width: { xs: 20, sm: 24 }, height: { xs: 20, sm: 24 }, borderRadius: '50%', fontSize: 13, fontWeight: 700, bgcolor: value === today ? '#285fa5' : undefined, color: value === today ? '#fff' : undefined }}>{index+1}</Typography>
+                    <Typography component="span" sx={{ display: 'block', fontSize: { xs: 9, sm: 10 }, lineHeight: 1.2, minHeight: 11, fontWeight: 800, color: status?.color || (off ? '#a18e83' : '#b2bdcb') }}>{status?.code || (off ? 'Off' : '·')}</Typography>
                   </Box>
                 </Button>;
               })}
             </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.5, pb: 1 }}>Off: Sunday · W: Holiday worked</Typography>
-            <Box data-testid="month-attendance-counts" sx={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 0.5, p: 1, borderTop: '1px solid #edf0f5' }}>
-              {monthCounts.map(item => <Box key={item.status} sx={{ textAlign: 'center', borderRadius: 1.5, py: 0.75, bgcolor: calendarStatus[item.status].bg }}><Typography fontSize={18} fontWeight={800} sx={{ color: calendarStatus[item.status].color }}>{item.count}</Typography><Typography fontSize={10} sx={{ color: calendarStatus[item.status].color }}>{calendarStatus[item.status].code} · {item.label}</Typography></Box>)}
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1, pb: 0.5, fontSize: { xs: 10, sm: 12 } }}>Off: Sunday · W: Holiday worked</Typography>
+            <Box data-testid="month-attendance-counts" sx={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 0.5, p: { xs: 0.5, sm: 1 }, borderTop: '1px solid #edf0f5' }}>
+              {monthCounts.map(item => <Box key={item.status} sx={{ textAlign: 'center', borderRadius: 1.5, py: { xs: 0.25, sm: 0.75 }, bgcolor: calendarStatus[item.status].bg }}><Typography fontWeight={800} sx={{ fontSize: { xs: 16, sm: 18 }, color: calendarStatus[item.status].color }}>{item.count}</Typography><Typography fontSize={10} sx={{ color: calendarStatus[item.status].color }}>{calendarStatus[item.status].code} · {item.label}</Typography></Box>)}
             </Box>
           </Box>
           <Box sx={{ mt: 2, mb: 0.5 }}>

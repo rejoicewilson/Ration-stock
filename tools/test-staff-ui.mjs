@@ -152,12 +152,16 @@ await browserFixture(bundle.outputFiles[0].contents, async ({evaluate,until,comm
   await evaluate(`window.__payments.push({id:'alignment-payment',paid_on:'2024-02-05',period_start:'2024-02-05',amount_paise:1000000,voided:false,kind:'salary'});`);
   await click('Refresh');
   await until('!window.__button("Refresh").disabled&&document.querySelector("[data-testid=staff-money-summary]")?.textContent.includes("അധികം നൽകിയത്")');
+  await fill('Month','2026-11');
+  await until(`!!document.querySelector('[data-date="2026-11-30"]')&&!window.__button('Refresh').disabled`);
   for (const width of [320,390,600]) {
     await command('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<500});
     if(width<500){
       const navigation=await evaluate(`(()=>{const nav=document.querySelector('[data-testid=calendar-navigation]').getBoundingClientRect();const month=window.__field('Month').closest('.MuiTextField-root').getBoundingClientRect();const arrow=window.__button('Previous month').getBoundingClientRect();return {width:nav.width,pickerWidth:month.width,bottom:month.bottom,arrowTop:arrow.top};})()`);
       assert.ok(Math.abs(navigation.pickerWidth-navigation.width)<1,'Month picker uses full mobile width');
       assert.ok(navigation.arrowTop>=navigation.bottom,'Navigation buttons sit below month picker');
+      const calendarHeight=await evaluate('document.querySelector("[data-testid=attendance-calendar]").getBoundingClientRect().height');
+      assert.ok(calendarHeight<=410,'Six-row calendar remains compact on mobile: '+calendarHeight);
     }
     const tops=await evaluate('[...document.querySelector("[data-testid=staff-money-summary]").children].map(cell=>cell.lastElementChild.getBoundingClientRect().top)');
     assert.ok(Math.max(...tops)-Math.min(...tops)<1,'Amounts align even with wrapped Malayalam labels at '+width);
