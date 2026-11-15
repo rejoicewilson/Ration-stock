@@ -108,7 +108,7 @@ export default function StaffTracker() {
   return <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid #e4eaf4', borderRadius: 3,
     '& .MuiButton-root': { textTransform: 'none' } }}>
     <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}>
-      <Box><Typography component="h2" sx={{ fontSize: 23, fontWeight: 800, color: '#172c47' }}>Salesman Passbook</Typography></Box>
+      <Box><Typography component="h2" sx={{ fontSize: 23, fontWeight: 800, color: '#172c47' }}>Salesman Tracker</Typography></Box>
       <Button variant="outlined" size="small" aria-label="+ Add salesman" sx={{ flexShrink: 0, borderRadius: 2, minHeight: 44 }} disabled={blocked} onClick={() => setAdding(v => !v)}>+ Add salesman</Button>
     </Stack>
     <Typography lang="ml" sx={{ mt: 0.75, color: '#536780', fontSize: 13 }}>ഹാജർ ചേർക്കാനോ തിരുത്താനോ കലണ്ടറിലെ തീയതി അമർത്തുക.</Typography>
