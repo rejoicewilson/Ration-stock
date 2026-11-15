@@ -108,8 +108,7 @@ export default function StaffTracker() {
   return <Paper elevation={0} sx={{ p: { xs: 1.5, sm: 3 }, border: '1px solid #e4eaf4', borderRadius: 3,
     '& .MuiButton-root': { textTransform: 'none' } }}>
     <Stack direction="row" justifyContent="flex-end" alignItems="center" gap={1}>
-      <Button aria-label="Refresh" title="Refresh" sx={{ minWidth: 36, minHeight: 40 }} disabled={blocked} onClick={() => setRefresh(v => v + 1)}>↻</Button>
-      <Button variant="outlined" size="small" aria-label="+ Add salesman" sx={{ flexShrink: 0, borderRadius: 2, minHeight: 44 }} disabled={blocked} onClick={() => setAdding(v => !v)}>+ Add salesman</Button>
+      <Button variant="contained" disableElevation aria-label="+ Add salesman" sx={{ flexShrink: 0, borderRadius: 2, minHeight: 48 }} disabled={blocked} onClick={() => setAdding(v => !v)}>+ Add salesman</Button>
     </Stack>
     <Typography lang="ml" sx={{ mt: 0.75, color: '#536780', fontSize: 13 }}>ഹാജർ ചേർക്കാനോ തിരുത്താനോ കലണ്ടറിലെ തീയതി അമർത്തുക.</Typography>
     {!!staff.length && <TextField {...field} select label="Salesman" value={activeStaff?.id || ''} disabled={blocked} sx={{ mt: 2 }}
@@ -119,6 +118,7 @@ export default function StaffTracker() {
     {notice && <Alert severity="success" sx={{ mt: 2 }}>{notice}</Alert>}
     {error && <Alert severity="error" sx={{ mt: 2 }}>{error}
       {pending && <Button disabled={saving} onClick={() => save(pending)}>Retry same save</Button>}
+      {!pending && !loading && !staff.length && <Button onClick={() => setRefresh(v => v + 1)}>Try again</Button>}
     </Alert>}
     {saving && <Typography role="status" sx={{ mt: 1 }}>Saving…</Typography>}
     {adding && <Box component="form" sx={{ mt: 2, p: 2, bgcolor: '#f7faff', borderRadius: 2 }} onSubmit={e => {

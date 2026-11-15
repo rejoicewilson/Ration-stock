@@ -23,7 +23,7 @@ const bundle = await build({
       const search=params.get('search')||'';
       const page=Number(params.get('page')||1);
       const matching=rows.filter(r=>(r.fps_id.includes(search)||r.mobile.includes(search))&&(!url.includes('recent-usage')||r.last_used_at));
-      return new Response(JSON.stringify({accounts:matching.slice((page-1)*50,page*50),matching_accounts:matching.length,total_accounts:52,new_today:2,new_month:52,active_today:40,active_month:51,features:[]}));
+      return new Response(JSON.stringify({accounts:matching.slice((page-1)*50,page*50),matching_accounts:matching.length,total_accounts:52,new_today:2,new_month:52,active_today:40,active_month:51,features:[{feature:'balanceLedger',requests:12,accounts:3},{feature:'staffTracker',requests:8,accounts:2}]}));
     };
     createRoot(document.getElementById('root')).render(<><CssBaseline/><AdminDashboard onHome={()=>{window.__home=true}}/></>);
   ` },
@@ -36,6 +36,7 @@ await browserFixture(bundle.outputFiles[0].contents, async ({ evaluate, until, c
   const search = `document.querySelector('input')`;
   const setSearch = value => evaluate(`(()=>{const input=${search};Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(value)});input.dispatchEvent(new Event('input',{bubbles:true}))})()`);
   await until(`!!document.querySelector('#owner-usage-tab')`);
+  await until(`document.body.textContent.includes('Balance Book')&&document.body.textContent.includes('Salesman Management')`);
   await evaluate(`document.querySelector('#owner-usage-tab').click()`);
   await until(`!!${table}`);
   assert.equal(await evaluate(`document.querySelector('#owner-usage-tab').getAttribute('aria-selected')`), 'true');

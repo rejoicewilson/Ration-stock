@@ -54,7 +54,7 @@ class LedgerTests(unittest.TestCase):
         calls = [c for c in self.rpc.call_args_list if c.args[0] == 'ledger_add']
         self.assertEqual(calls[0].args[1]['account_id'], self.owner)
         analytics = [c.args[1] for c in self.rpc.call_args_list if c.args[0] == 'record_activity']
-        self.assertEqual(analytics, [{'account_id': self.owner, 'feature': '/ledger/entries'}])
+        self.assertEqual(analytics, [{'account_id': self.owner, 'feature': 'balanceLedger'}])
         response = self.client.post('/ledger/entries', json={**self.entry, 'account_id': 'attacker'})
         self.assertEqual(response.status_code, 422)
         self.assertNotIn('attacker', response.text)

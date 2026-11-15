@@ -252,6 +252,28 @@ class AccountSecurityTests(unittest.TestCase):
             expected = label if label != 'untrusted' else '/transactions'
             self.assertEqual(auth.activity_feature('/transactions', request), expected)
             self.assertEqual(auth.activity_feature('/count', request), '/count')
+            for path in ('/ledger/customers', '/ledger/customer', '/ledger/entries', '/ledger/reverse'):
+                self.assertEqual(auth.activity_feature(path, request), 'balanceLedger')
+            for path in ('/staff/report', '/staff/create', '/staff/attendance', '/staff/payment', '/staff/void-payment'):
+                self.assertEqual(auth.activity_feature(path, request), 'staffTracker')
+
+    def test_notebook_and_salesman_usage_records_grouped_successes(self):
+        for path, feature in [('/ledger/customers', 'balanceLedger'), ('/staff/report', 'staffTracker')]:
+            for status in (200, 409, 500):
+                self.rpc.reset_mock()
+                self.rpc.side_effect = lambda action, data: {'id': 'test'} if action == 'session' else {'ok': True}
+                request = Request({'type': 'http', 'method': 'POST', 'path': path,
+                    'headers': [(b'origin', auth.ALLOWED_ORIGINS[0].encode()),
+                                (b'cookie', f'{auth.SESSION_COOKIE}={"A" * 43}'.encode()),
+                                (b'x-app-feature', b'commission')], 'query_string': b''})
+                async def next_handler(request):
+                    return Response(status_code=status)
+                response = asyncio.run(auth.account_gate(request, next_handler))
+                self.assertEqual(response.status_code, status)
+                recorded = [call for call in self.rpc.call_args_list if call.args[0] == 'record_activity']
+                self.assertEqual(len(recorded), 1 if status == 200 else 0)
+                if recorded:
+                    self.assertEqual(recorded[0].args[1], {'account_id': 'test', 'feature': feature})
 
     def test_activity_records_only_successful_feature_requests(self):
         for status in (200, 422, 500):

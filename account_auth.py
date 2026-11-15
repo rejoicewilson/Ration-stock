@@ -199,6 +199,10 @@ async def account_gate(request, call_next):
 
 
 def activity_feature(path, request):
+    if path.startswith('/ledger/'):
+        return 'balanceLedger'
+    if path.startswith('/staff/'):
+        return 'staffTracker'
     # Analytics hint only, never an authorization input.
     label = request.headers.get('x-app-feature', '')
     if path == '/transactions' and label in ('transactions', 'commission', 'monthComparison'):
