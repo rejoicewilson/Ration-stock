@@ -731,7 +731,7 @@ export default function App({ initialView = 'home', onProtectedFeature, onHome, 
     { key: 'KOIL', label: 'KOIL', icon: '🛢️', color: '#8a6bff' },
   ];
   const featurePages = [
-    { title: 'Salesman Management', category: 'ഹാജറും ശമ്പളവും രേഖപ്പെടുത്തുവാൻ', view: 'staffTracker', mark: 'SA', color: '#0369a1', background: '#edf7ff' },
+    { title: 'Manage Salesmen', category: 'ഹാജറും ശമ്പളവും രേഖപ്പെടുത്തുവാൻ', view: 'staffTracker', mark: 'SA', color: '#0369a1', background: '#edf7ff' },
     { title: 'Balance Book', category: 'പറ്റ് ബുക്ക്', view: 'balanceLedger', mark: 'BK', color: '#365d4d', background: '#f8f1df' },
     { title: 'Monthly Sales Comparison', category: 'മാസ വിൽപ്പന താരതമ്യം ചെയ്യാൻ', view: 'monthComparison', mark: 'MC', color: '#0369a1', background: '#f0f9ff' },
     { title: 'Stock Summary', category: 'കടയിലെ സ്റ്റോക്ക് നോക്കാൻ', view: 'stock', mark: 'ST', color: '#2563eb', background: '#eff6ff' },

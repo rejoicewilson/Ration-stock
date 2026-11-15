@@ -222,9 +222,16 @@ export default function StaffTracker() {
             }}><TextField {...field} required label="Extra pay (₹)" value={holiday.amount} disabled={blocked} inputProps={{ inputMode: 'decimal' }} onChange={e => setHoliday({ ...holiday, amount: e.target.value })} />
               <Button type="submit" disabled={blocked}>Save holiday work</Button><Button disabled={blocked} onClick={() => setHoliday(null)}>Cancel</Button></Box>}
           </Box> : <Box sx={{ mt: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-            {[['present', '✓ Present'], ['absent', 'Absent']].map(([value, label]) => <Button key={value} size="small" sx={{ minHeight: 42,
-              ...(value === 'present' ? { bgcolor: '#edf8f1', color: '#216b43', borderColor: '#b8d8c4', '&:hover': { bgcolor: '#dcefe3', borderColor: '#216b43' } } : {}) }}
-              variant="outlined" aria-pressed={record?.status === value}
+            {[['present', '✓ Present'], ['absent', 'Absent']].map(([value, label]) => <Button key={value} sx={{ minHeight: 46, borderRadius: 2, fontWeight: 800, fontSize: 14,
+              bgcolor: value === 'present' ? '#238653' : '#c83e3e', color: '#fff',
+              border: '1px solid', borderColor: value === 'present' ? '#1a7445' : '#ad3030',
+              boxShadow: value === 'present' ? '0 3px 0 #17663d' : '0 3px 0 #942626',
+              transition: 'background-color .15s, transform .1s, box-shadow .1s',
+              '&:hover': { bgcolor: value === 'present' ? '#1c7547' : '#af3030', borderColor: value === 'present' ? '#17663d' : '#942626', boxShadow: value === 'present' ? '0 3px 0 #12512f' : '0 3px 0 #7d2020' },
+              '&:active': { transform: 'translateY(2px)', boxShadow: 'none' },
+              '&:focus-visible': { outline: '3px solid #94b9ed', outlineOffset: 3 },
+              '&.Mui-disabled': { bgcolor: '#eef1f5', color: '#8994a3', borderColor: '#dce2ea', boxShadow: 'none' } }}
+              variant="contained" aria-pressed={record?.status === value}
               aria-label={label} disabled={!editable || record?.status === value} onClick={() => mutate('attendance', person, { work_date: day, status: value, extra_paise: 0 })}>{label}</Button>)}
           </Box>)}
           {changing && (!sunday || record) && <Box>

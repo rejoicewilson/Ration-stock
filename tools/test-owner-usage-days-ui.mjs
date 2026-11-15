@@ -36,7 +36,7 @@ await browserFixture(bundle.outputFiles[0].contents, async ({ evaluate, until, c
   const search = `document.querySelector('input')`;
   const setSearch = value => evaluate(`(()=>{const input=${search};Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(value)});input.dispatchEvent(new Event('input',{bubbles:true}))})()`);
   await until(`!!document.querySelector('#owner-usage-tab')`);
-  await until(`document.body.textContent.includes('Balance Book')&&document.body.textContent.includes('Salesman Management')`);
+  await until(`document.body.textContent.includes('Balance Book')&&document.body.textContent.includes('Manage Salesmen')`);
   await evaluate(`document.querySelector('#owner-usage-tab').click()`);
   await until(`!!${table}`);
   assert.equal(await evaluate(`document.querySelector('#owner-usage-tab').getAttribute('aria-selected')`), 'true');

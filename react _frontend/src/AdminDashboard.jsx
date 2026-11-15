@@ -4,7 +4,7 @@ import { accountRequest } from './accountApi';
 import AccountUsageDaysTable from './AccountUsageDaysTable';
 import RecentAccountUsageTable from './RecentAccountUsageTable';
 
-const names = { '/count': 'Stock summary', '/fps-stock': 'Stock board', '/transactions': 'Sales tools (legacy)', '/stock-register': 'Stock board', '/ro-details': 'RO orders', '/ro-quantity-details': 'RO quantities', '/ration-card-details': 'Ration card details', transactions: 'Transactions', commission: 'Commission', monthComparison: 'Monthly comparison', balanceLedger: 'Balance Book', staffTracker: 'Salesman Management' };
+const names = { '/count': 'Stock summary', '/fps-stock': 'Stock board', '/transactions': 'Sales tools (legacy)', '/stock-register': 'Stock board', '/ro-details': 'RO orders', '/ro-quantity-details': 'RO quantities', '/ration-card-details': 'Ration card details', transactions: 'Transactions', commission: 'Commission', monthComparison: 'Monthly comparison', balanceLedger: 'Balance Book', staffTracker: 'Manage Salesmen' };
 const date = value => value ? new Date(value).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : 'Not yet active';
 const panel = { p: { xs: 2, sm: 3 }, borderRadius: 3, border: '1px solid #e2e8f0', boxShadow: '0 4px 20px #173e7a06' };
 
