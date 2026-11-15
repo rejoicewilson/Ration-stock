@@ -45,7 +45,8 @@ RENEWAL_COOKIE = '__Host-ration_renewed' if SECURE_COOKIES else 'ration_renewed'
 SUPPORT_NUMBER = os.getenv('SUPPORT_WHATSAPP', '919447645196')
 PROTECTED_PATHS = {'/count', '/fps-stock', '/transactions', '/stock-register', '/ro-details',
                    '/ro-quantity-details', '/ration-card-details', '/ledger/customers',
-                   '/ledger/customer', '/ledger/entries', '/ledger/reverse'}
+                   '/ledger/customer', '/ledger/entries', '/ledger/reverse',
+                   '/staff/report', '/staff/create', '/staff/attendance', '/staff/payment', '/staff/void-payment'}
 hasher = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1)
 _dummy_hash = hasher.hash(secrets.token_urlsafe(32))
 router = APIRouter(prefix='/auth')
@@ -76,6 +77,8 @@ def rpc(action, data):
             function = 'ration_recent_usage'
         elif action.startswith('ledger_'):
             function = 'ration_balance_ledger'
+        elif action.startswith('staff_'):
+            function = 'ration_staff'
         response = requests.post(f'{url}/rest/v1/rpc/{function}',
             headers={'apikey': key, 'User-Agent': 'ration-stock-backend/1.0'},
             json={'p_action': action, 'p_data': data}, timeout=(5, 12))

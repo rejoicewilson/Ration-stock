@@ -10,6 +10,7 @@ export default defineConfig({
     proxy: {
       '/auth': 'http://127.0.0.1:8000',
       '/ledger': 'http://127.0.0.1:8000',
+      '/staff': 'http://127.0.0.1:8000',
       '/count': 'http://127.0.0.1:8000',
       '/fps-stock': 'http://127.0.0.1:8000',
       '/transactions': 'http://127.0.0.1:8000',

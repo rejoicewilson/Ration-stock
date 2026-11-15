@@ -19,6 +19,7 @@ import requests
 from bs4 import BeautifulSoup
 from account_auth import ALLOWED_ORIGINS, account_gate, router as account_router
 from balance_ledger import router as ledger_router
+from staff_tracker import router as staff_router
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse
@@ -26,11 +27,14 @@ from fastapi.responses import JSONResponse
 app = FastAPI()
 app.include_router(account_router)
 app.include_router(ledger_router)
+app.include_router(staff_router)
 app.middleware('http')(account_gate)
 
 
 @app.exception_handler(RequestValidationError)
 async def safe_validation_error(request, exc):
+    if request.url.path.startswith('/staff/'):
+        return JSONResponse(status_code=422, content={'detail': 'Check the staff name, dates, attendance and amount.'})
     if request.url.path.startswith('/ledger/'):
         return JSONResponse(status_code=422, content={'detail': 'Check the 10-digit card number, amount and notebook entry details.'})
     if request.url.path.startswith('/auth/'):
